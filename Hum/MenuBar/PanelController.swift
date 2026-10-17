@@ -126,7 +126,7 @@ final class PanelController {
     private func layout() {
         guard let panel, let host else { return }
         let size = host.fittingSize
-        let width = max(size.width, Self.width)
+        let width = size.width
         var x = anchorX - width / 2
         if screenFrame.width > 0 {
             x = min(max(x, screenFrame.minX + 8), screenFrame.maxX - width - 8)
@@ -149,24 +149,26 @@ final class PanelController {
     }
 }
 
-/// Shared chrome for every dropdown: 320 wide (384 combined), 16 padding, rounded glass.
+/// Shared chrome for every dropdown: 320 wide (384 combined) at design size, drawn at UI scale.
 struct PanelRoot: View {
     let kind: PanelKind
     var settings = SettingsStore.shared
 
     var body: some View {
-        Group {
-            switch kind {
-            case .module(let m): ModulePanel(module: m)
-            case .combined: CombinedPanel()
+        UIScaled {
+            Group {
+                switch kind {
+                case .module(let m): ModulePanel(module: m)
+                case .combined: CombinedPanel()
+                }
             }
+            .padding(16)
+            .frame(width: kind == .combined ? 384 : PanelController.width)
+            .environment(\.accent, settings.prefs.general.accent.colors)
+            .ui(13)
+            .foregroundStyle(Theme.text)
         }
-        .padding(16)
-        .frame(width: kind == .combined ? 384 : PanelController.width)
-        .background(GlassBackground(radius: 20))
-        .environment(\.accent, settings.prefs.general.accent.colors)
-        .ui(13)
-        .foregroundStyle(Theme.text)
+        .background(GlassBackground(radius: UIScale.of(20)))
         .focusEffectDisabled()
     }
 }

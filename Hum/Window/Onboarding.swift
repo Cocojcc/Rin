@@ -33,7 +33,7 @@ final class OnboardingController: NSObject, NSWindowDelegate {
     }
 
     private func makeWindow() {
-        let host = NSHostingView(rootView: OnboardingView())
+        let host = NSHostingView(rootView: OnboardingRoot())
         // Measure before the view joins the window: once inside, the title bar's safe area would be
         // added on top of a layout that already draws under it.
         let size = host.fittingSize
@@ -57,6 +57,15 @@ final class OnboardingController: NSObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         SettingsStore.shared.prefs.general.onboarded = true
         window = nil
+    }
+}
+
+/// The onboarding window's content at UI scale, on glass.
+struct OnboardingRoot: View {
+    var body: some View {
+        UIScaled { OnboardingView() }
+            .background(GlassBackground(radius: UIScale.of(18), material: .underWindowBackground))
+            .ignoresSafeArea()
     }
 }
 
@@ -91,10 +100,10 @@ struct OnboardingView: View {
         }
         .padding(EdgeInsets(top: 18, leading: 22, bottom: 22, trailing: 22))
         .frame(width: 480)
-        .background(GlassBackground(radius: 18, material: .underWindowBackground))
         .environment(\.accent, prefs.general.accent.colors)
         .ui(13)
         .foregroundStyle(Theme.text)
+        .focusEffectDisabled()
         .ignoresSafeArea()
     }
 

@@ -38,13 +38,13 @@ enum Snapshots {
                 save(PanelRoot(kind: .combined).padding(20).background(wall), appearance, dir.appendingPathComponent("panel-combined-\(tag).png"))
             }
             if want("onboarding") {
-                save(OnboardingView().padding(40).background(wall), appearance, dir.appendingPathComponent("onboarding-\(tag).png"))
+                save(OnboardingRoot().padding(40).background(wall), appearance, dir.appendingPathComponent("onboarding-\(tag).png"))
             }
             if want("notch") {
                 NotchWatcher.shared.debugSetHidden([.cpu, .memory])
-                save(NotchAlertView().padding(40).background(wall), appearance, dir.appendingPathComponent("notch-alert-\(tag).png"))
+                save(NotchAlertRoot().padding(40).background(wall), appearance, dir.appendingPathComponent("notch-alert-\(tag).png"))
                 Navigator.shared.page = .menubar
-                save(MainView().frame(width: 860, height: 1000).background(wall), appearance, dir.appendingPathComponent("page-menubar-notch-\(tag).png"))
+                save(MainView().frame(width: UIScale.of(860), height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-menubar-notch-\(tag).png"))
                 NotchWatcher.shared.debugSetHidden([])
             }
             let pages: [(Page, String)] = [
@@ -55,7 +55,7 @@ enum Snapshots {
             ]
             for (page, name) in pages where want("page") || want("page-\(name)") {
                 Navigator.shared.page = page
-                save(MainView().frame(width: 860, height: 1000).background(wall), appearance, dir.appendingPathComponent("page-\(name)-\(tag).png"))
+                save(MainView().frame(width: UIScale.of(860), height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-\(name)-\(tag).png"))
             }
         }
     }

@@ -7,16 +7,15 @@ struct MainView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Sidebar()
-                .frame(width: 200)
+            UIScaled { Sidebar().frame(width: 200) }
             PageView(page: navigator.page)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(minWidth: 760, minHeight: 600)
-        .background(GlassBackground(radius: 18, material: .underWindowBackground))
+        .background(GlassBackground(radius: UIScale.of(18), material: .underWindowBackground))
         .environment(\.accent, settings.prefs.general.accent.colors)
         .ui(13)
         .foregroundStyle(Theme.text)
+        .focusEffectDisabled()
         .ignoresSafeArea()
     }
 }
@@ -27,9 +26,10 @@ struct PageView: View {
     var body: some View {
         if RenderContext.offscreen {
             // ImageRenderer can't draw scroll views.
-            stack.frame(maxHeight: .infinity, alignment: .top)
+            UIScaled { stack }.frame(maxHeight: .infinity, alignment: .top)
         } else {
-            ScrollView { stack }
+            // The scroll view itself stays unscaled; only the page inside it is drawn at UI scale.
+            ScrollView { UIScaled { stack } }
                 .scrollIndicators(.automatic)
                 .id(page)
         }

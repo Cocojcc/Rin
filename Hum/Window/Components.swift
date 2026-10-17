@@ -8,6 +8,44 @@ extension View {
     func ui(_ size: CGFloat, _ weight: CGFloat = 400) -> some View { font(Fonts.ui(size, weight)) }
 }
 
+// MARK: - Scale
+
+/// Hum's windows and dropdowns are laid out at the design's sizes and drawn at this scale, so
+/// the whole UI shrinks uniformly and keeps the design's proportions.
+enum UIScale {
+    static let factor: CGFloat = 0.85
+
+    static func of(_ value: CGFloat) -> CGFloat { value * factor }
+}
+
+/// Lays its content out at 1 / scale of the space it gets, then draws it scaled down to fit.
+struct UIScaled<Content: View>: View {
+    var scale: CGFloat = UIScale.factor
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        ScaleLayout(scale: scale) {
+            content.scaleEffect(scale, anchor: .topLeading)
+        }
+    }
+}
+
+private struct ScaleLayout: Layout {
+    var scale: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let child = subviews.first else { return .zero }
+        let size = child.sizeThatFits(ProposedViewSize(width: proposal.width.map { $0 / scale },
+                                                       height: proposal.height.map { $0 / scale }))
+        return CGSize(width: size.width * scale, height: size.height * scale)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, anchor: .topLeading,
+                              proposal: ProposedViewSize(width: bounds.width / scale, height: bounds.height / scale))
+    }
+}
+
 // MARK: - Containers
 
 /// Subtle filled area that groups content on glass (no border).

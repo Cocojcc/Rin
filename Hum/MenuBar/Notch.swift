@@ -68,7 +68,7 @@ final class NotchAlertController {
     func show() {
         close()
         let panel = NotchPanel()
-        let host = NSHostingView(rootView: NotchAlertView()
+        let host = NSHostingView(rootView: NotchAlertRoot()
             .environment(\.accent, SettingsStore.shared.prefs.general.accent.colors))
         panel.contentView = host
         let size = host.fittingSize
@@ -77,7 +77,7 @@ final class NotchAlertController {
             let menuBar = max(screen.frame.maxY - screen.visibleFrame.maxY, NSStatusBar.system.thickness)
             // Just right of the notch, under where the covered items would be.
             let notchRight = screen.auxiliaryTopRightArea?.minX ?? screen.frame.midX
-            let x = min(max(notchRight - 23, screen.frame.minX + 8), screen.frame.maxX - size.width - 8)
+            let x = min(max(notchRight - UIScale.of(23), screen.frame.minX + 8), screen.frame.maxX - size.width - 8)
             let y = screen.frame.maxY - menuBar - 8 - size.height
             panel.setFrame(NSRect(x: x, y: y, width: size.width, height: size.height), display: true)
         }
@@ -106,6 +106,14 @@ final class NotchPanel: NSPanel {
     }
 
     override var canBecomeKey: Bool { true }
+}
+
+/// The notch card at UI scale, on glass.
+struct NotchAlertRoot: View {
+    var body: some View {
+        UIScaled { NotchAlertView() }
+            .background(GlassBackground(radius: UIScale.of(22)))
+    }
 }
 
 struct NotchAlertView: View {
@@ -153,9 +161,9 @@ struct NotchAlertView: View {
         }
         .padding(18)
         .frame(width: 320)
-        .background(GlassBackground(radius: 22))
         .ui(13)
         .foregroundStyle(Theme.text)
+        .focusEffectDisabled()
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.isModal)
     }

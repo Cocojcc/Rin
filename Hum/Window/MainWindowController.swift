@@ -64,12 +64,12 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         // The SwiftUI root draws the frosted glass, so the window itself is clear.
         window.isOpaque = false
         window.backgroundColor = .clear
-        window.setContentSize(NSSize(width: 860, height: 760))
-        window.contentMinSize = NSSize(width: 760, height: 600)
-        window.setFrameAutosaveName("HumMainWindow.v2")
+        window.setContentSize(NSSize(width: UIScale.of(860), height: UIScale.of(760)))
+        window.contentMinSize = NSSize(width: UIScale.of(760), height: UIScale.of(600))
+        window.setFrameAutosaveName("HumMainWindow.v3")
         window.isReleasedWhenClosed = false
         window.delegate = self
-        if !window.setFrameUsingName("HumMainWindow.v2") { window.center() }
+        if !window.setFrameUsingName("HumMainWindow.v3") { window.center() }
         self.window = window
     }
 

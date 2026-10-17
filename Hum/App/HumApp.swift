@@ -4,6 +4,9 @@ import SwiftUI
 @main
 enum HumMain {
     static func main() {
+        // Draw text the way the design does (WebKit's "antialiased"): macOS font smoothing
+        // thickens every stroke, which made the glass UI read noticeably heavier than the canvas.
+        UserDefaults.standard.register(defaults: ["AppleFontSmoothing": 0])
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate
