@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         OnboardingController.shared.showIfNeeded()
         UpdateChecker.shared.checkOnLaunch()
         #if DEBUG
+        ToggleCheck.runIfRequested()
         LiveDump.scheduleIfRequested()
         #endif
         if CommandLine.arguments.contains("--open-window") {
@@ -44,12 +45,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 enum Appearance {
+    /// Only touches NSApp.appearance when it actually changes: setting it redraws every window,
+    /// status items included.
     static func apply() {
+        let target: NSAppearance?
         switch SettingsStore.shared.prefs.general.appearance {
-        case .system: NSApp.appearance = nil
-        case .light: NSApp.appearance = NSAppearance(named: .aqua)
-        case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
+        case .system: target = nil
+        case .light: target = NSAppearance(named: .aqua)
+        case .dark: target = NSAppearance(named: .darkAqua)
         }
+        guard NSApp.appearance?.name != target?.name else { return }
+        NSApp.appearance = target
     }
 
     /// Writes the per-app language override; takes effect on next launch.

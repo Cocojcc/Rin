@@ -53,31 +53,45 @@ final class StatusBarController: NSObject {
         return prefs.menubar.order.filter { prefs.isVisible($0) && (!ready || MenuBarText.available($0, s)) }
     }
 
+    /// There is one status item per module (plus the combined one), created in settings order.
+    /// Showing or hiding a module only flips `isVisible`, so the other items stay put; removing
+    /// and re-adding every item made the whole group blink. Only a reorder rebuilds them.
     private func rebuildIfNeeded() {
         let prefs = SettingsStore.shared.prefs
-        let modules = currentModules()
-        let key = prefs.menubar.displayMode.rawValue + ":" + modules.map(\.rawValue).joined(separator: ",")
-        guard key != layoutKey else { return }
-        layoutKey = key
-        PanelController.shared.close()
-        for entry in items { NSStatusBar.system.removeStatusItem(entry.item) }
-        items = []
-        renderers = [:]
-        lastBytes = [:]
-
-        if prefs.menubar.displayMode == .combined || modules.isEmpty {
-            // With nothing visible, the combined item shows the app mark so there is always a way back in.
-            add(module: nil)
-        } else {
+        let key = prefs.menubar.order.map(\.rawValue).joined(separator: ",")
+        if key != layoutKey {
+            layoutKey = key
+            PanelController.shared.close()
+            for entry in items { NSStatusBar.system.removeStatusItem(entry.item) }
+            items = []
+            renderers = [:]
+            lastBytes = [:]
             // New items appear to the left of existing ones, so add right-to-left.
-            for m in modules.reversed() { add(module: m) }
+            add(module: nil)
+            for m in prefs.menubar.order.reversed() { add(module: m) }
         }
-        refresh()
+        updateVisibility()
+    }
+
+    private func updateVisibility() {
+        let prefs = SettingsStore.shared.prefs
+        let modules = currentModules()
+        // With nothing visible, the combined item shows the app mark so there is always a way back in.
+        let combined = prefs.menubar.displayMode == .combined || modules.isEmpty
+        for entry in items {
+            let show = entry.module.map { !combined && modules.contains($0) } ?? combined
+            guard entry.item.isVisible != show else { continue }
+            if !show, PanelController.shared.kind == entry.module.map({ PanelKind.module($0) }) ?? .combined {
+                PanelController.shared.close()
+            }
+            entry.item.isVisible = show
+        }
     }
 
     private func add(module: Module?) {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.autosaveName = "hum." + (module?.rawValue ?? "combined")
+        item.isVisible = false
         guard let button = item.button else { return }
         button.imagePosition = .imageOnly
         button.target = self
@@ -93,7 +107,7 @@ final class StatusBarController: NSObject {
         let prefs = SettingsStore.shared.prefs
         let s = Monitor.shared.snapshot
         let height = NSStatusBar.system.thickness
-        for (index, entry) in items.enumerated() {
+        for (index, entry) in items.enumerated() where entry.item.isVisible {
             guard let button = entry.item.button else { continue }
             let colored: Bool
             let label: String
@@ -156,7 +170,7 @@ final class StatusBarController: NSObject {
 
     #if DEBUG
     func debugButtons() -> [(String, NSStatusBarButton)] {
-        items.compactMap { entry in entry.item.button.map { (entry.module?.rawValue ?? "combined", $0) } }
+        items.filter(\.item.isVisible).compactMap { entry in entry.item.button.map { (entry.module?.rawValue ?? "combined", $0) } }
     }
     #endif
 

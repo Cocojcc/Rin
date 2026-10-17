@@ -148,6 +148,32 @@ enum LiveDump {
     }
 }
 
+/// `Hum --check-toggle`: flips one module's visibility and reports whether the other status
+/// items survived (same buttons, same windows) instead of being torn down and re-added.
+enum ToggleCheck {
+    static func runIfRequested() {
+        guard CommandLine.arguments.contains("--check-toggle") else { return }
+        SettingsStore.persistenceEnabled = false
+        NotchWatcher.alertsEnabled = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            let before = StatusBarController.shared.debugButtons()
+            let prefs = SettingsStore.shared.prefs
+            let target = Module.allCases.first { !prefs.isVisible($0) } ?? .gpu
+            SettingsStore.shared.prefs.setVisible(target, !prefs.isVisible(target))
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                let after = StatusBarController.shared.debugButtons()
+                print("toggled", target.rawValue, "before", before.map(\.0), "after", after.map(\.0))
+                for (name, button) in before {
+                    let kept = after.contains { $0.1 === button && $0.1.window === button.window }
+                    print(name, kept ? "kept" : "recreated")
+                }
+                fflush(stdout)
+                exit(0)
+            }
+        }
+    }
+}
+
 /// Every module in every style on a light / dark menu bar strip.
 private struct MenubarSheet: View {
     var dark: Bool

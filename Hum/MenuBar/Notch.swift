@@ -17,13 +17,15 @@ final class NotchWatcher {
     private(set) var hidden: [Module] = []
 
     @ObservationIgnored private var lastCheck: [Module] = []
+    /// Off in debug self-checks that add a second copy of the items.
+    static var alertsEnabled = true
     @ObservationIgnored private var alerted = false
 
     func check(_ items: [(module: Module?, item: NSStatusItem)]) {
         var covered: [Module] = []
         if NSScreen.screens.contains(where: { $0.auxiliaryTopRightArea != nil }) {
             for entry in items {
-                guard let module = entry.module, let window = entry.item.button?.window else { continue }
+                guard let module = entry.module, entry.item.isVisible, let window = entry.item.button?.window else { continue }
                 if let screen = window.screen {
                     if let area = screen.auxiliaryTopRightArea, window.frame.minX < area.minX { covered.append(module) }
                 } else {
@@ -50,7 +52,7 @@ final class NotchWatcher {
 
     private func alertIfNeeded() {
         let prefs = SettingsStore.shared.prefs
-        guard !alerted, prefs.general.onboarded, prefs.menubar.displayMode == .separate,
+        guard Self.alertsEnabled, !alerted, prefs.general.onboarded, prefs.menubar.displayMode == .separate,
               !prefs.menubar.notchAlertDismissed else { return }
         alerted = true
         NotchAlertController.shared.show()
