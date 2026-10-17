@@ -1,0 +1,112 @@
+import AppKit
+import SwiftUI
+
+@main
+enum HumMain {
+    static func main() {
+        let app = NSApplication.shared
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.setActivationPolicy(.accessory)
+        withExtendedLifetime(delegate) { app.run() }
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        #if DEBUG
+        if Snapshots.runIfRequested() { return }
+        #endif
+        Appearance.apply()
+        NSApp.mainMenu = MainMenu.build()
+        Alerts.shared.setUp()
+        Monitor.shared.start()
+        StatusBarController.shared.start()
+        #if DEBUG
+        LiveDump.scheduleIfRequested()
+        #endif
+        if CommandLine.arguments.contains("--open-window") {
+            MainWindowController.shared.show(.overview)
+        }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        Monitor.shared.stop()
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        MainWindowController.shared.show(.overview)
+        return true
+    }
+}
+
+enum Appearance {
+    static func apply() {
+        switch SettingsStore.shared.prefs.general.appearance {
+        case .system: NSApp.appearance = nil
+        case .light: NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
+        }
+    }
+
+    /// Writes the per-app language override; takes effect on next launch.
+    static func applyLanguage(_ choice: LanguageChoice) {
+        switch choice {
+        case .system: UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+        case .zhHans: UserDefaults.standard.set(["zh-Hans"], forKey: "AppleLanguages")
+        case .en: UserDefaults.standard.set(["en"], forKey: "AppleLanguages")
+        }
+    }
+
+    static func relaunch() {
+        let url = Bundle.main.bundleURL
+        let config = NSWorkspace.OpenConfiguration()
+        config.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: url, configuration: config) { _, _ in
+            DispatchQueue.main.async { NSApp.terminate(nil) }
+        }
+    }
+}
+
+/// Menu bar shown while the main window is open (the app is a regular app only then).
+enum MainMenu {
+    static func build() -> NSMenu {
+        let main = NSMenu()
+
+        let app = NSMenu()
+        app.addItem(withTitle: L10n.MainMenu.about, action: #selector(AppActions.showAbout), keyEquivalent: "").target = AppActions.shared
+        app.addItem(.separator())
+        app.addItem(withTitle: L10n.Menu.settings, action: #selector(AppActions.showSettings), keyEquivalent: ",").target = AppActions.shared
+        app.addItem(.separator())
+        app.addItem(withTitle: L10n.MainMenu.hide, action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        let others = app.addItem(withTitle: L10n.MainMenu.hideOthers, action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
+        others.keyEquivalentModifierMask = [.command, .option]
+        app.addItem(.separator())
+        app.addItem(withTitle: L10n.Menu.quit, action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        main.addItem(submenu(app, title: L10n.App.name))
+
+        let edit = NSMenu(title: L10n.MainMenu.edit)
+        edit.addItem(withTitle: L10n.MainMenu.copy, action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: L10n.MainMenu.selectAll, action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        main.addItem(submenu(edit, title: L10n.MainMenu.edit))
+
+        let window = NSMenu(title: L10n.MainMenu.window)
+        window.addItem(withTitle: L10n.MainMenu.minimize, action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        window.addItem(withTitle: L10n.MainMenu.close, action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        main.addItem(submenu(window, title: L10n.MainMenu.window))
+        NSApp.windowsMenu = window
+        return main
+    }
+
+    private static func submenu(_ menu: NSMenu, title: String) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        item.submenu = menu
+        return item
+    }
+}
+
+final class AppActions: NSObject {
+    static let shared = AppActions()
+    @objc func showAbout() { MainWindowController.shared.show(.about) }
+    @objc func showSettings() { MainWindowController.shared.show(.general) }
+}
