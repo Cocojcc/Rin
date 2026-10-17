@@ -86,6 +86,10 @@ enum L10n {
         static var mono: String { tr("common.mono") }
         static var colored: String { tr("common.colored") }
         static var restart: String { tr("common.restart") }
+        static var percentSign: String { tr("common.percentSign") }
+        static var wattUnit: String { tr("common.wattUnit") }
+        static var rpmUnit: String { tr("common.rpmUnit") }
+        static func watts(_ n: Int) -> String { tr("common.watts", n) }
     }
 
     enum Overview {
@@ -155,6 +159,7 @@ enum L10n {
 
     enum A11y {
         static var separator: String { tr("a11y.separator") }
+        static var dotSeparator: String { tr("a11y.dotSeparator") }
         static func cpu(_ v: String) -> String { tr("a11y.cpu", v) }
         static func gpu(_ v: String) -> String { tr("a11y.gpu", v) }
         static func memory(_ v: String) -> String { tr("a11y.memory", v) }
@@ -186,6 +191,8 @@ enum L10n {
     }
 
     enum Panel {
+        static var untilFullLabel: String { tr("panel.untilFullLabel") }
+        static var timeLeftLabel: String { tr("panel.timeLeftLabel") }
         static func openMonitor(_ m: String) -> String { tr("panel.openMonitor", m) }
         static func moduleSettings(_ m: String) -> String { tr("panel.moduleSettings", m) }
         static var noProcesses: String { tr("panel.noProcesses") }
@@ -303,6 +310,7 @@ enum L10n {
     }
 
     enum Network {
+        static func downUpCompact(_ down: String, _ up: String) -> String { tr("network.downUpCompact", down, up) }
         static var localIP: String { tr("network.localIP") }
         static var router: String { tr("network.router") }
         static var publicIP: String { tr("network.publicIP") }
@@ -314,6 +322,7 @@ enum L10n {
     }
 
     enum Disk {
+        static func unitFree(_ unit: String) -> String { tr("disk.unitFree", unit) }
         static var read: String { tr("disk.read") }
         static var write: String { tr("disk.write") }
         static var sinceBoot: String { tr("disk.sinceBoot") }
@@ -330,6 +339,7 @@ enum L10n {
     }
 
     enum Monitor {
+        static var degreeCPUAverage: String { tr("monitor.degreeCPUAverage") }
         static var backToNow: String { tr("monitor.backToNow") }
         static func cpuChartA11y(_ v: String) -> String { tr("monitor.cpuChartA11y", v) }
         static func gpuChartA11y(_ v: String) -> String { tr("monitor.gpuChartA11y", v) }
@@ -475,6 +485,44 @@ enum L10n {
         static var chip: String { tr("settings.chip") }
         static var macOS: String { tr("settings.macOS") }
         static func palette(_ p: AccentPalette) -> String { tr("settings.palette." + p.rawValue) }
+        static var celsius: String { tr("settings.celsius") }
+        static var fahrenheit: String { tr("settings.fahrenheit") }
+        static var updates: String { tr("settings.updates") }
+        static var autoCheckUpdates: String { tr("settings.autoCheckUpdates") }
+        static var currentVersion: String { tr("settings.currentVersion") }
+        static var checkForUpdates: String { tr("settings.checkForUpdates") }
+        static var checkingUpdates: String { tr("settings.checkingUpdates") }
+        static var upToDate: String { tr("settings.upToDate") }
+        static var checkFailed: String { tr("settings.checkFailed") }
+        static func downloadVersion(_ v: String) -> String { tr("settings.downloadVersion", v) }
+        static var breadcrumb: String { tr("settings.breadcrumb") }
+        static var networkInterface: String { tr("settings.networkInterface") }
+        static func autoWith(_ v: String) -> String { tr("settings.autoWith", v) }
+        static func interfaceOption(_ kind: String, _ name: String) -> String { tr("settings.interfaceOption", kind, name) }
+        static var ruleCPUSwitch: String { tr("settings.ruleCPUSwitch") }
+        static var ruleMemorySwitch: String { tr("settings.ruleMemorySwitch") }
+        static var ruleDiskSwitch: String { tr("settings.ruleDiskSwitch") }
+        static var ruleBatterySwitch: String { tr("settings.ruleBatterySwitch") }
+        static var ruleTempSwitch: String { tr("settings.ruleTempSwitch") }
+        static var ruleNetworkSwitch: String { tr("settings.ruleNetworkSwitch") }
+        static var banner: String { tr("settings.banner") }
+        static var alertStyle: String { tr("settings.alertStyle") }
+        static func gigabytes(_ n: Int) -> String { tr("settings.gigabytes", n) }
+    }
+
+    enum Notch {
+        static var title: String { tr("notch.title") }
+        static func hiddenCount(_ n: Int) -> String { tr("notch.hiddenCount", n) }
+        static var merge: String { tr("notch.merge") }
+        static var dontRemind: String { tr("notch.dontRemind") }
+        static var openSettings: String { tr("notch.openSettings") }
+        static var blocked: String { tr("notch.blocked") }
+    }
+
+    enum Onboarding {
+        static var title: String { tr("onboarding.title") }
+        static var subtitle: String { tr("onboarding.subtitle") }
+        static var done: String { tr("onboarding.done") }
     }
 
     enum Style {

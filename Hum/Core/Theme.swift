@@ -1,8 +1,9 @@
 import AppKit
+import CoreText
 import SwiftUI
 
-/// Design tokens from the Hum canvas (light / dark pairs). Data colors are shared by the
-/// menu bar, popovers and monitor pages so a value reads the same everywhere.
+/// Design tokens from the Hum canvas (light / dark pairs). Surfaces are neutral and
+/// translucent; color is reserved for data, so a value reads the same everywhere.
 struct RGBA {
     let r: CGFloat, g: CGFloat, b: CGFloat, a: CGFloat
 
@@ -40,57 +41,69 @@ extension Color {
 }
 
 enum Theme {
-    // Surfaces
-    static let content = Color.dyn(RGBA(0xF5F5F7), RGBA(0x1C1C1E))
-    static let side = Color.dyn(RGBA(232, 232, 236, 1), RGBA(38, 38, 42, 1))
-    static let text = Color.dyn(RGBA(0x1D1D1F), RGBA(0xF5F5F7))
-    static let sub = Color.dyn(RGBA(0x6E6E73), RGBA(0x98989D))
-    static let faint = Color.dyn(RGBA(0x8E8E93), RGBA(0x7C7C82))
-    static let group = Color.dyn(RGBA(0xFFFFFF), RGBA(0x2A2A2D))
-    static let groupRim = Color.dyn(RGBA(0, 0, 0, 0.06), RGBA(255, 255, 255, 0.06))
-    static let line = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.07))
-    static let chip = Color.dyn(RGBA(0, 0, 0, 0.055), RGBA(255, 255, 255, 0.08))
-    static let well = chip
-    static let segOn = Color.dyn(RGBA(0xFFFFFF), RGBA(0x56565B))
-    static let rim = Color.dyn(RGBA(29, 29, 31, 0.4), RGBA(245, 245, 247, 0.45))
-    static let track = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.1))
-    static let grid = Color.dyn(RGBA(0, 0, 0, 0.06), RGBA(255, 255, 255, 0.07))
-    static let tip = Color.dyn(RGBA(0xFFFFFF), RGBA(0x3A3A3E))
-    static let tipRim = Color.dyn(RGBA(0, 0, 0, 0.1), RGBA(255, 255, 255, 0.12))
-    static let cross = Color.dyn(RGBA(29, 29, 31, 0.35), RGBA(245, 245, 247, 0.4))
-    static let hover = Color.dyn(RGBA(0, 0, 0, 0.05), RGBA(255, 255, 255, 0.07))
-    static let cache = Color.dyn(RGBA(0, 0, 0, 0.16), RGBA(255, 255, 255, 0.2))
+    // Glass surfaces
+    static let glass = Color.dyn(RGBA(255, 255, 255, 0.62), RGBA(38, 38, 40, 0.6))
+    static let side = Color.dyn(RGBA(255, 255, 255, 0.28), RGBA(20, 20, 22, 0.25))
+    static let glassRim = Color.dyn(RGBA(255, 255, 255, 0.8), RGBA(255, 255, 255, 0.14))
+    static let glassEdge = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(0, 0, 0, 0.5))
+    static let menu = Color.dyn(RGBA(250, 250, 250, 0.82), RGBA(48, 48, 50, 0.85))
 
-    // Popover
-    static let pop = Color.dyn(RGBA(238, 238, 242, 0.97), RGBA(36, 36, 40, 0.97))
-    static let popRim = Color.dyn(RGBA(0, 0, 0, 0.14), RGBA(255, 255, 255, 0.12))
-    static let popGroup = Color.dyn(RGBA(0xFFFFFF), RGBA(0x2E2E32))
+    // Raised controls (selected segments, sidebar selection, inline values)
+    static let raised = Color.dyn(RGBA(0xFFFFFF), RGBA(255, 255, 255, 0.2))
+    static let raisedShadowNear = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(0, 0, 0, 0.3))
+    static let raisedShadowFar = Color.dyn(RGBA(0, 0, 0, 0.06), RGBA(0, 0, 0, 0))
+
+    static let well = Color.dyn(RGBA(0, 0, 0, 0.055), RGBA(255, 255, 255, 0.08))
+    static let panel = Color.dyn(RGBA(0, 0, 0, 0.035), RGBA(255, 255, 255, 0.05))
+    static let line = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(255, 255, 255, 0.1))
+
+    static let text = Color.dyn(RGBA(0x1D1D1D), RGBA(0xF2F2F2))
+    static let sub = Color.dyn(RGBA(0x5C5C5C), RGBA(0xABABAB))
+    static let faint = Color.dyn(RGBA(0x8C8C8C), RGBA(0x7E7E7E))
+    static let track = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.1))
+    static let grid = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.08))
+    static let cache = Color.dyn(RGBA(0, 0, 0, 0.18), RGBA(255, 255, 255, 0.22))
+    static let cross = Color.dyn(RGBA(0, 0, 0, 0.3), RGBA(255, 255, 255, 0.35))
+    static let rim = Color.dyn(RGBA(29, 29, 31, 0.4), RGBA(245, 245, 247, 0.45))
+    static let tile = Color.dyn(RGBA(29, 29, 31, 0.08), RGBA(245, 245, 247, 0.1))
+    static let bar = Color.dyn(RGBA(255, 255, 255, 0.5), RGBA(30, 30, 32, 0.5))
+    static let barFg = Color.dyn(RGBA(0x1D1D1D), RGBA(0xF2F2F2))
+
+    static let ink = Color.dyn(RGBA(0x1D1D1D), RGBA(0xF2F2F2))
+    static let onInk = Color.dyn(RGBA(0xFFFFFF), RGBA(0x1D1D1D))
 
     // Status
-    static let danger = Color.dyn(RGBA(0xD70015), RGBA(0xD93A2F))
-    static let dangerBg = Color.dyn(RGBA(255, 59, 48, 0.1), RGBA(255, 69, 58, 0.18))
-    static let dangerText = Color.dyn(RGBA(0xC4211A), RGBA(0xFF8A80))
-    static let warnBg = Color.dyn(RGBA(245, 135, 10, 0.14), RGBA(255, 159, 10, 0.2))
-    static let warnText = Color.dyn(RGBA(0xA85A00), RGBA(0xFFB340))
-    static let ok = Color.dyn(RGBA(0x1E8E3E), RGBA(0x30D158))
-    static let okBg = Color.dyn(RGBA(40, 167, 69, 0.12), RGBA(48, 209, 88, 0.16))
-    static let low = Color.dyn(RGBA(0xD70015), RGBA(0xFF453A))
+    static let ok = Color.dyn(RGBA(0x3F7F4C), RGBA(0x8FD09C))
+    static let okBg = Color.dyn(RGBA(79, 143, 92, 0.15), RGBA(127, 192, 140, 0.18))
+    static let warn = Color.dyn(RGBA(0x9A6220), RGBA(0xF0C080))
+    static let warnBg = Color.dyn(RGBA(201, 138, 62, 0.18), RGBA(226, 168, 98, 0.2))
+    static let danger = Color.dyn(RGBA(0xB23F2C), RGBA(0xF09A88))
+    static let dangerBg = Color.dyn(RGBA(196, 80, 60, 0.12), RGBA(238, 138, 120, 0.16))
+    static let dangerFill = Color.dyn(RGBA(0xB23F2C), RGBA(0xE07A66))
+    static let onDanger = Color.dyn(RGBA(0xFFFFFF), RGBA(0x1D1D1D))
 
     // Data
-    static let cpu = Color.dyn(RGBA(0x28A745), RGBA(0x30D158))
-    static let cpuSoft = Color.dyn(RGBA(40, 167, 69, 0.22), RGBA(48, 209, 88, 0.28))
-    static let sys = Color.dyn(RGBA(0xF5870A), RGBA(0xFF9F0A))
-    static let gpu = Color.dyn(RGBA(0xE0457B), RGBA(0xFF6B98))
-    static let mem = Color.dyn(RGBA(0x5856D6), RGBA(0x7D7AFF))
-    static let down = Color.dyn(RGBA(0x0A7AFF), RGBA(0x0A84FF))
-    static let up = Color.dyn(RGBA(0xF5870A), RGBA(0xFF9F0A))
-    static let read = Color.dyn(RGBA(0x0A7AFF), RGBA(0x0A84FF))
-    static let write = Color.dyn(RGBA(0xAF52DE), RGBA(0xBF5AF2))
-    static let disk = Color.dyn(RGBA(0x1A9CB0), RGBA(0x40C8E0))
-    static let temp = Color.dyn(RGBA(0xF2603C), RGBA(0xFF6B4A))
-    static let bat = Color.dyn(RGBA(0x28A745), RGBA(0x30D158))
+    static let cpu = Color.dyn(RGBA(0x4F8F5C), RGBA(0x7FC08C))
+    static let sys = Color.dyn(RGBA(0xC98A3E), RGBA(0xE2A862))
+    static let gpu = Color.dyn(RGBA(0xC05A7C), RGBA(0xE890AC))
+    static let mem = Color.dyn(RGBA(0x6A64A8), RGBA(0xA49EDB))
+    static let down = Color.dyn(RGBA(0x4F7FB0), RGBA(0x86AEDB))
+    static let up = Color.dyn(RGBA(0xC98A3E), RGBA(0xE2A862))
+    static let read = Color.dyn(RGBA(0x4F7FB0), RGBA(0x86AEDB))
+    static let write = Color.dyn(RGBA(0x9A6AA8), RGBA(0xC9A0D6))
+    static let disk = Color.dyn(RGBA(0x3D8C88), RGBA(0x73C2BC))
+    static let temp = Color.dyn(RGBA(0xC4683F), RGBA(0xE69470))
+    static let bat = Color.dyn(RGBA(0x4F8F5C), RGBA(0x7FC08C))
 
-    // Menu bar states
+    // Menu bar items keep Apple's vivid colors: they sit on the system menu bar, not on glass.
+    static let barCPU = Color.dyn(RGBA(0x34C759), RGBA(0x34C759))
+    static let barMem = Color.dyn(RGBA(0x5E5CE6), RGBA(0x5E5CE6))
+    static let barUp = Color.dyn(RGBA(0xFF9F0A), RGBA(0xFF9F0A))
+    static let barDown = Color.dyn(RGBA(0x0A84FF), RGBA(0x0A84FF))
+    static let barDisk = Color.dyn(RGBA(0xFF9F0A), RGBA(0xFF9F0A))
+    static let barBat = Color.dyn(RGBA(0x34C759), RGBA(0x34C759))
+    static let barTemp = Color.dyn(RGBA(0xFF375F), RGBA(0xFF375F))
+    static let barGPU = Color.dyn(RGBA(0xFF6B98), RGBA(0xFF6B98))
     static let barWarn = NSColor.dynamic(RGBA(0xB25000), RGBA(0xFF9F0A))
     static let barCrit = NSColor.dynamic(RGBA(0xD70015), RGBA(0xFF453A))
 
@@ -107,61 +120,49 @@ enum Theme {
     }
 }
 
-/// The user-selectable accent. Orange is the brand color; "system" follows the macOS accent.
+/// Soft two-layer shadow under raised controls.
+struct RaisedShadow: ViewModifier {
+    var on = true
+
+    func body(content: Content) -> some View {
+        content
+            .shadow(color: on ? Theme.raisedShadowNear : .clear, radius: 1, y: 1)
+            .shadow(color: on ? Theme.raisedShadowFar : .clear, radius: 5, y: 3)
+    }
+}
+
+extension View {
+    func raisedShadow(_ on: Bool = true) -> some View { modifier(RaisedShadow(on: on)) }
+}
+
+/// The user-selectable accent. Graphite (ink) is the default; "system" follows the macOS accent.
 enum AccentPalette: String, Codable, CaseIterable, Identifiable {
     case system, green, teal, indigo, orange, graphite
 
     var id: String { rawValue }
 
-    private var values: (RGBA, RGBA, RGBA, RGBA, RGBA, RGBA)? {
-        switch self {
-        case .system: return nil
-        case .green: return (RGBA(0x22A45D), RGBA(0x30D158), RGBA(34, 164, 93, 0.13), RGBA(48, 209, 88, 0.2), RGBA(0x17763F), RGBA(0x6EE59A))
-        case .teal: return (RGBA(0x0F9D8A), RGBA(0x2CC5AE), RGBA(15, 157, 138, 0.13), RGBA(44, 197, 174, 0.2), RGBA(0x0B7A6B), RGBA(0x6ADBC8))
-        case .indigo: return (RGBA(0x5856D6), RGBA(0x7D7AFF), RGBA(88, 86, 214, 0.12), RGBA(125, 122, 255, 0.22), RGBA(0x4644B8), RGBA(0xB0AEFF))
-        case .orange: return (RGBA(0xF7821B), RGBA(0xFF9F2E), RGBA(247, 130, 27, 0.13), RGBA(255, 159, 46, 0.2), RGBA(0xB3570A), RGBA(0xFFB766))
-        case .graphite: return (RGBA(0x1D1D1F), RGBA(0xF5F5F7), RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.12), RGBA(0x1D1D1F), RGBA(0xF5F5F7))
-        }
-    }
-
     var colors: AccentColors {
-        guard let v = values else {
-            let accent = NSColor.controlAccentColor
-            return AccentColors(
-                accent: Color(nsColor: accent),
-                tint: Color(nsColor: accent.withAlphaComponent(0.14)),
-                tintText: Color(nsColor: NSColor(name: nil) { ap in
-                    let base = accent.usingColorSpace(.sRGB) ?? accent
-                    return ap.isDark ? base.blended(withFraction: 0.35, of: .white) ?? base
-                                     : base.blended(withFraction: 0.25, of: .black) ?? base
-                }),
-                onAccent: .white
-            )
+        switch self {
+        case .system: return AccentColors(accent: Color(nsColor: .controlAccentColor), onAccent: .white)
+        case .green: return AccentColors(accent: .dyn(RGBA(0x22A45D), RGBA(0x30D158)), onAccent: .white)
+        case .teal: return AccentColors(accent: .dyn(RGBA(0x0F9D8A), RGBA(0x2CC5AE)), onAccent: .white)
+        case .indigo: return AccentColors(accent: .dyn(RGBA(0x5856D6), RGBA(0x7D7AFF)), onAccent: .white)
+        case .orange: return AccentColors(accent: .dyn(RGBA(0xF7821B), RGBA(0xFF9F2E)), onAccent: .white)
+        case .graphite: return AccentColors(accent: Theme.ink, onAccent: Theme.onInk)
         }
-        return AccentColors(
-            accent: .dyn(v.0, v.1),
-            tint: .dyn(v.2, v.3),
-            tintText: .dyn(v.4, v.5),
-            onAccent: self == .graphite ? .dyn(RGBA(0xFFFFFF), RGBA(0x1D1D1F)) : .white
-        )
     }
 
     /// Swatch shown in the accent picker.
-    var swatch: Color {
-        if self == .system { return Color(nsColor: .controlAccentColor) }
-        return colors.accent
-    }
+    var swatch: Color { colors.accent }
 }
 
 struct AccentColors {
     var accent: Color
-    var tint: Color
-    var tintText: Color
     var onAccent: Color
 }
 
 private struct AccentKey: EnvironmentKey {
-    static let defaultValue = AccentPalette.orange.colors
+    static let defaultValue = AccentPalette.graphite.colors
 }
 
 extension EnvironmentValues {
@@ -171,7 +172,31 @@ extension EnvironmentValues {
     }
 }
 
+/// Space Grotesk for the window and panels (bundled, OFL); the menu bar keeps the system font.
 enum Fonts {
-    /// Rounded heavy numerals used for headline values.
-    static func big(_ size: CGFloat) -> Font { .system(size: size, weight: .heavy, design: .rounded) }
+    private static var registered = false
+    private static var cache: [String: Font] = [:]
+    private static let lock = NSLock()
+
+    static func register() {
+        guard !registered, let url = Bundle.main.url(forResource: "SpaceGrotesk", withExtension: "ttf") else { return }
+        registered = CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+    }
+
+    /// Space Grotesk at an exact weight (variable font, 300...700), tabular figures.
+    static func ui(_ size: CGFloat, _ weight: CGFloat = 400) -> Font {
+        let key = "\(size)-\(weight)"
+        lock.lock(); defer { lock.unlock() }
+        if let f = cache[key] { return f }
+        register()
+        let wght: UInt32 = 0x7767_6874 // 'wght'
+        let base = CTFontDescriptorCreateWithAttributes([
+            kCTFontFamilyNameAttribute: "Space Grotesk",
+            kCTFontVariationAttribute: [NSNumber(value: wght): NSNumber(value: Double(weight))],
+        ] as CFDictionary)
+        let tabular = CTFontDescriptorCreateCopyWithFeature(base, kNumberSpacingType as CFNumber, kMonospacedNumbersSelector as CFNumber)
+        let font = Font(CTFontCreateWithFontDescriptor(tabular, size, nil))
+        cache[key] = font
+        return font
+    }
 }

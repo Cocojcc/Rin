@@ -27,13 +27,25 @@ enum Snapshots {
         for dark in [false, true] {
             let tag = dark ? "dark" : "light"
             let appearance = NSAppearance(named: dark ? .darkAqua : .aqua)!
+            // The canvas's mint wallpaper, so the glass reads as it does in the design.
+            let wall = dark ? Color(red: 0.122, green: 0.208, blue: 0.153) : Color(red: 0.804, green: 0.898, blue: 0.808)
             func want(_ name: String) -> Bool { only == nil || name.hasPrefix(only!) }
             if want("menubar") { save(MenubarSheet(dark: dark), appearance, dir.appendingPathComponent("menubar-\(tag).png")) }
             for m in Module.allCases where want("panel") {
-                save(PanelRoot(kind: .module(m)).padding(20).background(dark ? Color(white: 0.12) : Color(white: 0.55)), appearance, dir.appendingPathComponent("panel-\(m.rawValue)-\(tag).png"))
+                save(PanelRoot(kind: .module(m)).padding(20).background(wall), appearance, dir.appendingPathComponent("panel-\(m.rawValue)-\(tag).png"))
             }
             if want("panel") {
-                save(PanelRoot(kind: .combined).padding(20).background(dark ? Color(white: 0.12) : Color(white: 0.55)), appearance, dir.appendingPathComponent("panel-combined-\(tag).png"))
+                save(PanelRoot(kind: .combined).padding(20).background(wall), appearance, dir.appendingPathComponent("panel-combined-\(tag).png"))
+            }
+            if want("onboarding") {
+                save(OnboardingView().padding(40).background(wall), appearance, dir.appendingPathComponent("onboarding-\(tag).png"))
+            }
+            if want("notch") {
+                NotchWatcher.shared.debugSetHidden([.cpu, .memory])
+                save(NotchAlertView().padding(40).background(wall), appearance, dir.appendingPathComponent("notch-alert-\(tag).png"))
+                Navigator.shared.page = .menubar
+                save(MainView().frame(width: 860, height: 1000).background(wall), appearance, dir.appendingPathComponent("page-menubar-notch-\(tag).png"))
+                NotchWatcher.shared.debugSetHidden([])
             }
             let pages: [(Page, String)] = [
                 (.overview, "overview"), (.monitor(.cpu), "cpu"), (.monitor(.gpu), "gpu"), (.monitor(.memory), "memory"),
@@ -43,7 +55,7 @@ enum Snapshots {
             ]
             for (page, name) in pages where want("page") || want("page-\(name)") {
                 Navigator.shared.page = page
-                save(MainView().frame(width: 860, height: 1000), appearance, dir.appendingPathComponent("page-\(name)-\(tag).png"))
+                save(MainView().frame(width: 860, height: 1000).background(wall), appearance, dir.appendingPathComponent("page-\(name)-\(tag).png"))
             }
         }
     }
@@ -106,6 +118,9 @@ enum LiveDump {
     }
 
     private static func dumpItems(_ dir: URL) {
+        if let onboarding = NSApp.windows.first(where: { $0.title == L10n.Onboarding.title && $0.isVisible })?.contentView {
+            write(onboarding, dir.appendingPathComponent("live-onboarding.png"))
+        }
         let buttons = StatusBarController.shared.debugButtons()
         for (name, button) in buttons {
             if let w = button.window { print("item", name, w.frame, "appearance", w.effectiveAppearance.name.rawValue) }

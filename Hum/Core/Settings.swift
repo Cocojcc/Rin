@@ -18,11 +18,14 @@ enum NotificationStyle: String, Codable, CaseIterable { case banner, alert }
 
 struct GeneralPrefs: Codable, Equatable {
     var appearance: AppearanceMode = .system
-    var accent: AccentPalette = .orange
+    var accent: AccentPalette = .graphite
     var temperatureUnit: TemperatureUnit = .celsius
     var language: LanguageChoice = .system
     var refreshInterval: Double = 2
     var slowOnBattery = true
+    var autoCheckUpdates = true
+    /// Set once the first-launch window has been finished or closed.
+    var onboarded = false
 }
 
 struct CPUPrefs: Codable, Equatable {
@@ -88,7 +91,7 @@ struct DiskPrefs: Codable, Equatable {
 }
 
 struct BatteryPrefs: Codable, Equatable {
-    var visible = true
+    var visible = false
     var style: BatteryStyle = .iconPercent
     var showTimeRemaining = false
     var showBolt = true
@@ -100,7 +103,7 @@ struct BatteryPrefs: Codable, Equatable {
 }
 
 struct SensorsPrefs: Codable, Equatable {
-    var visible = true
+    var visible = false
     var style: SensorsStyle = .iconTemp
     var sensor: SensorChoice = .cpuAverage
     var color: TempColor = .mono
@@ -114,6 +117,8 @@ struct MenubarPrefs: Codable, Equatable {
     var iconColor: ColorMode = .mono
     var colorOnHighLoad = true
     var order: [Module] = Module.allCases
+    /// "不再提醒" on the notch card.
+    var notchAlertDismissed = false
 }
 
 struct AlertPrefs: Codable, Equatable {
@@ -130,6 +135,7 @@ struct AlertPrefs: Codable, Equatable {
     var tempOn = false
     var tempThreshold: Double = 95
     var networkOn = true
+    var style: NotificationStyle = .banner
     var sound = false
     var colorMenubar = true
 }
@@ -175,7 +181,8 @@ struct Preferences: Codable, Equatable {
 final class SettingsStore {
     static let shared = SettingsStore()
 
-    private static let key = "preferences.v1"
+    private static let key = "preferences.v2"
+    private static let legacyKey = "preferences.v1"
     /// Off while rendering debug snapshots so previews never overwrite the user's settings.
     static var persistenceEnabled = true
 
@@ -188,7 +195,12 @@ final class SettingsStore {
 
     private init() {
         if let data = UserDefaults.standard.data(forKey: Self.key),
-           let decoded = try? JSONDecoder().decode(Preferences.self, from: data) {
+           let decoded = Self.decode(data) {
+            prefs = decoded
+        } else if let data = UserDefaults.standard.data(forKey: Self.legacyKey),
+                  var decoded = Self.decode(data) {
+            // v1 defaulted to orange; the glass design's default accent is graphite.
+            if decoded.general.accent == .orange { decoded.general.accent = .graphite }
             prefs = decoded
         } else {
             prefs = Preferences()
@@ -196,6 +208,28 @@ final class SettingsStore {
         // Keep every module in the order list, even ones added after the prefs were saved.
         let missing = Module.allCases.filter { !prefs.menubar.order.contains($0) }
         prefs.menubar.order.append(contentsOf: missing)
+    }
+
+    /// Decodes saved prefs on top of the defaults, so fields added in later versions get their
+    /// default value instead of failing the whole decode.
+    static func decode(_ data: Data) -> Preferences? {
+        guard let stored = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let defaultsData = try? JSONEncoder().encode(Preferences()),
+              let defaults = try? JSONSerialization.jsonObject(with: defaultsData) as? [String: Any],
+              let merged = try? JSONSerialization.data(withJSONObject: merge(defaults, stored)) else { return nil }
+        return try? JSONDecoder().decode(Preferences.self, from: merged)
+    }
+
+    private static func merge(_ base: [String: Any], _ over: [String: Any]) -> [String: Any] {
+        var out = base
+        for (key, value) in over {
+            if let b = base[key] as? [String: Any], let o = value as? [String: Any] {
+                out[key] = merge(b, o)
+            } else {
+                out[key] = value
+            }
+        }
+        return out
     }
 
     private func save() {
@@ -207,7 +241,9 @@ final class SettingsStore {
 
     func resetMenubar() {
         let defaults = Preferences()
+        let dismissed = prefs.menubar.notchAlertDismissed
         prefs.menubar = defaults.menubar
+        prefs.menubar.notchAlertDismissed = dismissed
         prefs.cpu = defaults.cpu
         prefs.gpu = defaults.gpu
         prefs.memory = defaults.memory

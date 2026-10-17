@@ -149,7 +149,7 @@ final class PanelController {
     }
 }
 
-/// Shared chrome for every dropdown: 320 wide, 10 padding, translucent rounded card.
+/// Shared chrome for every dropdown: 320 wide (384 combined), 16 padding, rounded glass.
 struct PanelRoot: View {
     let kind: PanelKind
     var settings = SettingsStore.shared
@@ -161,17 +161,11 @@ struct PanelRoot: View {
             case .combined: CombinedPanel()
             }
         }
+        .padding(16)
         .frame(width: kind == .combined ? 384 : PanelController.width)
-        .background(
-            ZStack {
-                if !RenderContext.offscreen { VisualEffectBlur(material: .popover) }
-                Theme.pop
-            }
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.popRim, lineWidth: 0.5))
+        .background(GlassBackground(radius: 20))
         .environment(\.accent, settings.prefs.general.accent.colors)
-        .font(.system(size: 12))
+        .ui(13)
         .foregroundStyle(Theme.text)
         .focusEffectDisabled()
     }

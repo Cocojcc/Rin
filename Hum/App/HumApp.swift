@@ -14,6 +14,7 @@ enum HumMain {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Fonts.register()
         #if DEBUG
         if Snapshots.runIfRequested() { return }
         #endif
@@ -22,6 +23,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Alerts.shared.setUp()
         Monitor.shared.start()
         StatusBarController.shared.start()
+        OnboardingController.shared.showIfNeeded()
+        UpdateChecker.shared.checkOnLaunch()
         #if DEBUG
         LiveDump.scheduleIfRequested()
         #endif

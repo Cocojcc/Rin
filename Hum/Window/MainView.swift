@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// Glass window: translucent sidebar on the left, the page on the right.
 struct MainView: View {
     var navigator = Navigator.shared
     var settings = SettingsStore.shared
@@ -7,15 +8,14 @@ struct MainView: View {
     var body: some View {
         HStack(spacing: 0) {
             Sidebar()
-                .frame(width: 210)
-            Rectangle().fill(Theme.line).frame(width: 0.5)
+                .frame(width: 200)
             PageView(page: navigator.page)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Theme.content)
         }
-        .frame(minWidth: 760, minHeight: 560)
+        .frame(minWidth: 760, minHeight: 600)
+        .background(GlassBackground(radius: 18, material: .underWindowBackground))
         .environment(\.accent, settings.prefs.general.accent.colors)
-        .font(.system(size: 13))
+        .ui(13)
         .foregroundStyle(Theme.text)
         .ignoresSafeArea()
     }
@@ -36,11 +36,9 @@ struct PageView: View {
     }
 
     private var stack: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            content
-        }
-        .padding(EdgeInsets(top: 24, leading: 28, bottom: 28, trailing: 28))
-        .frame(maxWidth: .infinity, alignment: .topLeading)
+        content
+            .padding(EdgeInsets(top: 46, leading: 30, bottom: 30, trailing: 30))
+            .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     @ViewBuilder private var content: some View {
@@ -67,7 +65,6 @@ struct PageView: View {
 
 struct Sidebar: View {
     var navigator = Navigator.shared
-    @Environment(\.accent) private var accent
 
     private let monitors: [(Page, String, String)] = [
         (.overview, Icons.overview, L10n.Sidebar.overview),
@@ -91,18 +88,18 @@ struct Sidebar: View {
         VStack(alignment: .leading, spacing: 2) {
             Color.clear.frame(height: 32)   // traffic lights
             HStack(spacing: 10) {
-                AppMark(size: 34)
+                AppMark(size: 26)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(L10n.App.name).font(.system(size: 14, weight: .bold))
-                    Text(L10n.App.version(SystemInfo.appVersion)).font(.system(size: 11)).foregroundStyle(Theme.sub)
+                    Text(L10n.App.name).ui(18, 600).kerning(-0.18)
+                    Text(L10n.App.version(SystemInfo.appVersion)).ui(11).foregroundStyle(Theme.sub)
                 }
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 10)
             .padding(.bottom, 18)
 
             sectionTitle(L10n.Sidebar.monitors)
             ForEach(monitors, id: \.0) { item($0) }
-            sectionTitle(L10n.Sidebar.settings).padding(.top, 10)
+            sectionTitle(L10n.Sidebar.settings).padding(.top, 14)
             ForEach(settingsPages, id: \.0) { item($0) }
             Spacer(minLength: 0)
         }
@@ -110,16 +107,16 @@ struct Sidebar: View {
         .padding(.bottom, 16)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(Theme.side)
+        .overlay(alignment: .trailing) { Rectangle().fill(Theme.line).frame(width: 0.5) }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Sidebar.label)
     }
 
     private func sectionTitle(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(Theme.faint)
-            .padding(.horizontal, 8)
-            .padding(.bottom, 4)
+        Text(text).ui(11, 500)
+            .foregroundStyle(Theme.sub)
+            .padding(.horizontal, 10)
+            .padding(.bottom, 6)
     }
 
     private func item(_ entry: (Page, String, String)) -> some View {
@@ -128,18 +125,18 @@ struct Sidebar: View {
             navigator.page = entry.0
         } label: {
             HStack(spacing: 10) {
-                IconChip(d: entry.1, size: 22, iconSize: 13, radius: 6,
-                         color: on ? accent.onAccent : Theme.text,
-                         fill: on ? accent.accent : Theme.chip, lineWidth: 1.6)
-                Text(entry.2)
-                    .fontWeight(on ? .semibold : .regular)
-                    .foregroundStyle(on ? accent.tintText : Theme.text)
+                LineIcon(d: entry.1, size: 15, lineWidth: 1.5)
+                Text(entry.2).ui(13, on ? 500 : 400)
                 Spacer(minLength: 0)
             }
-            .padding(.leading, 5)
-            .padding(.trailing, 8)
+            .foregroundStyle(on ? Theme.text : Theme.sub)
+            .padding(.horizontal, 10)
             .frame(height: 32)
-            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(on ? accent.tint : Color.clear))
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(on ? Theme.raised : Color.clear)
+                    .raisedShadow(on)
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -147,16 +144,15 @@ struct Sidebar: View {
     }
 }
 
-/// The app mark: three bars on an accent tile.
+/// The app mark: three bars on an ink tile.
 struct AppMark: View {
     var size: CGFloat
-    @Environment(\.accent) private var accent
 
     var body: some View {
-        LineIcon(d: Icons.appMark, size: size * 0.56, viewBox: 24, lineWidth: 2.4)
-            .foregroundStyle(accent.onAccent)
+        LineIcon(d: Icons.appMark, size: size * 0.54, viewBox: 24, lineWidth: 2.6)
+            .foregroundStyle(Theme.onInk)
             .frame(width: size, height: size)
-            .background(RoundedRectangle(cornerRadius: size * 0.265, style: .continuous).fill(accent.accent))
+            .background(RoundedRectangle(cornerRadius: size * 0.3, style: .continuous).fill(Theme.ink))
             .accessibilityHidden(true)
     }
 }

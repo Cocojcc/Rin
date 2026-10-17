@@ -1,13 +1,20 @@
 import AppKit
 import SwiftUI
 
+// MARK: - Typography
+
+extension View {
+    /// Space Grotesk at a size and weight (the design's type ramp: 11 / 12 / 13 / 15 / 18 / 24 / 44).
+    func ui(_ size: CGFloat, _ weight: CGFloat = 400) -> some View { font(Fonts.ui(size, weight)) }
+}
+
 // MARK: - Containers
 
-/// White rounded group used throughout the main window (12 radius, hairline rim).
-struct Card<Content: View>: View {
-    var padding: EdgeInsets = EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14)
-    var radius: CGFloat = 12
-    var fill: Color = Theme.group
+/// Subtle filled area that groups content on glass (no border).
+struct Panel<Content: View>: View {
+    var radius: CGFloat = 16
+    var padding: EdgeInsets = EdgeInsets(top: 14, leading: 14, bottom: 14, trailing: 14)
+    var fill: Color = Theme.panel
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -15,33 +22,60 @@ struct Card<Content: View>: View {
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill))
-            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Theme.groupRim, lineWidth: 0.5))
     }
 }
 
-/// Settings section: small grey heading above a grouped list.
-struct SettingsSection<Content: View>: View {
+/// Section title above a panel: 13 / 500 grey, optional note on the right.
+struct SectionHeader: View {
     var title: String
+    var right: String? = nil
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(title).ui(13, 500).foregroundStyle(Theme.sub).accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 0)
+            if let right { Text(right).ui(12).foregroundStyle(Theme.sub) }
+        }
+        .frame(minHeight: 18)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 8)
+    }
+}
+
+/// A titled block: header, then content.
+struct TitledSection<Content: View>: View {
+    var title: String
+    var right: String? = nil
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Theme.sub)
-                .padding(.horizontal, 4)
-                .accessibilityAddTraits(.isHeader)
-            VStack(spacing: 0) {
-                DividedRows { content }
-            }
-            .padding(.horizontal, 14)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.group))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.groupRim, lineWidth: 0.5))
+        VStack(alignment: .leading, spacing: 0) {
+            SectionHeader(title: title, right: right)
+            content
         }
     }
 }
 
-/// Lays out children with a hairline between each.
+/// Settings group: rows on a panel, separated by hairlines.
+struct SettingsGroup<Content: View>: View {
+    var title: String? = nil
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let title {
+                Text(title).ui(13, 500).foregroundStyle(Theme.sub)
+                    .padding(.horizontal, 14).padding(.bottom, 8)
+                    .accessibilityAddTraits(.isHeader)
+            }
+            VStack(spacing: 0) { DividedRows { content } }
+                .padding(.horizontal, 14)
+                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
+        }
+    }
+}
+
+/// Lays out children with a hairline above every row but the first.
 struct DividedRows<Content: View>: View {
     @ViewBuilder var content: Content
 
@@ -54,22 +88,29 @@ struct DividedRows<Content: View>: View {
             let first = children.first?.id
             ForEach(children) { child in
                 child.overlay(alignment: .top) {
-                    if child.id != first { Rectangle().fill(Theme.line).frame(height: 0.5) }
+                    if child.id != first { Hairline() }
                 }
             }
         }
     }
 }
 
-/// A 40 pt settings row: label on the left, control on the right.
+/// 0.5 pt rule in a 1 pt box so rows below stay on whole points.
+struct Hairline: View {
+    var body: some View {
+        Rectangle().fill(Theme.line).frame(height: 0.5).frame(height: 1, alignment: .top)
+    }
+}
+
+/// Label on the left, control on the right (42 pt rows in settings).
 struct SettingsRow<Control: View>: View {
     var title: String
-    var height: CGFloat = 40
+    var height: CGFloat = 42
     @ViewBuilder var control: Control
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(title).lineLimit(1)
+            Text(title).ui(13).lineLimit(1)
             Spacer(minLength: 8)
             control
         }
@@ -79,8 +120,8 @@ struct SettingsRow<Control: View>: View {
 
 // MARK: - Controls
 
-/// Pill switch (36 × 22) in the accent color.
-struct HumToggle: View {
+/// 34 × 20 switch. On: accent track. Off: grey track with a raised white knob.
+struct HumSwitch: View {
     @Binding var isOn: Bool
     var label: String
     @Environment(\.accent) private var accent
@@ -90,13 +131,13 @@ struct HumToggle: View {
             withAnimation(.easeOut(duration: 0.15)) { isOn.toggle() }
         } label: {
             ZStack(alignment: isOn ? .trailing : .leading) {
-                Capsule().fill(isOn ? accent.accent : Theme.track.opacity(2.2))
-                Circle().fill(isOn ? accent.onAccent : Color.white)
-                    .shadow(color: .black.opacity(0.2), radius: 1, y: 1)
-                    .frame(width: 18, height: 18)
+                Capsule().fill(isOn ? accent.accent : Theme.track)
+                Circle().fill(isOn ? accent.onAccent : Theme.raised)
+                    .raisedShadow(!isOn)
+                    .frame(width: 16, height: 16)
                     .padding(2)
             }
-            .frame(width: 36, height: 22)
+            .frame(width: 34, height: 20)
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -106,13 +147,16 @@ struct HumToggle: View {
     }
 }
 
-/// Grey well with a raised white segment, like the design's radio groups.
-struct SegmentedPicker<Value: Hashable>: View {
+/// Grey well with a raised selected segment. `.compact` for settings rows (24 pt),
+/// `.range` for the time ranges on monitor pages (28 pt, segments share the width),
+/// `.tab` for small inline switches (22 pt, 11 pt text).
+struct Segmented<Value: Hashable>: View {
+    enum Style { case compact, range, tab }
+
     var label: String
     var options: [(Value, String)]
     @Binding var selection: Value
-    var height: CGFloat = 22
-    var fontSize: CGFloat = 12
+    var style: Style = .compact
 
     var body: some View {
         HStack(spacing: 2) {
@@ -122,14 +166,16 @@ struct SegmentedPicker<Value: Hashable>: View {
                     selection = option.0
                 } label: {
                     Text(option.1)
-                        .font(.system(size: fontSize, weight: on ? .semibold : .regular))
+                        .ui(fontSize, on ? 500 : 400)
+                        .lineLimit(1)
                         .foregroundStyle(on ? Theme.text : Theme.sub)
-                        .padding(.horizontal, 10)
+                        .padding(.horizontal, style == .range ? 6 : 7)
+                        .frame(maxWidth: style == .range ? .infinity : nil)
                         .frame(height: height)
                         .background(
-                            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .fill(on ? Theme.segOn : Color.clear)
-                                .shadow(color: .black.opacity(on ? 0.12 : 0), radius: 1, y: 1)
+                            RoundedRectangle(cornerRadius: innerRadius, style: .continuous)
+                                .fill(on ? Theme.raised : Color.clear)
+                                .raisedShadow(on)
                         )
                         .contentShape(Rectangle())
                 }
@@ -137,14 +183,18 @@ struct SegmentedPicker<Value: Hashable>: View {
                 .accessibilityAddTraits(on ? [.isSelected] : [])
             }
         }
-        .padding(2)
-        .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.well))
+        .padding(style == .range ? 3 : 2)
+        .background(RoundedRectangle(cornerRadius: style == .range ? 11 : 9, style: .continuous).fill(Theme.well))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(label)
     }
+
+    private var height: CGFloat { style == .range ? 28 : style == .tab ? 22 : 24 }
+    private var innerRadius: CGFloat { style == .range ? 8 : 7 }
+    private var fontSize: CGFloat { style == .tab ? 11 : 12 }
 }
 
-/// Grey pill that opens a menu of choices ("5 个 ⌄").
+/// Well-coloured pill that opens a menu ("5 个 ⌃⌄").
 struct MenuPill<Value: Hashable>: View {
     var label: String
     var options: [(Value, String)]
@@ -160,106 +210,150 @@ struct MenuPill<Value: Hashable>: View {
                 }
             }
         } label: {
-            HStack(spacing: 5) {
-                Text(options.first(where: { $0.0 == selection })?.1 ?? "")
-                Image(systemName: "chevron.up.chevron.down").font(.system(size: 8, weight: .semibold)).foregroundStyle(Theme.sub)
+            HStack(spacing: 8) {
+                Text(options.first(where: { $0.0 == selection })?.1 ?? "").ui(13)
+                LineIcon(d: Icons.upDown, width: 8, height: 12, viewBox: CGSize(width: 8, height: 12), lineWidth: 1.4)
             }
-            .font(.system(size: 12))
-            .padding(.horizontal, 10)
-            .frame(height: 24)
-            .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.well))
+            .foregroundStyle(Theme.text)
+            .padding(.leading, 10)
+            .padding(.trailing, 8)
+            .frame(height: 26)
+            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.well))
         }
         .menuStyle(.button)
+        .menuIndicator(.hidden)
         .buttonStyle(.plain)
         .fixedSize()
         .accessibilityLabel(label)
     }
 }
 
-/// Grey rounded text button ("恢复默认", "回到现在").
+/// Grey text button ("恢复默认", "检查更新", "回到现在").
 struct WellButton: View {
     var title: String
+    var height: CGFloat = 28
+    var radius: CGFloat = 8
+    var horizontalPadding: CGFloat = 12
+    var expands = false
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(.system(size: 13))
+            Text(title).ui(13)
+                .lineLimit(1)
                 .foregroundStyle(Theme.text)
-                .padding(.horizontal, 12)
-                .frame(height: 26)
-                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.well))
+                .padding(.horizontal, horizontalPadding)
+                .fixedSize(horizontal: !expands, vertical: false)
+                .frame(maxWidth: expands ? .infinity : nil)
+                .frame(height: height)
+                .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Theme.well))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 }
 
-/// Accent-tinted button with dark accent text (white on orange fails contrast).
-struct TintButton: View {
+/// Accent-filled button ("完成", "合并成一项").
+struct PrimaryButton: View {
     var title: String
-    var height: CGFloat = 30
+    var height: CGFloat = 38
+    var radius: CGFloat = 12
+    var fontSize: CGFloat = 13
     var action: () -> Void
     @Environment(\.accent) private var accent
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(accent.tintText)
+            Text(title).ui(fontSize, 500)
+                .lineLimit(1)
+                .foregroundStyle(accent.onAccent)
+                .padding(.horizontal, 10)
                 .frame(maxWidth: .infinity)
                 .frame(height: height)
-                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(accent.tint))
+                .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(accent.accent))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 }
 
+/// Square well button with a line icon.
+struct IconButton: View {
+    var d: String
+    var size: CGFloat = 28
+    var radius: CGFloat = 8
+    var iconSize: CGFloat = 12
+    var viewBox: CGFloat = 12
+    var lineWidth: CGFloat = 1.7
+    var fill: Color = Theme.well
+    var tint: Color = Theme.sub
+    var label: String
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            LineIcon(d: d, size: iconSize, viewBox: viewBox, lineWidth: lineWidth)
+                .foregroundStyle(tint)
+                .frame(width: size, height: size)
+                .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+}
+
 // MARK: - Data display
 
-struct IconChip: View {
-    var d: String
-    var size: CGFloat = 30
-    var iconSize: CGFloat = 16
-    var radius: CGFloat = 8
-    var color: Color = Theme.text
-    var fill: Color = Theme.chip
-    var lineWidth: CGFloat = 1.5
+/// Value over label (monitor-page stat row: 18 / 500 over 12 grey).
+struct StatBlock: View {
+    var value: String
+    var label: String
+    var valueSize: CGFloat = 18
+    var valueColor: Color = Theme.text
 
     var body: some View {
-        LineIcon(d: d, size: iconSize, lineWidth: lineWidth)
-            .foregroundStyle(color)
-            .frame(width: size, height: size)
-            .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill))
-            .accessibilityHidden(true)
-    }
-}
-
-/// Rounded heavy number with a smaller unit, colored like its data.
-struct BigValue: View {
-    var number: String
-    var unit: String
-    var color: Color
-    var size: CGFloat = 30
-    var unitSize: CGFloat = 16
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: unit == "°" ? 0 : 2) {
-            Text(number).font(Fonts.big(size)).monospacedDigit()
-            Text(unit).font(Fonts.big(unit == "°" ? size : unitSize))
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value).ui(valueSize, 500).kerning(valueSize >= 18 ? -0.18 : 0).foregroundStyle(valueColor).lineLimit(1)
+            Text(label).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
         }
-        .foregroundStyle(color)
-        .lineLimit(1)
-        .fixedSize()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 }
 
-/// Thin horizontal meter (4 pt) on a track.
+/// A rounded strip of equal cells separated by hairlines (load average, frequencies, power).
+struct CellStrip: View {
+    var cells: [(String, String)]
+    var fill: Color = Theme.panel
+    var radius: CGFloat = 16
+    var compact = false
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(cells.enumerated()), id: \.offset) { i, cell in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(cell.0).ui(compact ? 14 : 15, 500).lineLimit(1).minimumScaleFactor(0.8)
+                    Text(cell.1).ui(compact ? 11 : 12).foregroundStyle(Theme.sub).lineLimit(1)
+                }
+                .padding(.horizontal, compact ? 12 : 14)
+                .padding(.vertical, compact ? 10 : 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(alignment: .leading) {
+                    if i > 0 { Rectangle().fill(Theme.line).frame(width: 0.5) }
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill))
+    }
+}
+
+/// Thin horizontal meter on a track (3 pt by default).
 struct MeterBar: View {
     var fraction: Double
     var color: Color
-    var height: CGFloat = 4
+    var height: CGFloat = 3
 
     var body: some View {
         GeometryReader { geo in
@@ -273,68 +367,116 @@ struct MeterBar: View {
     }
 }
 
-struct StatBlock: View {
-    var value: String
-    var label: String
-    var valueSize: CGFloat = 16
+/// Circular gauge; `segments` stack around the ring (butt ends when there are several).
+struct Ring: View {
+    struct Segment {
+        var fraction: Double
+        var color: Color
+        var opacity: Double = 1
+    }
+
+    var segments: [Segment]
+    var size: CGFloat
+    var lineWidth: CGFloat
+
+    init(fraction: Double, color: Color, size: CGFloat, lineWidth: CGFloat) {
+        segments = [Segment(fraction: fraction, color: color)]
+        self.size = size
+        self.lineWidth = lineWidth
+    }
+
+    init(segments: [Segment], size: CGFloat, lineWidth: CGFloat) {
+        self.segments = segments
+        self.size = size
+        self.lineWidth = lineWidth
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(value).font(.system(size: valueSize, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
-            Text(label).font(.system(size: 11)).foregroundStyle(Theme.sub).lineLimit(1)
+        ZStack {
+            Circle().stroke(Theme.track, lineWidth: lineWidth)
+            ForEach(Array(starts.enumerated()), id: \.offset) { i, start in
+                let seg = segments[i]
+                Circle()
+                    .trim(from: start, to: min(1, start + max(0, seg.fraction)))
+                    .stroke(seg.color.opacity(seg.opacity), style: StrokeStyle(lineWidth: lineWidth, lineCap: segments.count > 1 ? .butt : .round))
+                    .rotationEffect(.degrees(-90))
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
+        .padding(lineWidth / 2)
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+
+    private var starts: [Double] {
+        var acc = 0.0
+        return segments.map { s in defer { acc += max(0, s.fraction) }; return acc }
     }
 }
 
 struct LegendDot: View {
     var color: Color
     var label: String
+    var size: CGFloat = 8
     var value: String? = nil
 
     var body: some View {
-        HStack(spacing: 5) {
-            Circle().fill(color).frame(width: 7, height: 7)
+        HStack(spacing: 6) {
+            Circle().fill(color).frame(width: size, height: size)
             Text(label).foregroundStyle(Theme.sub)
-            if let value { Text(value).fontWeight(.semibold).foregroundStyle(Theme.text) }
+            if let value { Text(value).fontWeight(.medium).foregroundStyle(Theme.text) }
         }
-        .font(.system(size: 11))
+        .ui(12)
     }
 }
 
-struct StatusBadge: View {
+/// Rounded pill with tinted background ("一切正常", "被挡住", "电量低").
+struct StatusPill: View {
     var text: String
     var fg: Color
     var bg: Color
+    var dot = false
+    var fontSize: CGFloat = 11
+    var height: CGFloat = 18
+    var radius: CGFloat = 6
 
     var body: some View {
-        Text(text)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(fg)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 1)
-            .background(Capsule().fill(bg))
+        HStack(spacing: 6) {
+            if dot { Circle().fill(fg).frame(width: 6, height: 6) }
+            Text(text).ui(fontSize, 500).lineLimit(1)
+        }
+        .foregroundStyle(fg)
+        .padding(.horizontal, dot ? 10 : 7)
+        .frame(height: height)
+        .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(bg))
     }
 }
 
-/// App icon for a process row, or a letter chip when it has no bundle.
+/// App icon for a process row, or a letter tile when it has no bundle (18 pt, 5 radius).
 struct ProcessIcon: View {
     var process: ProcessUsage
-    var size: CGFloat = 22
+    var size: CGFloat = 18
 
     var body: some View {
         if let image = ProcessActions.icon(for: process) {
             Image(nsImage: image).resizable().interpolation(.high).frame(width: size, height: size)
                 .accessibilityHidden(true)
         } else {
-            Text(String(process.name.prefix(1)).uppercased())
-                .font(.system(size: size * 0.48, weight: .bold))
-                .foregroundStyle(Theme.sub)
-                .frame(width: size, height: size)
-                .background(RoundedRectangle(cornerRadius: size * 0.27, style: .continuous).fill(Theme.chip))
-                .accessibilityHidden(true)
+            LetterTile(name: process.name, size: size)
         }
+    }
+}
+
+struct LetterTile: View {
+    var name: String
+    var size: CGFloat = 18
+
+    var body: some View {
+        Text(String(name.prefix(1)).uppercased())
+            .ui(11, 600)
+            .foregroundStyle(Theme.sub)
+            .frame(width: size, height: size)
+            .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.well))
+            .accessibilityHidden(true)
     }
 }
 
@@ -343,7 +485,7 @@ struct MiniChart: View {
     struct Series {
         var values: [Double]      // 0...1
         var color: Color
-        var fill: Double = 0.14
+        var fill: Double = 0.13
         var lineWidth: CGFloat = 1.5
     }
 
@@ -379,5 +521,21 @@ struct MiniChart: View {
                 ctx.stroke(line, with: .color(s.color), style: StrokeStyle(lineWidth: s.lineWidth, lineCap: .round, lineJoin: .round))
             }
         }
+    }
+}
+
+/// Frosted glass for windows and panels: system blur behind, design tint on top.
+struct GlassBackground: View {
+    var radius: CGFloat
+    var tint: Color = Theme.glass
+    var material: NSVisualEffectView.Material = .popover
+
+    var body: some View {
+        ZStack {
+            if !RenderContext.offscreen { VisualEffectBlur(material: material) }
+            tint
+        }
+        .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Theme.glassRim, lineWidth: 0.5))
     }
 }

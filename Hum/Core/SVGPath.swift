@@ -53,6 +53,8 @@ enum SVGPath {
         var cmd: Character = "M"
         var current = CGPoint.zero
         var start = CGPoint.zero
+        var lastControl: CGPoint?
+        var lastWasCubic = false
 
         func next() -> CGFloat? {
             guard i < tokens.count, let v = tokens[i] as? CGFloat else { return nil }
@@ -95,12 +97,38 @@ enum SVGPath {
                 let end = CGPoint(x: base.x + x, y: base.y + y)
                 addArc(path, from: current, to: end, rx: rx, ry: ry, rotation: rot, large: large, sweep: sweep)
                 current = end
+            case "C":
+                guard let x1 = next(), let y1 = next(), let x2 = next(), let y2 = next(), let x = next(), let y = next() else { i += 1; continue }
+                let c2 = CGPoint(x: base.x + x2, y: base.y + y2)
+                let end = CGPoint(x: base.x + x, y: base.y + y)
+                path.addCurve(to: end, control1: CGPoint(x: base.x + x1, y: base.y + y1), control2: c2)
+                current = end
+                lastControl = c2
+                lastWasCubic = true
+                continue
+            case "S":
+                guard let x2 = next(), let y2 = next(), let x = next(), let y = next() else { i += 1; continue }
+                // First control point reflects the previous curve's second one.
+                let c1 = lastWasCubic ? CGPoint(x: 2 * current.x - (lastControl?.x ?? current.x), y: 2 * current.y - (lastControl?.y ?? current.y)) : current
+                let c2 = CGPoint(x: base.x + x2, y: base.y + y2)
+                let end = CGPoint(x: base.x + x, y: base.y + y)
+                path.addCurve(to: end, control1: c1, control2: c2)
+                current = end
+                lastControl = c2
+                lastWasCubic = true
+                continue
+            case "Q":
+                guard let x1 = next(), let y1 = next(), let x = next(), let y = next() else { i += 1; continue }
+                let end = CGPoint(x: base.x + x, y: base.y + y)
+                path.addQuadCurve(to: end, control: CGPoint(x: base.x + x1, y: base.y + y1))
+                current = end
             case "Z":
                 path.closeSubpath()
                 current = start
             default:
                 i += 1
             }
+            lastWasCubic = false
         }
         return path
     }
@@ -153,22 +181,39 @@ enum SVGPath {
     }
 }
 
-/// A stroked line icon drawn from SVG path data in a square viewBox.
+/// A stroked line icon drawn from SVG path data (stroke width in viewBox units, like SVG).
 struct LineIcon: View {
     var d: String
-    var size: CGFloat = 16
-    var viewBox: CGFloat = 16
-    var lineWidth: CGFloat = 1.4
+    var width: CGFloat
+    var height: CGFloat
+    var viewBox: CGSize
+    var lineWidth: CGFloat
+
+    init(d: String, size: CGFloat = 16, viewBox: CGFloat = 16, lineWidth: CGFloat = 1.4) {
+        self.d = d
+        width = size
+        height = size
+        self.viewBox = CGSize(width: viewBox, height: viewBox)
+        self.lineWidth = lineWidth
+    }
+
+    init(d: String, width: CGFloat, height: CGFloat, viewBox: CGSize, lineWidth: CGFloat) {
+        self.d = d
+        self.width = width
+        self.height = height
+        self.viewBox = viewBox
+        self.lineWidth = lineWidth
+    }
 
     var body: some View {
-        Canvas { context, canvasSize in
-            let scale = canvasSize.width / viewBox
-            var transform = CGAffineTransform(scaleX: scale, y: scale)
+        Canvas { context, size in
+            let sx = size.width / viewBox.width, sy = size.height / viewBox.height
+            var transform = CGAffineTransform(scaleX: sx, y: sy)
             guard let cg = SVGPath.path(d).copy(using: &transform) else { return }
             context.stroke(Path(cg), with: .foreground,
-                           style: StrokeStyle(lineWidth: lineWidth * scale, lineCap: .round, lineJoin: .round))
+                           style: StrokeStyle(lineWidth: lineWidth * min(sx, sy), lineCap: .round, lineJoin: .round))
         }
-        .frame(width: size, height: size)
+        .frame(width: width, height: height)
         .accessibilityHidden(true)
     }
 }

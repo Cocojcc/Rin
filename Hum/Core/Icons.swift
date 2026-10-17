@@ -17,7 +17,7 @@ enum Icons {
     static let menubar = "M2.5 2.5h11a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12V4a1.5 1.5 0 0 1 1.5-1.5zM1 5.5h14M9.5 4h1M12 4h1"
     static let alert = "M4 11V7a4 4 0 0 1 8 0v4l1.5 1.5h-11L4 11zM6.5 13.5a1.5 1.5 0 0 0 3 0"
     static let about = "M8 1.5a6.5 6.5 0 1 1 0 13a6.5 6.5 0 1 1 0-13zM8 7v4.5M8 4.75h.01"
-    static let wifi = "M1.8 6.2a9 9 0 0 1 12.4 0M4.1 8.7a5.7 5.7 0 0 1 7.8 0M6.4 11.2a2.4 2.4 0 0 1 3.2 0"
+    static let wifi = "M1.8 6.2a9 9 0 0 1 12.4 0M4.1 8.7a5.7 5.7 0 0 1 7.8 0M6.4 11.2a2.4 2.4 0 0 1 3.2 0M8 13.4h.01"
     static let slash = "M2.5 2.5l11 11"
     static let check = "M3.5 8.5l3 3 6-7"
     static let drag = "M6 3h.01M10 3h.01M6 8h.01M10 8h.01M6 13h.01M10 13h.01"
@@ -33,6 +33,15 @@ enum Icons {
     static let power = "M8 1.5v6M4.4 3.9a5.5 5.5 0 1 0 7.2 0"
     static let quit = "M6 2.5H3.5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1H6M10 11l3-3-3-3M13 8H6"
     static let activity = "M1.5 8h3l2-5 3 10 2-5h3"
+    static let monitorWindow = "M2.5 3h11a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM4.5 10l2.2-2.6 2 1.6 3-3.6"
+    static let notch = "M2.5 3h11a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 11.5v-7A1.5 1.5 0 0 1 2.5 3zM6 3v1.3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V3"
+    static let fan = "M8 6.6c-.4-2.2.2-4.1 1.8-4.1s1.8 2.2-.6 4.1M9.3 8.6c2 .9 3.2 2.5 2.4 3.9s-2.8.7-3.3-2.2M6.8 8.9c-1.7 1.4-3.7 1.6-4.3.2s1.3-2.6 4.2-2.1M8 6.6a1.4 1.4 0 1 1 0 2.8a1.4 1.4 0 1 1 0-2.8z"
+    static let upDown = "M1.5 4.5L4 2l2.5 2.5M1.5 7.5L4 10l2.5-2.5"     // 8 × 12
+    static let chevronSmallRight = "M4.5 2.5L8 6l-3.5 3.5"             // 12 × 12
+    static let chevronSmallLeft = "M7.5 2.5L4 6l3.5 3.5"               // 12 × 12
+    static let arrowUpSmall = "M3 5.4V0.9M1.1 2.7L3 0.8L4.9 2.7"       // 6 × 6
+    static let arrowDownSmall = "M3 0.6V5.1M1.1 3.3L3 5.2L4.9 3.3"     // 6 × 6
+    static let bolt = "M6.8 1L2.8 6.8h2.7L5 11l4.2-6H6.4z"              // 12 × 12, filled
 
     static func module(_ m: Module) -> String {
         switch m {
@@ -77,25 +86,31 @@ struct NetArrows: View {
 }
 
 /// The menu bar battery glyph (25 × 12): rim, fill and optional charging bolt.
+/// Without explicit colors it draws in the foreground style (rim at `rimOpacity`).
 struct BatteryGlyph: View {
     var level: Double
     var charging = false
-    var fill: Color = .primary
-    var rim: Color = .primary.opacity(0.45)
+    var fill: Color? = nil
+    var rim: Color? = nil
+    var rimOpacity: Double = 0.45
     var scale: CGFloat = 1
 
     var body: some View {
         Canvas { ctx, size in
             let s = size.width / 25
+            let fillShading: GraphicsContext.Shading = fill.map { .color($0) } ?? .foreground
+            let rimShading: GraphicsContext.Shading = rim.map { .color($0) } ?? .foreground
+            var rimCtx = ctx
+            rimCtx.opacity = rimOpacity
             let outer = Path(roundedRect: CGRect(x: 0.75 * s, y: 0.75 * s, width: 21 * s, height: 10.5 * s), cornerRadius: 3 * s)
-            ctx.stroke(outer, with: .color(rim), lineWidth: 1 * s)
-            let width = max(1.2, 18 * min(1, max(0, level))) * s
-            let inner = Path(roundedRect: CGRect(x: 2.25 * s, y: 2.25 * s, width: width, height: 7.5 * s), cornerRadius: 1.6 * s)
-            ctx.fill(inner, with: .color(fill))
+            rimCtx.stroke(outer, with: rimShading, lineWidth: 1 * s)
             var cap = Path()
             cap.move(to: CGPoint(x: 23.6 * s, y: 4.3 * s))
             cap.addLine(to: CGPoint(x: 23.6 * s, y: 7.7 * s))
-            ctx.stroke(cap, with: .color(rim), style: StrokeStyle(lineWidth: 1.5 * s, lineCap: .round))
+            rimCtx.stroke(cap, with: rimShading, style: StrokeStyle(lineWidth: 1.5 * s, lineCap: .round))
+            let width = max(1.2, 18 * min(1, max(0, level))) * s
+            let inner = Path(roundedRect: CGRect(x: 2.25 * s, y: 2.25 * s, width: width, height: 7.5 * s), cornerRadius: 1.6 * s)
+            ctx.fill(inner, with: fillShading)
             if charging {
                 // Knock the bolt out of the fill so the menu bar shows through, as the system glyph does.
                 let bolt = SVGShape(d: "M11 2.6L8.2 6.6h2l-0.7 2.8 2.9-4h-2z", viewBox: CGSize(width: 25, height: 12)).path(in: CGRect(origin: .zero, size: size))
@@ -106,6 +121,39 @@ struct BatteryGlyph: View {
             }
         }
         .frame(width: 25 * scale, height: 12 * scale)
+        .accessibilityHidden(true)
+    }
+}
+
+/// Line (and optional soft fill) in the foreground style, for small trend tiles. Values are 0...1.
+struct TrendLine: View {
+    var values: [Double]
+    var lineWidth: CGFloat = 1.2
+    var fillOpacity: Double = 0
+    var minCount = 30
+
+    var body: some View {
+        Canvas { ctx, size in
+            guard !values.isEmpty else { return }
+            let count = max(values.count, minCount)
+            let step = size.width / CGFloat(max(count - 1, 1))
+            let offset = CGFloat(count - values.count) * step
+            var line = Path()
+            for (i, v) in values.enumerated() {
+                let p = CGPoint(x: offset + CGFloat(i) * step, y: size.height - CGFloat(min(1, max(0, v))) * (size.height - lineWidth) - lineWidth / 2)
+                if i == 0 { line.move(to: p) } else { line.addLine(to: p) }
+            }
+            if fillOpacity > 0 {
+                var area = line
+                area.addLine(to: CGPoint(x: offset + CGFloat(values.count - 1) * step, y: size.height))
+                area.addLine(to: CGPoint(x: offset, y: size.height))
+                area.closeSubpath()
+                var fillCtx = ctx
+                fillCtx.opacity = fillOpacity
+                fillCtx.fill(area, with: .foreground)
+            }
+            ctx.stroke(line, with: .foreground, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+        }
         .accessibilityHidden(true)
     }
 }

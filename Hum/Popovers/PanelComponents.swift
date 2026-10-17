@@ -1,99 +1,232 @@
 import AppKit
 import SwiftUI
 
-/// White card inside a dropdown (10 radius).
-struct PanelCard<Content: View>: View {
-    var padding = EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12)
+// MARK: - Chrome
+
+/// Dropdown header: open-monitor button, centered title and subtitle, settings button.
+struct PanelHeader: View {
+    var module: Module
+    var subtitle: String? = nil
+
+    var body: some View {
+        HStack(spacing: 0) {
+            headerButton(Icons.monitorWindow, label: L10n.Panel.openMonitor(module.title)) {
+                MainWindowController.shared.show(.monitor(module))
+            }
+            VStack(spacing: 0) {
+                Text(module.title).ui(15, 500).frame(height: 20).accessibilityAddTraits(.isHeader)
+                if let subtitle {
+                    Text(subtitle).ui(11).foregroundStyle(Theme.sub).lineLimit(1).frame(height: 14)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            headerButton(Icons.general, label: L10n.Panel.moduleSettings(module.title)) {
+                MainWindowController.shared.show(.menubarModule(module))
+            }
+        }
+        .padding(.horizontal, 6)
+        .padding(.top, -4)
+    }
+
+    private func headerButton(_ d: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            LineIcon(d: d, size: 16, lineWidth: 1.5)
+                .foregroundStyle(Theme.sub)
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+}
+
+/// The big readouts under the header: one prominent center item flanked by two smaller ones,
+/// or two / one equal columns.
+struct HeroRow<Leading: View, Center: View, Trailing: View>: View {
+    @ViewBuilder var leading: Leading
+    @ViewBuilder var center: Center
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            leading.frame(maxWidth: .infinity)
+            center.fixedSize()
+            trailing.frame(maxWidth: .infinity)
+        }
+        .padding(.top, 2)
+    }
+}
+
+/// Two equal hero columns (memory, network).
+struct HeroPair<Leading: View, Trailing: View>: View {
+    @ViewBuilder var leading: Leading
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            leading.frame(maxWidth: .infinity)
+            trailing.frame(maxWidth: .infinity)
+        }
+        .padding(.top, 2)
+    }
+}
+
+/// One hero column: the readout centered in a fixed-height box, label underneath.
+struct HeroItem<Content: View>: View {
+    var label: String
+    var dot: Color? = nil
+    var height: CGFloat = 88
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(spacing: 8) {
+            content.frame(height: height)
+            HStack(spacing: 6) {
+                if let dot { Circle().fill(dot).frame(width: 6, height: 6) }
+                Text(label).ui(11).foregroundStyle(Theme.sub).lineLimit(1)
+            }
+            .frame(height: 14)
+        }
+        .frame(minWidth: 0)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Ring with the value in the middle: 84 / 5 for the hero center, 58 / 4 beside it.
+struct ValueRing: View {
+    var segments: [Ring.Segment]
+    var value: String
+    var large = true
+
+    init(fraction: Double, color: Color, value: String, large: Bool = true) {
+        segments = [Ring.Segment(fraction: fraction, color: color)]
+        self.value = value
+        self.large = large
+    }
+
+    init(segments: [Ring.Segment], value: String, large: Bool = true) {
+        self.segments = segments
+        self.value = value
+        self.large = large
+    }
+
+    var body: some View {
+        ZStack {
+            Ring(segments: segments, size: large ? 84 : 58, lineWidth: large ? 5 : 4)
+            Text(value).ui(large ? 22 : 14, 500).kerning(large ? -0.44 : -0.28).lineLimit(1)
+        }
+    }
+}
+
+/// "45 MB/s" style readout (24 / 500 with a small grey unit).
+struct BigReadout: View {
+    var value: String
+    var unit: String = ""
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 2) {
+            Text(value).ui(24, 500).kerning(-0.48).lineLimit(1)
+            if !unit.isEmpty { Text(unit).ui(12).foregroundStyle(Theme.sub).lineLimit(1) }
+        }
+        .fixedSize()
+    }
+}
+
+/// Section inside a dropdown: small grey title (and note) above its content.
+struct PanelSection<Content: View>: View {
+    var title: String
+    var right: String? = nil
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(title).font(Fonts.ui(12, 500)).accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 0)
+                if let right { Text(right) }
+            }
+            .ui(12)
+            .foregroundStyle(Theme.sub)
+            .frame(height: 16)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 6)
+            content
+        }
+    }
+}
+
+/// Rounded well that holds a group of rows or a chart (12 radius).
+struct Well<Content: View>: View {
+    var padding: EdgeInsets = EdgeInsets()
+    var fill: Color = Theme.well
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) { content }
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.popGroup))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Theme.groupRim, lineWidth: 0.5))
+            .background(fill)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
-struct PanelHeader<Value: View>: View {
-    var icon: String
-    var color: Color
-    var title: String
-    var subtitle: String
-    @ViewBuilder var value: Value
-
-    var body: some View {
-        HStack(spacing: 10) {
-            IconChip(d: icon, size: 28, iconSize: 16, radius: 7, color: color, fill: Theme.chip)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(title).font(.system(size: 14, weight: .bold)).accessibilityAddTraits(.isHeader)
-                Text(subtitle).font(.system(size: 11)).foregroundStyle(Theme.sub).lineLimit(1)
-            }
-            Spacer(minLength: 4)
-            value
-        }
-        .frame(height: 40)
-        .padding(.horizontal, 2)
-    }
-}
-
-/// Small grey card title with an optional faint note on the right (24 pt row).
-struct PanelTitle: View {
-    var text: String
+/// Chart in a well: plot on top, legend (or time labels) underneath.
+struct WellChart<Chart: View>: View {
+    var height: CGFloat = 56
+    var legend: [(Color, String)] = []
     var right: String? = nil
+    var labels: [String] = []
+    @ViewBuilder var chart: Chart
 
     var body: some View {
-        HStack {
-            Text(text).fontWeight(.semibold).foregroundStyle(Theme.sub)
-            Spacer()
-            if let right { Text(right).foregroundStyle(Theme.faint) }
-        }
-        .font(.system(size: 11))
-        .frame(height: 24)
-    }
-}
-
-struct PanelLegend: View {
-    var items: [(Color, String, String?)]
-    var right: String? = nil
-
-    var body: some View {
-        HStack(spacing: 12) {
-            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                LegendDot(color: item.0, label: item.1, value: item.2)
+        VStack(spacing: 0) {
+            chart.frame(height: height).padding(.top, 10)
+            if !legend.isEmpty || right != nil || !labels.isEmpty {
+                HStack(spacing: 14) {
+                    if labels.isEmpty {
+                        ForEach(Array(legend.enumerated()), id: \.offset) { _, item in
+                            HStack(spacing: 6) {
+                                Circle().fill(item.0).frame(width: 6, height: 6)
+                                Text(item.1)
+                            }
+                        }
+                        Spacer(minLength: 0)
+                        if let right { Text(right) }
+                    } else {
+                        ForEach(Array(labels.enumerated()), id: \.offset) { i, label in
+                            if i > 0 { Spacer(minLength: 0) }
+                            Text(label)
+                        }
+                    }
+                }
+                .ui(12)
+                .foregroundStyle(Theme.sub)
+                .frame(height: 16)
+                .padding(EdgeInsets(top: 8, leading: 12, bottom: 10, trailing: 12))
             }
-            Spacer(minLength: 0)
-            if let right { Text(right).font(.system(size: 11)).foregroundStyle(Theme.faint) }
         }
-        .padding(.top, 8)
     }
 }
 
-/// A key / value line inside a card (30 pt).
+/// Key / value line in a well (32 pt).
 struct KVRow: View {
     var key: String
     var value: String
+    var valueColor: Color = Theme.text
 
     var body: some View {
         HStack(spacing: 12) {
             Text(key).foregroundStyle(Theme.sub)
             Spacer(minLength: 8)
-            Text(value).fontWeight(.semibold).monospacedDigit().lineLimit(1).truncationMode(.middle)
+            Text(value).ui(13, 500).foregroundStyle(valueColor).lineLimit(1).truncationMode(.middle)
         }
-        .frame(height: 30)
+        .padding(.horizontal, 12)
+        .frame(height: 32)
         .accessibilityElement(children: .combine)
     }
 }
 
-/// 0.5 pt rule inside a 1 pt box, so the rows around it stay on whole points
-/// (a bare 0.5 pt view shifts everything below by half a point and blurs every other line).
-struct Hairline: View {
-    var body: some View {
-        Rectangle().fill(Theme.line).frame(height: 0.5).frame(height: 1, alignment: .top)
-    }
-}
-
-/// Name / bar / value line used for temperatures and fans (26 pt).
+/// Name / bar / value line used for temperatures and fans (28 pt).
 struct MeterRow: View {
     var name: String
     var fraction: Double
@@ -101,41 +234,36 @@ struct MeterRow: View {
     var color: Color
 
     var body: some View {
-        HStack(spacing: 8) {
-            Text(name).lineLimit(1)
-            Spacer(minLength: 4)
-            MeterBar(fraction: fraction, color: color).frame(width: 80)
-            Text(value).fontWeight(.semibold).monospacedDigit().frame(width: 64, alignment: .trailing)
+        HStack(spacing: 10) {
+            Text(name).lineLimit(1).frame(width: 96, alignment: .leading)
+            MeterBar(fraction: fraction, color: color)
+            Text(value).ui(13, 500).lineLimit(1).frame(width: 64, alignment: .trailing)
         }
-        .frame(height: 26)
+        .padding(.horizontal, 8)
+        .frame(height: 28)
         .accessibilityElement(children: .combine)
     }
 }
 
-struct PanelFooter: View {
-    var module: Module
-    @Environment(\.accent) private var accent
+/// Top processes in a dropdown: the monitor-page list at popover proportions.
+struct PanelProcessList: View {
+    var title: String
+    var processes: [ProcessUsage]
+    var metric: ProcessMetric
+    var color: Color
+    var nameWidth: CGFloat = 96
+    var valueWidth: CGFloat = 56
 
     var body: some View {
-        HStack(spacing: 6) {
-            TintButton(title: L10n.Panel.openMonitor(module.title)) {
-                MainWindowController.shared.show(.monitor(module))
-            }
-            Button {
-                MainWindowController.shared.show(.menubarModule(module))
-            } label: {
-                LineIcon(d: Icons.general, size: 14, lineWidth: 1.6)
-                    .frame(width: 30, height: 30)
-                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.well))
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(L10n.Panel.moduleSettings(module.title))
+        PanelSection(title: title) {
+            ProcessListPanel(processes: processes, metric: metric, color: color,
+                             rowHeight: 30, nameWidth: nameWidth, valueWidth: valueWidth, rowPadding: 8,
+                             fill: Theme.well, radius: 12)
         }
     }
 }
 
-// MARK: - Process list with quit controls
+// MARK: - Process actions
 
 enum ProcessMetric {
     case cpu, memory, disk, network, gpu
@@ -161,74 +289,7 @@ enum ProcessMetric {
     }
 }
 
-struct PanelProcessList: View {
-    var title: String
-    var processes: [ProcessUsage]
-    var metric: ProcessMetric
-    var color: Color
-    var quitCenter = QuitCenter.shared
-    @State private var hovered: String?
-
-    var body: some View {
-        PanelCard(padding: EdgeInsets(top: 2, leading: 12, bottom: 4, trailing: 12)) {
-            PanelTitle(text: title)
-            if processes.isEmpty {
-                Text(L10n.Panel.noProcesses).foregroundStyle(Theme.faint).frame(height: 30)
-            }
-            let maxValue = max(processes.map(metric.value).max() ?? 1, 0.0001)
-            ForEach(Array(processes.enumerated()), id: \.element.id) { index, p in
-                if quitCenter.states[p.id] == .unresponsive {
-                    ConfirmForceQuitRow(process: p, value: metric.text(p))
-                        .padding(.vertical, 2)
-                } else {
-                    row(p, fraction: metric.value(p) / maxValue, showTopLine: index > 0 && hovered != processes[index - 1].id)
-                }
-            }
-        }
-    }
-
-    private func row(_ p: ProcessUsage, fraction: Double, showTopLine: Bool) -> some View {
-        let isHover = hovered == p.id && !p.isSystem
-        return HStack(spacing: 8) {
-            ProcessIcon(process: p, size: 20)
-            Text(p.name).lineLimit(1).truncationMode(.tail)
-            Spacer(minLength: 4)
-            if isHover {
-                Button {
-                    quitCenter.quit(p)
-                } label: {
-                    Text(quitCenter.states[p.id] == .quitting ? L10n.Panel.quitting : L10n.Panel.quit)
-                        .font(.system(size: 11))
-                        .padding(.horizontal, 8)
-                        .frame(height: 20)
-                        .background(
-                            RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.popGroup)
-                                .shadow(color: .black.opacity(0.1), radius: 1, y: 1)
-                        )
-                        .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous).strokeBorder(Theme.groupRim, lineWidth: 0.5))
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(L10n.Panel.quitNamed(p.name))
-            } else {
-                MeterBar(fraction: fraction, color: color).frame(width: 56)
-            }
-            Text(metric.text(p)).fontWeight(.semibold).monospacedDigit().frame(width: 58, alignment: .trailing)
-        }
-        .frame(height: 30)
-        .padding(.horizontal, isHover ? 6 : 0)
-        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(isHover ? Theme.hover : .clear))
-        .padding(.horizontal, isHover ? -6 : 0)
-        .overlay(alignment: .top) { if showTopLine && !isHover { Hairline() } }
-        .contentShape(Rectangle())
-        .onHover { inside in
-            if inside { hovered = p.id } else if hovered == p.id { hovered = nil }
-        }
-        .contextMenu { ProcessContextMenu(process: p) }
-        .accessibilityElement(children: .combine)
-    }
-}
-
+/// Right-click menu on a process row (native menu).
 struct ProcessContextMenu: View {
     var process: ProcessUsage
 
@@ -247,61 +308,58 @@ struct ProcessContextMenu: View {
     }
 }
 
-/// Inline confirmation shown when an app didn't quit within a few seconds.
+/// Shown above the list when an app didn't quit within a few seconds.
 struct ConfirmForceQuitRow: View {
     var process: ProcessUsage
     var value: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                ProcessIcon(process: process, size: 20)
-                Text(process.name).fontWeight(.semibold).lineLimit(1)
+            HStack(spacing: 10) {
+                ProcessIcon(process: process, size: 18)
+                Text(process.name).ui(13, 500).lineLimit(1)
                 Text(L10n.Panel.notResponding)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Theme.dangerText)
+                    .ui(11, 500)
+                    .foregroundStyle(Theme.danger)
                     .padding(.horizontal, 6)
                     .frame(height: 16)
-                    .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Theme.popGroup))
+                    .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.raised))
                 Spacer(minLength: 4)
-                Text(value).fontWeight(.semibold).monospacedDigit()
+                Text(value).ui(13, 500)
             }
+            .frame(height: 20)
             Text(L10n.Panel.forceQuitWarning)
-                .font(.system(size: 11))
+                .ui(12)
                 .foregroundStyle(Theme.sub)
-                .padding(.leading, 28)
-                .padding(.top, 6)
-            HStack(spacing: 6) {
-                Spacer()
+                .padding(.top, 8)
+            HStack(spacing: 8) {
                 Button {
                     QuitCenter.shared.cancel(process)
                 } label: {
-                    Text(L10n.Common.cancel)
-                        .padding(.horizontal, 12)
-                        .frame(height: 24)
-                        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.popGroup))
-                        .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Theme.groupRim, lineWidth: 0.5))
+                    Text(L10n.Common.cancel).ui(12)
+                        .foregroundStyle(Theme.text)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 28)
+                        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.raised).raisedShadow())
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 Button {
                     QuitCenter.shared.forceQuit(process)
                 } label: {
-                    Text(L10n.Panel.forceQuit)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .frame(height: 24)
-                        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.danger))
+                    Text(L10n.Panel.forceQuit).ui(12, 500)
+                        .foregroundStyle(Theme.onDanger)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 28)
+                        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.dangerFill))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.top, 8)
+            .padding(.top, 12)
         }
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.dangerBg))
-        .padding(.horizontal, -6)
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.dangerBg))
     }
 }
 
@@ -311,16 +369,16 @@ struct QuitToast: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            LineIcon(d: Icons.check, size: 14, lineWidth: 2).foregroundStyle(Theme.ok)
-            Text(L10n.Panel.quitDone(toast.name)).fontWeight(.semibold).lineLimit(1)
+            LineIcon(d: Icons.check, size: 13, lineWidth: 2).foregroundStyle(Theme.ok)
+            Text(L10n.Panel.quitDone(toast.name)).ui(13, 500).lineLimit(1)
             Spacer(minLength: 4)
             if toast.freed > 0 {
-                Text(L10n.Panel.freed(Format.memory(toast.freed))).font(.system(size: 11)).foregroundStyle(Theme.sub)
+                Text(L10n.Panel.freed(Format.memory(toast.freed))).ui(12).foregroundStyle(Theme.sub)
             }
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 12)
         .frame(height: 32)
-        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.okBg))
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.okBg))
         .accessibilityElement(children: .combine)
     }
 }

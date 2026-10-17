@@ -22,6 +22,7 @@ final class StatusBarController: NSObject {
             Alerts.shared.evaluate()
             self?.rebuildIfNeeded()
             self?.refresh()
+            if let self { NotchWatcher.shared.check(self.items) }
         }
         themeObserver = DistributedNotificationCenter.default().addObserver(
             forName: Notification.Name("AppleInterfaceThemeChangedNotification"), object: nil, queue: .main

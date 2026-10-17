@@ -45,7 +45,7 @@ struct GraphTile: View {
     var height: CGFloat = 16
 
     var body: some View {
-        Sparkline(values: values, color: color, lineWidth: 1.25, fillOpacity: 0.25, secondary: secondary, secondaryColor: secondary == nil ? nil : Theme.sys, minCount: 30)
+        Sparkline(values: values, color: color, lineWidth: 1.25, fillOpacity: 0.25, secondary: secondary, secondaryColor: secondary == nil ? nil : Theme.barUp, minCount: 30)
             .frame(width: width, height: height)
             .background(Color.primary.opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
@@ -137,6 +137,31 @@ struct StackedValues: View {
     }
 }
 
+/// One small arrow per row beside each rate (9 pt light, 8 pt rows): the network "arrows" layout.
+struct ArrowRows: View {
+    var top: String
+    var bottom: String
+    var topColor: Color = .primary
+    var bottomColor: Color = .primary
+    var upOnTop = true
+    var template: String
+
+    var body: some View {
+        Grid(alignment: .trailing, horizontalSpacing: 3, verticalSpacing: 0) {
+            GridRow {
+                LineIcon(d: upOnTop ? Icons.arrowUpSmall : Icons.arrowDownSmall, size: 6, viewBox: 6, lineWidth: 1.1)
+                    .foregroundStyle(topColor)
+                FixedText(text: top, template: template, font: BarFont.stack).frame(height: 8)
+            }
+            GridRow {
+                LineIcon(d: upOnTop ? Icons.arrowDownSmall : Icons.arrowUpSmall, size: 6, viewBox: 6, lineWidth: 1.1)
+                    .foregroundStyle(bottomColor)
+                FixedText(text: bottom, template: template, font: BarFont.stack).frame(height: 8)
+            }
+        }
+    }
+}
+
 // MARK: - Per-module items
 
 struct MenuBarItemView: View {
@@ -182,7 +207,7 @@ struct MenuBarItemView: View {
     @ViewBuilder private var cpu: some View {
         let p = prefs.cpu
         let value = Format.percent(s.cpu.total)
-        let color = dataColor(p.color == .color, Theme.cpu)
+        let color = dataColor(p.color == .color, Theme.barCPU)
         switch p.style {
         case .graph:
             HStack(spacing: 4) {
@@ -216,7 +241,7 @@ struct MenuBarItemView: View {
         let p = prefs.gpu
         let value = p.valueType == .memory ? MenuBarText.gigabytes(s.gpu.memoryUsed) : Format.percent(s.gpu.utilization)
         let template = p.valueType == .memory ? "99.9G" : "100%"
-        let color = dataColor(p.color == .color, Theme.gpu)
+        let color = dataColor(p.color == .color, Theme.barGPU)
         switch p.style {
         case .graph:
             HStack(spacing: 4) {
@@ -248,12 +273,12 @@ struct MenuBarItemView: View {
             if let t = tone.color { return t }
             if p.color == .pressure {
                 switch s.memory.pressure {
-                case .normal: return Theme.ok
-                case .warning: return Theme.sys
-                case .critical: return Theme.low
+                case .normal: return Theme.barCPU
+                case .warning: return Color(nsColor: Theme.barWarn)
+                case .critical: return Color(nsColor: Theme.barCrit)
                 }
             }
-            return globallyColored ? Theme.mem : .primary
+            return globallyColored ? Theme.barMem : .primary
         }()
         switch p.style {
         case .bar:
@@ -282,19 +307,18 @@ struct MenuBarItemView: View {
         let n = s.network
         let offline = !n.connected
         let colored = (p.color == .color || globallyColored) && !offline
-        let upColor: Color = colored ? Theme.up : .primary
-        let downColor: Color = colored ? Theme.down : .primary
+        let upColor: Color = colored ? Theme.barUp : .primary
+        let downColor: Color = colored ? Theme.barDown : .primary
         let upText = offline ? L10n.Common.dash : (p.showUnit ? Format.rate(n.up, unit: p.speedUnit) : Format.rateCompact(n.up, unit: p.speedUnit))
         let downText = offline ? L10n.Common.dash : (p.showUnit ? Format.rate(n.down, unit: p.speedUnit) : Format.rateCompact(n.down, unit: p.speedUnit))
         let template = p.showUnit ? "999 KB/s" : "999K"
         let upTop = p.order == .uploadTop
         switch p.style {
         case .arrows:
-            HStack(spacing: 3) {
-                NetArrows(upColor: upColor, downColor: downColor, upOnTop: upTop, height: 20)
-                    .opacity(offline ? 0.45 : 1)
-                StackedValues(top: upTop ? upText : downText, bottom: upTop ? downText : upText, template: template)
-            }
+            ArrowRows(top: upTop ? upText : downText, bottom: upTop ? downText : upText,
+                      topColor: upTop ? upColor : downColor, bottomColor: upTop ? downColor : upColor,
+                      upOnTop: upTop, template: template)
+                .opacity(offline ? 0.45 : 1)
         case .dots:
             HStack(spacing: 3) {
                 VStack(spacing: 4) {
@@ -309,11 +333,11 @@ struct MenuBarItemView: View {
             let up = offline ? L10n.Common.dash : Format.rateCompact(n.up, unit: p.speedUnit)
             HStack(spacing: 4) {
                 HStack(spacing: 1) {
-                    Text(MenuBarText.downArrow).foregroundStyle(colored ? Theme.down : .primary.opacity(0.55))
+                    Text(MenuBarText.downArrow).foregroundStyle(colored ? Theme.barDown : .primary.opacity(0.55))
                     FixedText(text: down, template: "999K", font: .system(size: 12).monospacedDigit())
                 }
                 HStack(spacing: 1) {
-                    Text(MenuBarText.upArrow).foregroundStyle(colored ? Theme.up : .primary.opacity(0.55))
+                    Text(MenuBarText.upArrow).foregroundStyle(colored ? Theme.barUp : .primary.opacity(0.55))
                     FixedText(text: up, template: "999K", font: .system(size: 12).monospacedDigit())
                 }
             }
@@ -330,7 +354,7 @@ struct MenuBarItemView: View {
         let volume = MenuBarText.volume(s.disk, prefs.disk.volume)
         let free = volume.map { MenuBarText.gigabytes(UInt64(max(0, $0.available)), decimal: true) } ?? L10n.Common.dash
         let used = volume.map { Format.percent($0.usedFraction) } ?? L10n.Common.dash
-        let color = dataColor(false, Theme.disk)
+        let color = dataColor(false, Theme.barDisk)
         switch p.style {
         case .iconValue:
             HStack(spacing: 3) {
@@ -358,7 +382,7 @@ struct MenuBarItemView: View {
         let p = prefs.battery
         let b = s.battery
         let low = p.colorWhenLow && b.level <= 0.2 && !b.isCharging && !b.onAC
-        let fill: Color = low ? Color(nsColor: Theme.barCrit) : (globallyColored ? Theme.bat : .primary)
+        let fill: Color = low ? Color(nsColor: Theme.barCrit) : (globallyColored ? Theme.barBat : .primary)
         let value = Format.percent(b.level)
         let timeLeft: String? = p.showTimeRemaining ? (b.isCharging ? b.minutesToFull : b.minutesToEmpty).map { Format.clockDuration(minutes: $0) } : nil
         let glyph = BatteryGlyph(level: b.level, charging: p.showBolt && b.isCharging, fill: fill)
@@ -392,9 +416,9 @@ struct MenuBarItemView: View {
         let iconColor: Color = {
             if let t = tone.color { return t }
             if p.color == .byTemp, let c = celsius {
-                return c >= 80 ? Theme.low : c >= 60 ? Theme.sys : Theme.ok
+                return c >= 80 ? Color(nsColor: Theme.barCrit) : c >= 60 ? Color(nsColor: Theme.barWarn) : Theme.barCPU
             }
-            return globallyColored ? Theme.temp : .primary
+            return globallyColored ? Theme.barTemp : .primary
         }()
         switch p.style {
         case .iconTemp:
@@ -407,7 +431,7 @@ struct MenuBarItemView: View {
                 .foregroundStyle(p.color == .byTemp ? iconColor : (tone.color ?? .primary))
         case .fan:
             HStack(spacing: 3) {
-                Image(systemName: "fan").font(.system(size: 13)).foregroundStyle(iconColor)
+                LineIcon(d: Icons.fan, size: 16, lineWidth: 1.3).foregroundStyle(iconColor)
                 FixedText(text: s.sensors.fans.first.map { "\(Int($0.rpm))" } ?? L10n.Common.dash, template: "8888", font: BarFont.value())
             }
         case .twoLine:
@@ -446,13 +470,11 @@ struct CombinedMenuBarView: View {
         switch m {
         case .network:
             let offline = !s.network.connected
-            HStack(spacing: 2.5) {
-                NetArrows(upOnTop: prefs.network.order == .uploadTop, height: 20).opacity(offline ? 0.45 : 1)
-                let up = offline ? L10n.Common.dash : Format.rateCompact(s.network.up, unit: prefs.network.speedUnit)
-                let down = offline ? L10n.Common.dash : Format.rateCompact(s.network.down, unit: prefs.network.speedUnit)
-                StackedValues(top: prefs.network.order == .uploadTop ? up : down,
-                              bottom: prefs.network.order == .uploadTop ? down : up, template: "999K")
-            }
+            let up = offline ? L10n.Common.dash : Format.rateCompact(s.network.up, unit: prefs.network.speedUnit)
+            let down = offline ? L10n.Common.dash : Format.rateCompact(s.network.down, unit: prefs.network.speedUnit)
+            let upTop = prefs.network.order == .uploadTop
+            ArrowRows(top: upTop ? up : down, bottom: upTop ? down : up, upOnTop: upTop, template: "999K")
+                .opacity(offline ? 0.45 : 1)
         default:
             TwoLineValue(label: m.compactLabel, value: MenuBarText.shortValue(m, s, prefs), template: m == .sensors ? "100°" : "100%", tone: tone)
         }
@@ -472,8 +494,10 @@ enum MenuBarText {
         return String(format: "%.1fG", gb)
     }
 
-    static func readShort(_ v: Double) -> String { "R " + Format.rateCompact(v) }
-    static func writeShort(_ v: Double) -> String { "W " + Format.rateCompact(v) }
+    static var readLetter: String { "R" }
+    static var writeLetter: String { "W" }
+    static func readShort(_ v: Double) -> String { readLetter + " " + Format.rateCompact(v) }
+    static func writeShort(_ v: Double) -> String { writeLetter + " " + Format.rateCompact(v) }
 
     static func volume(_ d: DiskSample, _ name: String) -> Volume? {
         if !name.isEmpty, let v = d.volumes.first(where: { $0.name == name }) { return v }

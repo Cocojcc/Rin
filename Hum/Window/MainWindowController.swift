@@ -61,12 +61,15 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         window.titleVisibility = .hidden
         window.title = L10n.App.name
         window.isMovableByWindowBackground = true
-        window.setContentSize(NSSize(width: 860, height: 660))
-        window.contentMinSize = NSSize(width: 760, height: 560)
-        window.setFrameAutosaveName("HumMainWindow")
+        // The SwiftUI root draws the frosted glass, so the window itself is clear.
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.setContentSize(NSSize(width: 860, height: 760))
+        window.contentMinSize = NSSize(width: 760, height: 600)
+        window.setFrameAutosaveName("HumMainWindow.v2")
         window.isReleasedWhenClosed = false
         window.delegate = self
-        if !window.setFrameUsingName("HumMainWindow") { window.center() }
+        if !window.setFrameUsingName("HumMainWindow.v2") { window.center() }
         self.window = window
     }
 
