@@ -365,10 +365,11 @@ struct OverviewPage: View {
     /// Connected devices, lowest first; the status says how many are low.
     private func bluetoothCard(_ s: Snapshot) -> some View {
         let low = MenuBarText.lowDevices(s, settings.prefs).count
+        // The devices read down from the title, rather than sitting at the bottom of the card.
         return OverviewCard(module: .bluetooth, status: low > 0 ? (L10n.Bluetooth.lowCount(low), Theme.danger) : nil) {
-            EmptyView()
-        } footer: {
             BluetoothOverviewRows(snapshot: s, prefs: settings.prefs)
+        } footer: {
+            EmptyView()
         }
     }
 

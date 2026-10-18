@@ -344,7 +344,7 @@ struct BluetoothOverviewRows: View {
 
     var body: some View {
         let devices = snapshot.bluetooth.withBattery.sorted { ($0.level ?? 1) < ($1.level ?? 1) }
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 6) {
             if devices.isEmpty {
                 Text(L10n.Bluetooth.noDevices).ui(12).foregroundStyle(Theme.faint).frame(height: 18)
             }
@@ -363,5 +363,6 @@ struct BluetoothOverviewRows: View {
                 .frame(height: 18)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
