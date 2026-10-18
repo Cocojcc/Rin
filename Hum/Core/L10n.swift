@@ -123,9 +123,11 @@ enum L10n {
         static var topUsage: String { tr("overview.top") }
         static var sortBy: String { tr("overview.sortBy") }
         static var noBattery: String { tr("overview.battery.none") }
-        static func diskSummary(_ a: String, _ b: String) -> String { tr("overview.disk.summary", a, b) }
         static func videoDecode(_ a: String) -> String { tr("overview.gpu.videoDecode", a) }
         static func thermal(_ level: Int) -> String { tr("overview.thermal.\(min(max(level, 0), 3))") }
+        static var cpuPeaks: String { tr("overview.cpuPeaks") }
+        static var diskHealthy: String { tr("overview.diskHealthy") }
+        static func cycles(_ a: String) -> String { tr("overview.cycles", a) }
     }
 
     enum Battery {
@@ -460,6 +462,10 @@ enum L10n {
         static func zoneHigh(_ a: String) -> String { tr("monitor.zoneHigh", a) }
         static func usedSlashLimit(_ a: String, _ b: String) -> String { tr("monitor.usedSlashLimit", a, b) }
         static func thermalLevel(_ level: Int) -> String { tr("monitor.thermalLevel.\(min(max(level, 0), 3))") }
+        static func pCoreTip(_ a: Int, _ b: String, _ c: String) -> String { tr("monitor.pCoreTip", a, b, c) }
+        static func eCoreTip(_ a: Int, _ b: String, _ c: String) -> String { tr("monitor.eCoreTip", a, b, c) }
+        static func coreTip(_ a: Int, _ b: String, _ c: String) -> String { tr("monitor.coreTip", a, b, c) }
+        static func cyclesLimit(_ a: Int) -> String { tr("monitor.cyclesLimit", a) }
     }
 
     enum Settings {
@@ -597,10 +603,6 @@ enum L10n {
         static func gigabytes(_ n: Int) -> String { tr("settings.gigabytes", n) }
         static var mergeWidgets: String { tr("settings.mergeWidgets") }
         static func moduleSettings(_ a: String) -> String { tr("settings.moduleSettings", a) }
-        static func monitorModule(_ a: String) -> String { tr("settings.monitorModule", a) }
-        static var notInMenubar: String { tr("settings.notInMenubar") }
-        static var orderA11y: String { tr("settings.orderA11y") }
-        static var moduleOrder: String { tr("settings.moduleOrder") }
         static var processRefresh: String { tr("settings.processRefresh") }
         static var ruleGPU: String { tr("settings.ruleGPU") }
         static var ruleGPUSwitch: String { tr("settings.ruleGPUSwitch") }
@@ -616,6 +618,11 @@ enum L10n {
         static var tabsA11y: String { tr("settings.tabsA11y") }
         static var timeFormat: String { tr("settings.timeFormat") }
         static var widgetStripA11y: String { tr("settings.widgetStripA11y") }
+        static func moduleMonitor(_ a: String) -> String { tr("settings.moduleMonitor", a) }
+        static func moduleViews(_ a: String) -> String { tr("settings.moduleViews", a) }
+        static var noWidgets: String { tr("settings.noWidgets") }
+        static var modulesInMenubar: String { tr("settings.modulesInMenubar") }
+        static func blockedChip(_ a: String) -> String { tr("settings.blockedChip", a) }
     }
 
     enum Notch {

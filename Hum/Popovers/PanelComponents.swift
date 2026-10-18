@@ -113,7 +113,7 @@ struct ValueRing: View {
     var body: some View {
         ZStack {
             Ring(segments: segments, size: large ? 84 : 58, lineWidth: large ? 5 : 4)
-            Text(value).ui(large ? 22 : 14, 500).kerning(large ? -0.44 : -0.28).lineLimit(1)
+            Text(value).ui(large ? 20 : 15, 500).kerning(large ? -0.4 : -0.3).lineLimit(1)
         }
     }
 }

@@ -127,11 +127,7 @@ struct Sidebar: View {
             .foregroundStyle(on ? Theme.text : Theme.sub)
             .padding(.horizontal, 10)
             .frame(height: 32)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(on ? Theme.raised : Color.clear)
-                    .raisedShadow(on)
-            )
+            .background { if on { GlassThumb() } }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -139,18 +135,32 @@ struct Sidebar: View {
     }
 
     private func footerButton(_ d: String, lineWidth: CGFloat, label: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        FooterButton(d: d, lineWidth: lineWidth, label: label, selected: selected, action: action)
+    }
+}
+
+/// Round sidebar footer button: glass when selected, a grey disc under the pointer.
+private struct FooterButton: View {
+    var d: String
+    var lineWidth: CGFloat
+    var label: String
+    var selected: Bool
+    var action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
         Button(action: action) {
             LineIcon(d: d, size: 16, lineWidth: lineWidth)
                 .foregroundStyle(selected ? Theme.text : Theme.sub)
                 .frame(width: 32, height: 32)
-                .background(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .fill(selected ? Theme.raised : Color.clear)
-                        .raisedShadow(selected)
-                )
-                .contentShape(Rectangle())
+                .background {
+                    if selected { GlassThumb() } else if hovering { Circle().fill(Theme.well) }
+                }
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(label)
         .accessibilityLabel(label)
         .accessibilityAddTraits(selected ? [.isSelected] : [])
     }

@@ -485,7 +485,6 @@
 "disk.internal" = "Internal";
 "sidebar.pause" = "Pause monitoring";
 "sidebar.resume" = "Resume monitoring";
-"overview.disk.summary" = "%1$@ total · %2$@ used";
 "overview.gpu.videoDecode" = "Video decode %@";
 "monitor.active" = "Active";
 "monitor.idleState" = "Idle";
@@ -554,11 +553,8 @@
 "monitor.zoneLow" = "● Below %@";
 "monitor.zoneMid" = "● %1$@–%2$@";
 "monitor.zoneHigh" = "● Above %@";
-"settings.mergeWidgets" = "Combine into one item";
+"settings.mergeWidgets" = "Combine widgets";
 "settings.moduleSettings" = "%@ settings";
-"settings.monitorModule" = "Monitor %@";
-"settings.notInMenubar" = "Not shown in the menu bar";
-"settings.orderA11y" = "Menu bar order";
 "settings.processRefresh" = "Process refresh";
 "settings.ruleGPU" = "GPU usage above";
 "settings.ruleGPUSwitch" = "GPU usage alert";
@@ -568,7 +564,7 @@
 "settings.showThermal" = "Show thermal state";
 "settings.showVideo" = "Show video engines";
 "settings.tabAlerts" = "Alerts";
-"settings.tabModule" = "Module";
+"settings.tabModule" = "General";
 "settings.tabPanel" = "Dropdown";
 "settings.tabWidgets" = "Widgets";
 "settings.tabsA11y" = "Settings sections";
@@ -656,4 +652,15 @@
 "panel.volumeUsedPurgeable" = "%1$@ used (%2$@ purgeable) · %3$@ total";
 "panel.passiveCooling" = "Passive cooling";
 "panel.fanCount" = "%d fans";
-"settings.moduleOrder" = "Order";
+"settings.moduleMonitor" = "%@ monitor";
+"settings.moduleViews" = "%@ views";
+"settings.noWidgets" = "No widgets selected";
+"settings.modulesInMenubar" = "Modules in the menu bar";
+"settings.blockedChip" = "%@, hidden by the notch";
+"overview.cpuPeaks" = "CPU peaks, last 24 hours";
+"overview.diskHealthy" = "Healthy";
+"overview.cycles" = "%@ cycles";
+"monitor.pCoreTip" = "Performance core %1$d · %2$@ (system %3$@)";
+"monitor.eCoreTip" = "Efficiency core %1$d · %2$@ (system %3$@)";
+"monitor.coreTip" = "Core %1$d · %2$@ (system %3$@)";
+"monitor.cyclesLimit" = " / %d";

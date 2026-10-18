@@ -64,10 +64,17 @@ final class Monitor {
     func applyConfiguration() {
         let prefs = SettingsStore.shared.prefs
         var config = Sampler.Config()
-        // The overview and the combined panel show the whole machine, so while either is open
-        // modules that are switched off are read too; otherwise they are not read at all.
-        let wholeMachine = consumers.contains(.window(.overview)) || consumers.contains(.combinedPanel)
-        config.monitored = wholeMachine ? Set(Module.allCases) : Set(Module.allCases.filter(prefs.isMonitored))
+        // A module is read only while something uses it: its menu bar item, an alert rule, or a
+        // view showing it. The overview and the combined panel show the whole machine.
+        var read = Set(Module.allCases.filter(prefs.showsInMenubar)).union(prefs.alertedModules)
+        for consumer in consumers {
+            switch consumer {
+            case .popover(let m), .window(.monitor(let m)), .window(.moduleSettings(let m)): read.insert(m)
+            case .combinedPanel, .window(.overview): read = Set(Module.allCases)
+            default: break
+            }
+        }
+        config.monitored = read
         for m in Module.allCases { config.intervals[m] = prefs.refresh(m) }
         config.processInterval = min(prefs.cpu.processRefresh, prefs.memory.processRefresh)
         config.latency = prefs.network.showLatency
@@ -76,9 +83,10 @@ final class Monitor {
         let anyUI = !consumers.isEmpty
         config.processes.includeOtherUsers = anyUI
         config.processes.network = config.monitored.contains(.network)
-            && (consumers.contains(.popover(.network)) || consumers.contains(.window(.monitor(.network))) || consumers.contains(.combinedPanel))
+            && (consumers.contains(.popover(.network)) || consumers.contains(.window(.monitor(.network)))
+                || consumers.contains(.combinedPanel) || consumers.contains(.window(.overview)))
         config.processes.gpu = config.monitored.contains(.gpu)
-            && (consumers.contains(.popover(.gpu)) || consumers.contains(.window(.monitor(.gpu))) || consumers.contains(.window(.overview)))
+            && (consumers.contains(.popover(.gpu)) || consumers.contains(.window(.monitor(.gpu))))
         config.processes.limit = max(8, prefs.cpu.processCount, prefs.memory.processCount, prefs.gpu.processCount)
         let batteryVisible = config.monitored.contains(.battery)
             && (consumers.contains(.popover(.battery)) || consumers.contains(.window(.monitor(.battery))))
@@ -116,7 +124,7 @@ final class Monitor {
 /// Owns the readers and drives them from a timer on its own serial queue.
 final class Sampler {
     struct Config {
-        /// Modules read: those switched on, plus all of them while an overview is open.
+        /// Modules read: in the menu bar, watched by an alert, or on screen.
         var monitored: Set<Module> = Set(Module.allCases)
         /// Seconds between reads per module; the timer ticks at the shortest of them.
         var intervals: [Module: Double] = [:]

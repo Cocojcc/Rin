@@ -155,23 +155,18 @@ extension Preferences {
     /// Modules that were in the menu bar before widgets existed but have no default widget
     /// (disk, GPU) keep one, so they don't vanish. Runs once on saved settings.
     mutating func migrateWidgets() {
-        for m in Module.allCases where widgetState[m.rawValue] == nil && isMonitored(m) && m.defaultWidgets.isEmpty {
+        for m in Module.allCases where widgetState[m.rawValue] == nil && isVisible(m) && m.defaultWidgets.isEmpty {
             widgetState[m.rawValue] = ModuleWidgets(enabled: [m.primaryWidget])
         }
         general.widgetsMigrated = true
     }
 
-    /// Puts a module in the menu bar (monitoring it, with its usual widgets) or takes it out.
+    /// The "在菜单栏显示" switch. Off keeps the picked widgets for next time; on brings them
+    /// back, or the module's usual widgets when none are picked.
     mutating func setInMenubar(_ m: Module, _ on: Bool) {
-        if on {
-            setMonitored(m, true)
-            if widgets(m).isEmpty {
-                for kind in m.defaultWidgets.isEmpty ? [m.primaryWidget] : m.defaultWidgets { setWidget(kind, true, for: m) }
-            }
-        } else {
-            var state = widgetState[m.rawValue] ?? ModuleWidgets(enabled: [])
-            state.enabled = []
-            widgetState[m.rawValue] = state
+        setVisible(m, on)
+        if on && widgets(m).isEmpty {
+            for kind in m.defaultWidgets.isEmpty ? [m.primaryWidget] : m.defaultWidgets { setWidget(kind, true, for: m) }
         }
     }
 
@@ -205,6 +200,22 @@ extension Preferences {
         widgetState[m.rawValue] = state
     }
 
-    /// Shown in the menu bar: monitored and at least one widget selected.
-    func showsInMenubar(_ m: Module) -> Bool { isMonitored(m) && !widgets(m).isEmpty }
+    /// Shown in the menu bar: switched on and at least one widget picked (so clearing every
+    /// widget also takes it out).
+    func showsInMenubar(_ m: Module) -> Bool { isVisible(m) && !widgets(m).isEmpty }
+
+    /// Modules an alert rule watches; they are read even when not in the menu bar.
+    var alertedModules: Set<Module> {
+        let a = alerts
+        guard a.enabled else { return [] }
+        var out: Set<Module> = []
+        if a.cpuOn { out.insert(.cpu) }
+        if a.gpuOn { out.insert(.gpu) }
+        if a.memoryOn { out.insert(.memory) }
+        if a.diskOn { out.insert(.disk) }
+        if a.batteryOn { out.insert(.battery) }
+        if a.tempOn { out.insert(.sensors) }
+        if a.networkOn { out.insert(.network) }
+        return out
+    }
 }

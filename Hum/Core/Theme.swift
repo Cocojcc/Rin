@@ -53,6 +53,17 @@ enum Theme {
     static let raisedShadowNear = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(0, 0, 0, 0.3))
     static let raisedShadowFar = Color.dyn(RGBA(0, 0, 0, 0.06), RGBA(0, 0, 0, 0))
 
+    // Liquid-glass controls: a track behind segmented groups, a thumb for the selected piece.
+    static let lgFill = Color.dyn(RGBA(255, 255, 255, 0.05), RGBA(255, 255, 255, 0.03))
+    static let lgEdgeLight = Color.dyn(RGBA(255, 255, 255, 0.55), RGBA(255, 255, 255, 0.1))
+    static let lgEdgeLine = Color.dyn(RGBA(0, 0, 0, 0.1), RGBA(255, 255, 255, 0.1))
+    static let lgThumb = Color.dyn(RGBA(255, 255, 255, 0.07), RGBA(255, 255, 255, 0.08))
+    static let lgThumbLight = Color.dyn(RGBA(255, 255, 255, 0.8), RGBA(255, 255, 255, 0.28))
+    static let lgThumbRing = Color.dyn(RGBA(255, 255, 255, 0.35), RGBA(255, 255, 255, 0.14))
+    static let lgThumbLine = Color.dyn(RGBA(0, 0, 0, 0.14), RGBA(0, 0, 0, 0.5))
+    static let lgThumbShadow = Color.dyn(RGBA(0, 0, 0, 0.12), RGBA(0, 0, 0, 0.45))
+    static let lgHover = Color.dyn(RGBA(255, 255, 255, 0.1), RGBA(255, 255, 255, 0.06))
+
     static let well = Color.dyn(RGBA(0, 0, 0, 0.055), RGBA(255, 255, 255, 0.08))
     static let panel = Color.dyn(RGBA(0, 0, 0, 0.035), RGBA(255, 255, 255, 0.05))
     static let line = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(255, 255, 255, 0.1))

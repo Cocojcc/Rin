@@ -64,21 +64,15 @@ private struct Card<Content: View>: View {
     }
 }
 
-/// A monitor page: the module header, then its content, faded and inert while the module's
-/// monitoring is switched off (nothing is read for it then).
+/// A monitor page: the module header, then its content.
 private struct MonitorPageLayout<Content: View>: View {
     let module: Module
     @ViewBuilder var content: Content
-    var settings = SettingsStore.shared
 
     var body: some View {
-        let on = settings.prefs.isMonitored(module)
         VStack(alignment: .leading, spacing: 20) {
             ModuleHeader(module: module)
-            VStack(alignment: .leading, spacing: 20) { content }
-                .opacity(on ? 1 : 0.35)
-                .allowsHitTesting(on)
-                .accessibilityHidden(!on)
+            content
         }
     }
 }
@@ -155,7 +149,6 @@ struct OverviewPage: View {
     var monitor = Monitor.shared
     var settings = SettingsStore.shared
     var alerts = Alerts.shared
-    @State private var sortByMemory = false
 
     var body: some View {
         let s = monitor.snapshot
@@ -164,17 +157,15 @@ struct OverviewPage: View {
         VStack(alignment: .leading, spacing: 20) {
             PageTitle(title: L10n.Overview.title)
             status
-            // Every module, switched off or not: modules not monitored are read only while
-            // this page is open.
-            CardGrid {
+            CardGrid(spacing: 10) {
                 cpuCard(s, unit)
-                gpuCard(s, unit)
                 memoryCard(s)
                 networkCard(s)
                 diskCard(s)
                 batteryCard(s)
                 sensorsCard(s, unit)
-                topCard(s).layoutValue(key: SpanKey.self, value: 2)
+                peakCard().layoutValue(key: SpanKey.self, value: 2)
+                gpuCard(s, unit)
             }
         }
     }
@@ -190,49 +181,169 @@ struct OverviewPage: View {
             Spacer(minLength: 0)
             Text(Format.uptime(since: SystemInfo.bootTime)).ui(12).foregroundStyle(Theme.sub)
         }
-        .padding(14)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
         .accessibilityElement(children: .combine)
     }
 
-    private func card<Content: View>(_ m: Module, footer: String?, footerColor: Color = Theme.sub, footerWeight: CGFloat = 400,
-                                     @ViewBuilder content: () -> Content) -> some View {
-        Button {
-            Navigator.shared.page = .monitor(m)
-        } label: {
-            VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 8) {
-                        LineIcon(d: Icons.module(m), size: 16, lineWidth: 1.5)
-                        Text(m.title).ui(13, 500)
-                    }
-                    .foregroundStyle(Theme.sub)
-                    .frame(height: 18)
-                    content()
-                }
-                Spacer(minLength: 12)
-                if let footer {
-                    Text(footer).ui(12, footerWeight).foregroundStyle(footerColor).lineLimit(1).frame(height: 16)
-                }
+    // MARK: Cards
+
+    private func cpuCard(_ s: Snapshot, _ unit: TemperatureUnit) -> some View {
+        OverviewCard(module: .cpu, status: nil) {
+            ringRow(PageRing(segments: [.init(fraction: s.cpu.system, color: Theme.sys), .init(fraction: s.cpu.user, color: Theme.cpu)],
+                             size: 56, lineWidth: 4, text: Format.percent(s.cpu.total))) {
+                pair(L10n.Panel.user, Format.percent(s.cpu.user), swatch: LegendItem(color: Theme.cpu, label: "", shape: .square))
+                pair(L10n.Panel.system, Format.percent(s.cpu.system), swatch: LegendItem(color: Theme.sys, label: "", shape: .square))
+                pair(L10n.Monitor.idle, Format.percent(max(0, 1 - s.cpu.total)), swatch: LegendItem(color: Theme.faint, label: "", shape: .outline))
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.panel))
-            .contentShape(Rectangle())
+        } footer: {
+            processes(Array(s.processes.byCPU.prefix(2))) { Format.percentValue($0.cpu) }
         }
-        .buttonStyle(.plain)
-        .accessibilityHint(L10n.Panel.openMonitor(m.title))
     }
 
-    /// "用户 15%": grey label, value in text color.
-    private func pair(_ label: String, _ value: String?) -> some View {
-        HStack(spacing: 4) {
-            Text(label).foregroundStyle(Theme.sub)
-            if let value { Text(value).fontWeight(.medium).foregroundStyle(Theme.text) }
+    private func memoryCard(_ s: Snapshot) -> some View {
+        let m = s.memory
+        let pr = PanelText.pressure(m.pressure)
+        let label = m.pressure == .normal ? L10n.Overview.pressureNormal : m.pressure == .warning ? L10n.Overview.pressureWarning : L10n.Overview.pressureCritical
+        return OverviewCard(module: .memory, status: (label, pr.1)) {
+            ringRow(PageRing(segments: MemoryRing.segments(m), size: 56, lineWidth: 4, text: Format.percent(m.usedFraction))) {
+                pair(L10n.Memory.used, Format.memory(m.used))
+                pair(L10n.Monitor.ofTotal(Format.memory(m.total)), nil)
+                pair(L10n.Memory.swap, Format.memory(m.swapUsed))
+            }
+        } footer: {
+            processes(Array(s.processes.byMemory.prefix(2))) { Format.memory($0.memory) }
         }
-        .ui(12)
-        .lineLimit(1)
     }
+
+    private func networkCard(_ s: Snapshot) -> some View {
+        let n = s.network
+        let speed = settings.prefs.network.speedUnit
+        return OverviewCard(module: .network, status: (networkLine(n), n.connected ? Theme.ok : Theme.sub)) {
+            HStack(alignment: .top, spacing: 12) {
+                rate(MenuBarText.downArrow, Theme.down, L10n.Panel.download, n.connected ? Format.rate(n.down, unit: speed) : L10n.Common.dash)
+                rate(MenuBarText.upArrow, Theme.up, L10n.Panel.upload, n.connected ? Format.rate(n.up, unit: speed) : L10n.Common.dash)
+            }
+            MirrorSparkline(down: monitor.history.latest(.netDown, seconds: 120), up: monitor.history.latest(.netUp, seconds: 120))
+                .frame(height: 22)
+        } footer: {
+            processes(Array(s.processes.byNetwork.prefix(2))) { MenuBarText.downArrow + " " + Format.rate($0.netDown, unit: speed) }
+        }
+    }
+
+    private func diskCard(_ s: Snapshot) -> some View {
+        let root = s.disk.root
+        let other = s.disk.volumes.first { $0.id != root?.id }
+        let health: (String, Color)? = s.disk.health.map { $0.ok ? (L10n.Overview.diskHealthy, Theme.ok) : (L10n.Monitor.healthService, Theme.danger) }
+        return OverviewCard(module: .disk, status: health) {
+            ringRow(PageRing(segments: [.init(fraction: root?.usedFraction ?? 0, color: Theme.disk)], size: 56, lineWidth: 4,
+                             text: Format.percent(root?.usedFraction ?? 0))) {
+                Text(root?.name ?? L10n.Common.dash).ui(12, 500).lineLimit(1)
+                pair(L10n.Disk.free, Format.storage(root?.available ?? 0))
+                pair(L10n.Monitor.ofTotal(Format.storage(root?.total ?? 0)), nil)
+            }
+        } footer: {
+            if let other {
+                footerText(other.name + " · ", Format.marker + " " + L10n.Disk.free, Format.storage(other.available))
+            } else {
+                footerText(L10n.Panel.readWriteShort(Format.rate(s.disk.read), Format.rate(s.disk.write)))
+            }
+        }
+    }
+
+    private func batteryCard(_ s: Snapshot) -> some View {
+        let b = s.battery
+        let state: (String, Color)? = b.hasBattery ? (PanelText.batteryState(b), b.onAC ? Theme.ok : Theme.sub) : nil
+        return OverviewCard(module: .battery, status: state) {
+            if b.hasBattery {
+                ringRow(PageRing(segments: [.init(fraction: b.level, color: BatteryColors.fill(b))], size: 56, lineWidth: 4, text: Format.percent(b.level))) {
+                    if b.isCharging, let m = b.minutesToFull {
+                        pair(L10n.Battery.untilFull(BatteryTime.text(m)), nil)
+                    } else if !b.onAC, let m = b.minutesToEmpty {
+                        pair(L10n.Battery.remaining(BatteryTime.text(m)), nil)
+                    }
+                    if b.onAC, let w = b.adapterWatts {
+                        pair(L10n.Monitor.powerSource, "\(w) W")
+                    } else if let w = b.power {
+                        pair(L10n.Panel.power, Format.watts(abs(w)))
+                    }
+                }
+            } else {
+                Text(L10n.Battery.noBattery).ui(12).foregroundStyle(Theme.sub)
+            }
+        } footer: {
+            if b.hasBattery {
+                HStack(spacing: 0) {
+                    footerText("", L10n.Battery.health + " " + Format.marker, b.health.map(Format.percent) ?? L10n.Common.dash)
+                    if let c = b.cycles { footerText(" · ", L10n.Overview.cycles(Format.marker), "\(c)") }
+                }
+            } else {
+                footerText(L10n.Battery.deviceCount(monitor.bluetooth.count))
+            }
+        }
+    }
+
+    private func sensorsCard(_ s: Snapshot, _ unit: TemperatureUnit) -> some View {
+        let t = s.sensors
+        let thermal = ThermalText.color(t.thermal)
+        let fan = t.fans.first.map { L10n.Overview.fan + " " + Format.rpm($0.rpm) } ?? L10n.Overview.noFan
+        let footer = [fan, t.systemPower.map(Format.watts)].compactMap { $0 }.joined(separator: " · ")
+        return OverviewCard(module: .sensors, status: (L10n.Overview.thermal(t.thermal.rawValue), thermal)) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(t.cpuAverage.map { Format.temperatureNumber($0, unit: unit) + "°" } ?? L10n.Common.dash).ui(24, 500).kerning(-0.48)
+                Text(L10n.Overview.cpuTemp).ui(12).foregroundStyle(Theme.sub)
+            }
+            LevelSegments(level: t.thermal.rawValue, color: thermal, height: 3, gap: 3)
+        } footer: {
+            footerText(footer)
+        }
+    }
+
+    private func gpuCard(_ s: Snapshot, _ unit: TemperatureUnit) -> some View {
+        let g = s.gpu
+        return OverviewCard(module: .gpu, status: nil) {
+            ringRow(PageRing(segments: [.init(fraction: g.utilization, color: Theme.gpu)], size: 56, lineWidth: 4, text: Format.percent(g.utilization))) {
+                pair(L10n.Panel.vram, Format.memory(g.memoryUsed))
+                pair(L10n.Panel.frequency, g.frequencyMHz.map(Format.frequency) ?? L10n.Common.dash)
+                pair(L10n.Panel.temperature, g.temperature.map { Format.temperature($0, unit: unit, showUnit: true) } ?? L10n.Common.dash)
+            }
+        } footer: {
+            footerText("", L10n.Overview.videoDecode(Format.marker), MediaText.state(g.decodeWatts))
+        }
+    }
+
+    /// The busiest moments of the last 24 hours; opens the CPU page's lookback.
+    private func peakCard() -> some View {
+        let peaks = monitor.history.cpuPeaks()
+        return OverviewCard(module: .cpu, title: L10n.Overview.cpuPeaks, icon: Icons.activity, status: nil,
+                            action: { CPUPage.requestedRange = .h24; Navigator.shared.page = .monitor(.cpu) }) {
+            PeakSparkline(points: monitor.history.points(.cpu, range: .h24), peaks: peaks)
+                .frame(height: 30)
+                .accessibilityLabel(L10n.Monitor.cpuChartA11y(TimeRange.h24.title))
+            if peaks.isEmpty {
+                Text(L10n.Monitor.noPeaks).ui(12).foregroundStyle(Theme.sub)
+            } else {
+                HStack(alignment: .top, spacing: 12) {
+                    ForEach(peaks) { p in
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                Text(Format.percent(p.value / 100)).ui(15, 500)
+                                Text(p.top.first?.name ?? L10n.Common.dash).ui(12).lineLimit(1)
+                            }
+                            Text(Format.dayAndTime(p.date)).ui(12).foregroundStyle(Theme.sub)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    ForEach(0..<max(0, 3 - peaks.count), id: \.self) { _ in Color.clear.frame(maxWidth: .infinity) }
+                }
+            }
+        } footer: {
+            EmptyView()
+        }
+    }
+
+    // MARK: Pieces
 
     private func ringRow<Lines: View>(_ ring: PageRing, @ViewBuilder lines: () -> Lines) -> some View {
         HStack(spacing: 14) {
@@ -241,61 +352,59 @@ struct OverviewPage: View {
         }
     }
 
-    private func cpuCard(_ s: Snapshot, _ unit: TemperatureUnit) -> some View {
-        let parts = [s.sensors.cpuAverage.map { Format.temperature($0, unit: unit, showUnit: true) }, s.sensors.cpuPower.map(Format.watts)].compactMap { $0 }
-        return card(.cpu, footer: parts.isEmpty ? nil : parts.joined(separator: " · ")) {
-            ringRow(PageRing(segments: [.init(fraction: s.cpu.system, color: Theme.sys), .init(fraction: s.cpu.user, color: Theme.cpu)],
-                              size: 56, lineWidth: 4, text: Format.percent(s.cpu.total))) {
-                pair(L10n.Panel.user, Format.percent(s.cpu.user))
-                pair(L10n.Panel.system, Format.percent(s.cpu.system))
-                pair(L10n.Monitor.idle, Format.percent(max(0, 1 - s.cpu.total)))
-            }
+    /// "用户 15%": grey label, value in text color, optional color square in front.
+    private func pair(_ label: String, _ value: String?, swatch: LegendItem? = nil) -> some View {
+        HStack(spacing: 6) {
+            if let swatch { swatch.swatch }
+            Text(label).foregroundStyle(Theme.sub)
+            if let value { Text(value).fontWeight(.medium).foregroundStyle(Theme.text) }
         }
+        .ui(12)
+        .lineLimit(1)
     }
 
-    private func gpuCard(_ s: Snapshot, _ unit: TemperatureUnit) -> some View {
-        let g = s.gpu
-        return card(.gpu, footer: L10n.Overview.videoDecode(MediaText.state(g.decodeWatts))) {
-            ringRow(PageRing(segments: [.init(fraction: g.utilization, color: Theme.gpu)], size: 56, lineWidth: 4, text: Format.percent(g.utilization))) {
-                pair(L10n.Panel.vram, Format.memory(g.memoryUsed))
-                pair(L10n.Panel.temperature, g.temperature.map { Format.temperature($0, unit: unit, showUnit: true) } ?? L10n.Common.dash)
-                pair(L10n.Panel.frequency, g.frequencyMHz.map(Format.frequency) ?? L10n.Common.dash)
+    private func rate(_ arrow: String, _ color: Color, _ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
+                Text(arrow).ui(12, 600).foregroundStyle(color)
+                Text(label).ui(12).foregroundStyle(Theme.sub)
             }
+            Text(value).ui(15, 500).lineLimit(1)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func memoryCard(_ s: Snapshot) -> some View {
-        let m = s.memory
-        let pr = PanelText.pressure(m.pressure)
-        let label = m.pressure == .normal ? L10n.Overview.pressureNormal : m.pressure == .warning ? L10n.Overview.pressureWarning : L10n.Overview.pressureCritical
-        return card(.memory, footer: label, footerColor: pr.1, footerWeight: 500) {
-            ringRow(PageRing(segments: MemoryRing.segments(m), size: 56, lineWidth: 4, text: Format.percent(m.usedFraction))) {
-                pair(L10n.Memory.used, Format.memory(m.used))
-                pair(L10n.Monitor.ofTotal(Format.memory(m.total)), nil)
-                pair(L10n.Memory.swap, Format.memory(m.swapUsed))
-            }
+    /// Grey footer line; with a value, the template's `Format.marker` becomes that value in
+    /// text color ("T7 Shield · 590 GB 可用", "循环 214 次").
+    private func footerText(_ prefix: String, _ template: String, _ value: String) -> some View {
+        let parts = template.components(separatedBy: Format.marker)
+        var text = Text(prefix + parts[0]).foregroundColor(Theme.sub)
+        if parts.count > 1 {
+            text = text + Text(value).foregroundColor(Theme.text).fontWeight(.medium) + Text(parts[1...].joined()).foregroundColor(Theme.sub)
         }
+        return text.ui(12).lineLimit(1).frame(height: 16)
     }
 
-    private func networkCard(_ s: Snapshot) -> some View {
-        let n = s.network
-        let unit = settings.prefs.network.speedUnit
-        let down = Format.rateParts(n.down, unit: unit)
-        return card(.network, footer: networkLine(n)) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(n.connected ? MenuBarText.downArrow + " " + down.0 : L10n.Common.dash).ui(24, 500).kerning(-0.48)
-                    if n.connected { Text(down.1).ui(13).foregroundStyle(Theme.sub) }
+    private func footerText(_ line: String) -> some View { footerText("", line, "") }
+
+    private func processes(_ list: [ProcessUsage], value: @escaping (ProcessUsage) -> String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if list.isEmpty {
+                Text(L10n.Panel.noProcesses).ui(12).foregroundStyle(Theme.faint).frame(height: 18)
+            }
+            ForEach(list) { p in
+                HStack(spacing: 8) {
+                    ProcessIcon(process: p, size: 18)
+                    Text(p.name).lineLimit(1).truncationMode(.tail).frame(maxWidth: .infinity, alignment: .leading)
+                    Text(value(p)).fontWeight(.medium).lineLimit(1)
                 }
-                .lineLimit(1)
-                .frame(height: 28)
-                if n.connected {
-                    Text(MenuBarText.upArrow + " " + Format.rate(n.up, unit: unit)).ui(13).foregroundStyle(Theme.sub).lineLimit(1)
-                }
+                .ui(12)
+                .frame(height: 18)
             }
-            MirrorSparkline(down: monitor.history.latest(.netDown, seconds: 120), up: monitor.history.latest(.netUp, seconds: 120))
-                .frame(height: 30)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 8)
+        .overlay(alignment: .top) { Hairline() }
     }
 
     private func networkLine(_ n: NetworkSample) -> String {
@@ -306,101 +415,91 @@ struct OverviewPage: View {
         default: return "\(PanelText.kindName(n.kind)) · \(L10n.Overview.connected)"
         }
     }
+}
 
-    private func diskCard(_ s: Snapshot) -> some View {
-        let root = s.disk.root
-        let footer = root.map { L10n.Overview.diskSummary(Format.storage($0.total), Format.percent($0.usedFraction)) }
-        return card(.disk, footer: footer) {
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(Array(s.disk.volumes.prefix(2))) { v in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 4) {
-                            Text(v.name).lineLimit(1).allowsTightening(true).layoutPriority(1)
-                            Spacer(minLength: 0)
-                            HStack(spacing: 3) {
-                                Text(Format.storage(v.available)).fontWeight(.medium)
-                                Text(L10n.Disk.free).foregroundStyle(Theme.sub)
-                            }
-                            .fixedSize()
+/// An overview card: icon and title, a status on the right, content, and a footer pinned to
+/// the bottom. The whole card opens its monitor page and tints under the pointer.
+private struct OverviewCard<Content: View, Footer: View>: View {
+    let module: Module
+    var title: String? = nil
+    var icon: String? = nil
+    var status: (String, Color)?
+    var action: (() -> Void)? = nil
+    @ViewBuilder var content: Content
+    @ViewBuilder var footer: Footer
+    @State private var hovering = false
+
+    init(module: Module, title: String? = nil, icon: String? = nil, status: (String, Color)?,
+         action: (() -> Void)? = nil, @ViewBuilder content: () -> Content, @ViewBuilder footer: () -> Footer) {
+        self.module = module
+        self.title = title
+        self.icon = icon
+        self.status = status
+        self.action = action
+        self.content = content()
+        self.footer = footer()
+    }
+
+    var body: some View {
+        Button {
+            if let action { action() } else { Navigator.shared.page = .monitor(module) }
+        } label: {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 8) {
+                        HStack(spacing: 8) {
+                            LineIcon(d: icon ?? Icons.module(module), size: 16, lineWidth: 1.5)
+                            Text(title ?? module.title).ui(13, 500)
                         }
-                        .ui(12)
-                        MeterBar(fraction: v.usedFraction, color: Theme.disk)
+                        .foregroundStyle(Theme.sub)
+                        Spacer(minLength: 0)
+                        if let status { Text(status.0).ui(12, 500).foregroundStyle(status.1).lineLimit(1) }
                     }
+                    .frame(height: 18)
+                    content
                 }
+                Spacer(minLength: 12)
+                footer
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(hovering ? Theme.well : Theme.panel))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .accessibilityHint(L10n.Panel.openMonitor(module.title))
+    }
+}
+
+/// 24 hours of CPU use as a small area chart with dots on the peaks.
+struct PeakSparkline: View {
+    var points: [ChartPoint]
+    var peaks: [PeakMarker]
+
+    var body: some View {
+        Canvas { ctx, size in
+            let end = Date(), start = end.addingTimeInterval(-86_400)
+            let x = { (d: Date) in size.width * CGFloat(d.timeIntervalSince(start) / 86_400) }
+            let y = { (v: Double) in size.height - CGFloat(min(100, max(0, v)) / 100) * (size.height - 3) }
+            guard let first = points.first, let last = points.last else { return }
+            var line = Path()
+            for (i, p) in points.enumerated() {
+                let pt = CGPoint(x: x(p.date), y: y(p.value))
+                if i == 0 { line.move(to: pt) } else { line.addLine(to: pt) }
+            }
+            var area = line
+            area.addLine(to: CGPoint(x: x(last.date), y: size.height))
+            area.addLine(to: CGPoint(x: x(first.date), y: size.height))
+            area.closeSubpath()
+            ctx.fill(area, with: .color(Theme.cpu.opacity(0.13)))
+            ctx.stroke(line, with: .color(Theme.cpu), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+            for p in peaks {
+                let c = CGPoint(x: x(p.date), y: y(p.value))
+                ctx.fill(Path(ellipseIn: CGRect(x: c.x - 5, y: c.y - 5, width: 10, height: 10)), with: .color(Theme.raised))
+                ctx.fill(Path(ellipseIn: CGRect(x: c.x - 3, y: c.y - 3, width: 6, height: 6)), with: .color(Theme.cpu))
             }
         }
-    }
-
-    private func batteryCard(_ s: Snapshot) -> some View {
-        let b = s.battery
-        return card(.battery, footer: b.hasBattery ? batteryLine(b) : L10n.Battery.deviceCount(monitor.bluetooth.count)) {
-            if b.hasBattery {
-                HStack(spacing: 14) {
-                    LargeBattery(level: b.level, charging: b.isCharging, color: BatteryColors.fill(b)).frame(width: 56, height: 26)
-                    HStack(alignment: .firstTextBaseline, spacing: 2) {
-                        Text(percentNumber(b.level)).ui(24, 500).kerning(-0.48)
-                        Text("%").ui(13).foregroundStyle(Theme.sub)
-                    }
-                }
-                if let h = b.health { pair(L10n.Battery.health, Format.percent(h)) }
-            } else {
-                Text(L10n.Common.dash).ui(24, 500)
-            }
-        }
-    }
-
-    private func batteryLine(_ b: BatterySample) -> String {
-        if b.isCharging, let m = b.minutesToFull { return L10n.Battery.charging + " · " + L10n.Battery.untilFull(Format.clockDuration(minutes: m)) }
-        if b.isCharging { return L10n.Battery.charging }
-        if !b.onAC, let m = b.minutesToEmpty { return L10n.Battery.remaining(Format.clockDuration(minutes: m)) }
-        return b.onAC ? L10n.Battery.onAC : L10n.Battery.onBattery
-    }
-
-    private func sensorsCard(_ s: Snapshot, _ unit: TemperatureUnit) -> some View {
-        let t = s.sensors
-        let thermal = ThermalText.color(t.thermal)
-        let fan = t.fans.first.map { L10n.Overview.fan + " " + Format.rpm($0.rpm) } ?? L10n.Overview.noFan
-        let footer = [fan, t.systemPower.map(Format.watts)].compactMap { $0 }.joined(separator: " · ")
-        return card(.sensors, footer: footer) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(t.cpuAverage.map { Format.temperatureNumber($0, unit: unit) + "°" } ?? L10n.Common.dash).ui(24, 500).kerning(-0.48)
-                Text(L10n.Overview.cpuTemp).ui(12).foregroundStyle(Theme.sub)
-            }
-            VStack(alignment: .leading, spacing: 6) {
-                LevelSegments(level: t.thermal.rawValue, color: thermal, height: 3, gap: 3)
-                Text(L10n.Overview.thermal(t.thermal.rawValue)).ui(12).foregroundStyle(thermal)
-            }
-        }
-    }
-
-    private func topCard(_ s: Snapshot) -> some View {
-        let list = Array((sortByMemory ? s.processes.byMemory : s.processes.byCPU).prefix(3))
-        let maxValue = max(list.map { sortByMemory ? Double($0.memory) : $0.cpu }.max() ?? 1, 0.0001)
-        return VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text(L10n.Overview.topUsage).ui(13, 500).foregroundStyle(Theme.sub)
-                Spacer()
-                Segmented(label: L10n.Overview.sortBy, options: [(false, L10n.Module.cpu), (true, L10n.Module.memory)], selection: $sortByMemory, style: .sort)
-            }
-            .frame(height: 22)
-            .padding(.bottom, 8)
-            ForEach(list) { p in
-                HStack(spacing: 10) {
-                    ProcessIcon(process: p, size: 18)
-                    Text(p.name).lineLimit(1).frame(width: 120, alignment: .leading)
-                    MeterBar(fraction: (sortByMemory ? Double(p.memory) : p.cpu) / maxValue, color: sortByMemory ? Theme.mem : Theme.cpu)
-                    Text(sortByMemory ? Format.memory(p.memory) : Format.percentValue(p.cpu)).fontWeight(.medium).frame(width: 56, alignment: .trailing)
-                }
-                .ui(13)
-                .frame(height: 30)
-                .contentShape(Rectangle())
-                .contextMenu { ProcessContextMenu(process: p) }
-            }
-            if list.isEmpty { Text(L10n.Panel.noProcesses).foregroundStyle(Theme.faint).frame(height: 30) }
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.panel))
     }
 }
 
@@ -511,7 +610,15 @@ struct LargeBattery: View {
 struct CPUPage: View {
     var monitor = Monitor.shared
     var settings = SettingsStore.shared
-    @State private var range: TimeRange = .m5
+    @State private var range: TimeRange = CPUPage.takeRequestedRange()
+
+    /// Set before opening the page to start on another range (the overview's peaks card).
+    static var requestedRange: TimeRange?
+
+    private static func takeRequestedRange() -> TimeRange {
+        defer { requestedRange = nil }
+        return requestedRange ?? .m5
+    }
     @State private var selectedPeak: Date?
 
     var body: some View {
@@ -573,7 +680,7 @@ struct CPUPage: View {
                 }
             } else {
                 Section(title: L10n.Panel.cores, right: L10n.Monitor.coreTotal(s.cpu.perCore.count)) {
-                    CoreRingsPanel(cpu: s.cpu)
+                    CoreBarsPanel(cpu: s.cpu)
                 }
                 SideBySide {
                     Section(title: L10n.Panel.loadAverage) {
@@ -678,55 +785,145 @@ struct CPUPage: View {
     }
 }
 
-/// Per-core rings (system + user), performance and efficiency cores on their own rows.
-struct CoreRingsPanel: View {
+/// One bar per core (system from the bottom, user above), performance and efficiency cores
+/// side by side with a divider; every gap is equal and the divider takes two.
+struct CoreBarsPanel: View {
     var cpu: CPUSample
 
     var body: some View {
         let groups = groupsOf(cpu)
-        let widest = groups.map(\.indices.count).max() ?? 1
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach(Array(groups.enumerated()), id: \.offset) { _, g in
-                QuarterSplit {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(Format.percent(g.average)).ui(15, 500)
-                        Text(g.label).ui(12).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
-                    }
-                    SpreadRow(slots: widest, item: 26) {
-                        ForEach(g.indices, id: \.self) { i in
-                            Ring(segments: [
-                                .init(fraction: i < cpu.perCoreSystem.count ? cpu.perCoreSystem[i] : 0, color: Theme.sys),
-                                .init(fraction: i < cpu.perCoreUser.count ? cpu.perCoreUser[i] : cpu.perCore[i], color: Theme.cpu),
-                            ], size: 26, lineWidth: 2.5)
-                        }
-                    }
-                    .accessibilityElement()
-                    .accessibilityLabel(L10n.Monitor.coresA11y(g.label, g.indices.map { Format.percent(cpu.perCore[$0]) }.joined(separator: L10n.A11y.separator)))
+        CoreBarsLayout(counts: groups.map(\.indices.count)) {
+            ForEach(groups.indices, id: \.self) { g in
+                ForEach(Array(groups[g].indices.enumerated()), id: \.element) { n, i in
+                    bar(i).help(groups[g].tip(n + 1, Format.percent(cpu.perCore[i]), Format.percent(system(i))))
                 }
             }
+            ForEach(1..<max(groups.count, 1), id: \.self) { _ in
+                Rectangle().fill(Theme.line).frame(width: 1, height: 40)
+            }
+            ForEach(groups.indices, id: \.self) { g in
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(groups[g].label).foregroundStyle(Theme.sub)
+                    Text(Format.percent(groups[g].average)).fontWeight(.medium)
+                }
+                .ui(12)
+                .lineLimit(1)
+                .fixedSize()
+            }
         }
-        .padding(14)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(groups.map { g in
+            L10n.Monitor.coresA11y(g.label, g.indices.map { Format.percent(cpu.perCore[$0]) }.joined(separator: L10n.A11y.separator))
+        }.joined(separator: L10n.A11y.separator))
     }
 
-    private struct Group { var label: String; var indices: [Int]; var average: Double }
+    private func system(_ i: Int) -> Double { i < cpu.perCoreSystem.count ? cpu.perCoreSystem[i] : 0 }
+    private func user(_ i: Int) -> Double { i < cpu.perCoreUser.count ? cpu.perCoreUser[i] : max(0, cpu.perCore[i] - system(i)) }
+
+    private func bar(_ i: Int) -> some View {
+        let sys = min(1, max(0, system(i))) * CoreBarsLayout.height
+        let usr = min(1, max(0, user(i))) * CoreBarsLayout.height
+        return VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            UnevenRoundedRectangle(topLeadingRadius: 2, topTrailingRadius: 2, style: .continuous)
+                .fill(Theme.cpu)
+                .frame(height: max(0, usr - 1))
+            Color.clear.frame(height: usr > 0 ? 1 : 0)
+            Rectangle().fill(Theme.sys).frame(height: sys)
+        }
+        .background(Theme.track)
+        .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+    }
+
+    private struct Group {
+        var label: String
+        var indices: [Int]
+        var average: Double
+        var tip: (Int, String, String) -> String
+    }
 
     private func groupsOf(_ cpu: CPUSample) -> [Group] {
         let isE = { (i: Int) in i < cpu.coreKinds.count && cpu.coreKinds[i] == .efficiency }
         let p = cpu.perCore.indices.filter { !isE($0) }
         let e = cpu.perCore.indices.filter { isE($0) }
         let avg = { (ix: [Int]) in ix.isEmpty ? 0 : ix.map { cpu.perCore[$0] }.reduce(0, +) / Double(ix.count) }
-        if e.isEmpty { return [Group(label: L10n.Monitor.coreGroup(p.count), indices: p, average: avg(p))] }
+        if e.isEmpty { return [Group(label: L10n.Monitor.coreGroup(p.count), indices: p, average: avg(p), tip: L10n.Monitor.coreTip)] }
         return [
-            Group(label: L10n.Monitor.performanceGroup(p.count), indices: p, average: avg(p)),
-            Group(label: L10n.Monitor.efficiencyGroup(e.count), indices: e, average: avg(e)),
+            Group(label: L10n.Monitor.performanceGroup(p.count), indices: p, average: avg(p), tip: L10n.Monitor.pCoreTip),
+            Group(label: L10n.Monitor.efficiencyGroup(e.count), indices: e, average: avg(e), tip: L10n.Monitor.eCoreTip),
         ]
     }
 }
 
+/// Lays out the cores panel. Subviews come in order: every bar, the dividers between groups,
+/// then one label per group, placed under the group's first bar.
+struct CoreBarsLayout: Layout {
+    var counts: [Int]
+    static let height: CGFloat = 40
+    private let barWidth: CGFloat = 10
+    private let minBar: CGFloat = 4
+    private let minGap: CGFloat = 2
+    private let labelGap: CGFloat = 8
+
+    /// Bar width and gap for a row this wide.
+    private func metrics(_ width: CGFloat) -> (bar: CGFloat, gap: CGFloat) {
+        let bars = CGFloat(counts.reduce(0, +))
+        // Gaps inside groups, plus two for each divider.
+        let gaps = CGFloat(counts.map { max($0 - 1, 0) }.reduce(0, +) + 2 * max(counts.count - 1, 0))
+        guard bars > 0 else { return (barWidth, minGap) }
+        let gap = gaps > 0 ? (width - bars * barWidth) / gaps : 0
+        if gap >= minGap { return (barWidth, gap) }
+        return (max(minBar, (width - gaps * minGap) / bars), minGap)
+    }
+
+    private func labelHeight(_ subviews: Subviews) -> CGFloat {
+        let bars = counts.reduce(0, +), dividers = max(counts.count - 1, 0)
+        return subviews.dropFirst(bars + dividers).map { $0.sizeThatFits(.unspecified).height }.max() ?? 0
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? 400
+        return CGSize(width: width, height: Self.height + labelGap + labelHeight(subviews))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let m = metrics(bounds.width)
+        let bars = counts.reduce(0, +)
+        var x = bounds.minX
+        var index = 0
+        var starts: [CGFloat] = []
+        for (g, count) in counts.enumerated() {
+            starts.append(x)
+            for _ in 0..<count {
+                guard index < subviews.count else { return }
+                subviews[index].place(at: CGPoint(x: x, y: bounds.minY), anchor: .topLeading,
+                                      proposal: ProposedViewSize(width: m.bar, height: Self.height))
+                x += m.bar + m.gap
+                index += 1
+            }
+            if g < counts.count - 1 {
+                // The divider sits centered in a double gap.
+                let divider = bars + g
+                if divider < subviews.count {
+                    subviews[divider].place(at: CGPoint(x: x, y: bounds.minY), anchor: .top,
+                                            proposal: ProposedViewSize(width: 1, height: Self.height))
+                }
+                x += m.gap
+            }
+        }
+        let labels = subviews.dropFirst(bars + max(counts.count - 1, 0))
+        for (label, start) in zip(labels, starts) {
+            label.place(at: CGPoint(x: start, y: bounds.minY + Self.height + labelGap), anchor: .topLeading, proposal: .unspecified)
+        }
+    }
+}
+
 /// Two children on a four-column grid: the first takes one column, the second the other three
-/// (the cores panel and the connection log), both centered vertically.
+/// (the connection log), both centered vertically.
 struct QuarterSplit: Layout {
     var gap: CGFloat = 12
 
@@ -750,39 +947,6 @@ struct QuarterSplit: Layout {
             view.place(at: CGPoint(x: x, y: bounds.midY - size.height / 2), anchor: .topLeading,
                        proposal: ProposedViewSize(width: width, height: size.height))
             x += width + gap
-        }
-    }
-}
-
-/// Lays fixed-size items out with the spacing that would spread `slots` of them edge to edge,
-/// so shorter rows line up with longer ones; wraps when they don't fit.
-struct SpreadRow: Layout {
-    var slots: Int
-    var item: CGFloat
-    var minGap: CGFloat = 4
-    var lineGap: CGFloat = 8
-
-    private func metrics(_ width: CGFloat) -> (perLine: Int, gap: CGFloat) {
-        let ratio = (width + minGap) / (item + minGap)
-        let fit = ratio.isFinite ? max(1, Int(ratio)) : slots
-        let perLine = max(1, min(slots, fit))
-        let gap = perLine > 1 ? (width - CGFloat(perLine) * item) / CGFloat(perLine - 1) : 0
-        return (perLine, max(minGap, gap))
-    }
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? CGFloat(slots) * (item + 12)
-        let m = metrics(width)
-        let lines = max(1, Int(ceil(Double(subviews.count) / Double(m.perLine))))
-        return CGSize(width: width, height: CGFloat(lines) * item + CGFloat(lines - 1) * lineGap)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let m = metrics(bounds.width)
-        for (i, view) in subviews.enumerated() {
-            let col = i % m.perLine, line = i / m.perLine
-            view.place(at: CGPoint(x: bounds.minX + CGFloat(col) * (item + m.gap), y: bounds.minY + CGFloat(line) * (item + lineGap)),
-                       anchor: .topLeading, proposal: ProposedViewSize(width: item, height: item))
         }
     }
 }
@@ -856,7 +1020,7 @@ struct PeakRow: View {
             }
             .padding(.horizontal, 10)
             .frame(height: 46)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(selected ? Theme.raised : .clear).raisedShadow(selected))
+            .background { if selected { GlassThumb(cornerRadius: 14) } }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

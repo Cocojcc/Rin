@@ -485,7 +485,6 @@
 "disk.internal" = "内置";
 "sidebar.pause" = "暂停监控";
 "sidebar.resume" = "继续监控";
-"overview.disk.summary" = "共 %1$@ · 已用 %2$@";
 "overview.gpu.videoDecode" = "视频解码 %@";
 "monitor.active" = "活跃";
 "monitor.idleState" = "空闲";
@@ -554,11 +553,8 @@
 "monitor.zoneLow" = "● 低于 %@";
 "monitor.zoneMid" = "● %1$@–%2$@";
 "monitor.zoneHigh" = "● %@ 以上";
-"settings.mergeWidgets" = "合并成一项";
+"settings.mergeWidgets" = "合并小组件";
 "settings.moduleSettings" = "%@设置";
-"settings.monitorModule" = "监控%@";
-"settings.notInMenubar" = "未在菜单栏显示";
-"settings.orderA11y" = "菜单栏顺序";
 "settings.processRefresh" = "进程刷新频率";
 "settings.ruleGPU" = "GPU 使用率高于";
 "settings.ruleGPUSwitch" = "GPU 使用率提醒";
@@ -568,7 +564,7 @@
 "settings.showThermal" = "显示散热状态";
 "settings.showVideo" = "显示视频编解码";
 "settings.tabAlerts" = "警报";
-"settings.tabModule" = "模块";
+"settings.tabModule" = "常规";
 "settings.tabPanel" = "下拉面板";
 "settings.tabWidgets" = "小组件";
 "settings.tabsA11y" = "设置分类";
@@ -656,4 +652,15 @@
 "panel.volumeUsedPurgeable" = "已用 %1$@（可清除 %2$@）· 共 %3$@";
 "panel.passiveCooling" = "被动散热";
 "panel.fanCount" = "%d 个风扇";
-"settings.moduleOrder" = "顺序";
+"settings.moduleMonitor" = "%@监视器";
+"settings.moduleViews" = "%@视图";
+"settings.noWidgets" = "未选择小组件";
+"settings.modulesInMenubar" = "菜单栏中的模块";
+"settings.blockedChip" = "%@，被刘海挡住";
+"overview.cpuPeaks" = "CPU 24 小时峰值";
+"overview.diskHealthy" = "健康良好";
+"overview.cycles" = "循环 %@ 次";
+"monitor.pCoreTip" = "性能核 %1$d · %2$@（系统 %3$@）";
+"monitor.eCoreTip" = "能效核 %1$d · %2$@（系统 %3$@）";
+"monitor.coreTip" = "核心 %1$d · %2$@（系统 %3$@）";
+"monitor.cyclesLimit" = " / %d";

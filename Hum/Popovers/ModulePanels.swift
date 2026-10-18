@@ -98,7 +98,7 @@ enum PanelText {
 }
 
 /// Bold value followed by a grey word, as one line ("2.8 GB 已用", "性能核 平均 42%").
-private func valueThenLabel(_ value: String, _ label: String, size: CGFloat = 14) -> Text {
+private func valueThenLabel(_ value: String, _ label: String, size: CGFloat = 15) -> Text {
     Text(value).font(Fonts.ui(size, 500)).foregroundColor(Theme.text)
         + Text(verbatim: " ")
         + Text(label).font(Fonts.ui(12)).foregroundColor(Theme.sub)
@@ -531,7 +531,7 @@ struct BatteryPanel: View {
                 HeroItem(label: PanelText.batteryState(b)) {
                     VStack(spacing: 6) {
                         LargeBattery(level: b.level, charging: b.isCharging, color: low ? Theme.danger : Theme.bat).frame(width: 80, height: 37)
-                        Text(Format.percent(b.level)).ui(22, 500).kerning(-0.44)
+                        Text(Format.percent(b.level)).ui(20, 500).kerning(-0.4)
                     }
                 }
             } trailing: {
@@ -595,7 +595,7 @@ struct BatteryPanel: View {
     private func batteryCells(_ b: BatterySample, _ p: BatteryPrefs) -> [(String, String)] {
         var out: [(String, String)] = []
         if p.showHealth, let h = b.health { out.append((Format.percent(h), L10n.Battery.health)) }
-        if p.showCycles, let c = b.cycles { out.append((L10n.Monitor.cyclesOf(c, b.designCycles ?? 1000), L10n.Battery.cycles)) }
+        if p.showCycles, let c = b.cycles { out.append(("\(c)" + Format.marker + L10n.Monitor.cyclesLimit(b.designCycles ?? 1000), L10n.Battery.cycles)) }
         if p.showTemperature, let t = b.temperature ?? monitor.snapshot.sensors.value(.battery) {
             out.append((Format.temperature(t, unit: settings.prefs.general.temperatureUnit, showUnit: true), L10n.Battery.temperature))
         }

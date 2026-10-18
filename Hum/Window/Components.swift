@@ -46,6 +46,51 @@ private struct ScaleLayout: Layout {
     }
 }
 
+// MARK: - Liquid glass
+
+/// Track behind a group of glass controls: faint fill, a 1 pt highlight along the top inside
+/// edge, a hairline outline.
+struct GlassTrack: View {
+    var cornerRadius: CGFloat? = nil
+
+    var body: some View {
+        GlassShape(cornerRadius: cornerRadius)
+            .fill(Theme.lgFill.shadow(.inner(color: Theme.lgEdgeLight, radius: 0, x: 0, y: 1)))
+            .overlay(GlassShape(cornerRadius: cornerRadius).inset(by: -0.25).stroke(Theme.lgEdgeLine, lineWidth: 0.5))
+    }
+}
+
+/// The raised glass piece of a selected segment, sidebar row or chip.
+struct GlassThumb: View {
+    var cornerRadius: CGFloat? = nil
+
+    var body: some View {
+        GlassShape(cornerRadius: cornerRadius)
+            .fill(Theme.lgThumb.shadow(.inner(color: Theme.lgThumbLight, radius: 0, x: 0, y: 1)))
+            .overlay(GlassShape(cornerRadius: cornerRadius).strokeBorder(Theme.lgThumbRing, lineWidth: 0.5))
+            .overlay(GlassShape(cornerRadius: cornerRadius).inset(by: -0.25).stroke(Theme.lgThumbLine, lineWidth: 0.5))
+            .shadow(color: Theme.lgThumbShadow, radius: 3.5, x: 0, y: 2)
+    }
+}
+
+/// A capsule, or a rounded rectangle when a radius is given.
+struct GlassShape: InsettableShape {
+    var cornerRadius: CGFloat?
+    var insetAmount: CGFloat = 0
+
+    func path(in rect: CGRect) -> Path {
+        let r = rect.insetBy(dx: insetAmount, dy: insetAmount)
+        let radius = cornerRadius.map { max(0, $0 - insetAmount) } ?? min(r.width, r.height) / 2
+        return Path(roundedRect: r, cornerRadius: radius, style: .continuous)
+    }
+
+    func inset(by amount: CGFloat) -> GlassShape {
+        var s = self
+        s.insetAmount += amount
+        return s
+    }
+}
+
 // MARK: - Containers
 
 /// Subtle filled area that groups content on glass (no border).
@@ -185,7 +230,8 @@ struct HumSwitch: View {
     }
 }
 
-/// Grey well with a raised selected segment. `.compact` for settings rows (24 pt),
+/// Glass track with a glass thumb on the selected segment (`.tab`, used in dropdowns, keeps
+/// the grey well and white thumb). `.compact` for settings rows (24 pt),
 /// `.range` for the time ranges on monitor pages (26 pt, 12 pt side padding),
 /// `.tab` for small inline switches (22 pt, 11 pt text), `.tabs` for a page's tab bar
 /// (26 pt, full width), `.sort` for the overview's sort switch (26 pt).
@@ -219,11 +265,15 @@ struct Segmented<Value: Hashable>: View {
                     .padding(.horizontal, style == .range ? 12 : 7)
                     .frame(maxWidth: fills ? .infinity : nil)
                     .frame(height: height)
-                    .background(
-                        RoundedRectangle(cornerRadius: innerRadius, style: .continuous)
-                            .fill(on ? Theme.raised : Color.clear)
-                            .raisedShadow(on)
-                    )
+                    .background {
+                        if on {
+                            if glass {
+                                GlassThumb()
+                            } else {
+                                RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.raised).raisedShadow()
+                            }
+                        }
+                    }
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -232,7 +282,13 @@ struct Segmented<Value: Hashable>: View {
             }
         }
         .padding(fills ? 3 : 2)
-        .background(RoundedRectangle(cornerRadius: fills ? 11 : 9, style: .continuous).fill(Theme.well))
+        .background {
+            if glass {
+                GlassTrack()
+            } else {
+                RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.well)
+            }
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(label)
     }
@@ -246,7 +302,7 @@ struct Segmented<Value: Hashable>: View {
         }
     }
 
-    private var innerRadius: CGFloat { fills ? 8 : 7 }
+    private var glass: Bool { style != .tab }
     private var fontSize: CGFloat { style == .tab ? 11 : 12 }
 }
 
@@ -383,6 +439,7 @@ struct StatBlock: View {
 }
 
 /// A rounded strip of equal cells separated by hairlines (load average, frequencies, power).
+/// Anything after `Format.marker` in a value is set small and grey ("214 / 1000").
 struct CellStrip: View {
     var cells: [(String, String)]
     var fill: Color = Theme.panel
@@ -393,7 +450,7 @@ struct CellStrip: View {
         HStack(spacing: 0) {
             ForEach(Array(cells.enumerated()), id: \.offset) { i, cell in
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(cell.0).ui(compact ? 14 : 15, 500).lineLimit(1).minimumScaleFactor(0.8)
+                    value(cell.0).ui(15, 500).lineLimit(1).minimumScaleFactor(0.8)
                     Text(cell.1).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
                 }
                 .padding(.horizontal, compact ? 12 : 14)
@@ -406,6 +463,12 @@ struct CellStrip: View {
             }
         }
         .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill))
+    }
+
+    private func value(_ s: String) -> Text {
+        let parts = s.components(separatedBy: Format.marker)
+        guard parts.count > 1 else { return Text(s) }
+        return Text(parts[0]) + Text(parts[1...].joined()).font(Fonts.ui(12)).foregroundColor(Theme.sub)
     }
 }
 

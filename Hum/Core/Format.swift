@@ -2,6 +2,9 @@ import Foundation
 
 /// Number formatting shared by every surface. Units are SI symbols, so they are not localized.
 enum Format {
+    /// Stands in for a value inside a localized template, so the value can be styled apart.
+    static let marker = "\u{1}"
+
     /// 0...1 → "23%"
     static func percent(_ fraction: Double) -> String {
         "\(Int((max(0, fraction) * 100).rounded()))%"

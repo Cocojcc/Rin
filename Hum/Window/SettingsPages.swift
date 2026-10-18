@@ -93,9 +93,13 @@ struct SettingsPage: View {
                 if !blocked.isEmpty {
                     NotchBanner(count: blocked.count).padding(.bottom, 8)
                 }
-                MenubarPreview(blocked: blocked)
-                    .padding(EdgeInsets(top: 10, leading: 14, bottom: 10, trailing: 14))
-                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
+                VStack(spacing: 0) {
+                    MenubarPreview(blocked: blocked)
+                        .padding(EdgeInsets(top: 10, leading: 14, bottom: 10, trailing: 14))
+                    Hairline().padding(.horizontal, 14)
+                    ModuleChips(blocked: blocked, dragging: $dragging).padding(6)
+                }
+                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
                 Color.clear.frame(height: 8)
                 SettingsGroup {
                     SettingsRow(title: L10n.Settings.displayMode) {
@@ -106,9 +110,6 @@ struct SettingsPage: View {
                     }
                     SettingsRow(title: L10n.Settings.colorOnHighLoad) {
                         HumSwitch(isOn: pref(\.menubar.colorOnHighLoad), label: L10n.Settings.colorOnHighLoad)
-                    }
-                    SettingsRow(title: L10n.Settings.moduleOrder) {
-                        OrderChips(blocked: blocked, dragging: $dragging)
                     }
                 }
             }
@@ -198,7 +199,7 @@ struct AccentPicker: View {
                 } label: {
                     Circle().fill(p.swatch).frame(width: 11, height: 11)
                         .frame(width: 28, height: 24)
-                        .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(on ? Theme.raised : .clear).raisedShadow(on))
+                        .background { if on { GlassThumb() } }
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -207,7 +208,7 @@ struct AccentPicker: View {
             }
         }
         .padding(2)
-        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.well))
+        .background(GlassTrack())
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Settings.accent)
     }
@@ -245,35 +246,52 @@ struct NotchBanner: View {
 }
 
 /// Visible modules as draggable chips, in menu bar order. Ones behind the notch are tinted.
-struct OrderChips: View {
+/// Every module as a chip under the preview: the ones in the menu bar (glass, in their order,
+/// a notch mark when hidden behind it) | the rest. Click shows or hides; drag reorders.
+struct ModuleChips: View {
     var blocked: [Module]
     @Binding var dragging: Module?
     var settings = SettingsStore.shared
 
     var body: some View {
         let prefs = settings.prefs
-        let modules = prefs.menubar.order.filter { prefs.showsInMenubar($0) }
-        HStack(spacing: 6) {
-            ForEach(modules) { m in
-                let hidden = blocked.contains(m)
-                HStack(spacing: 6) {
-                    LineIcon(d: Icons.drag, width: 8, height: 10, viewBox: CGSize(width: 16, height: 16), lineWidth: 2.4)
-                        .opacity(0.5)
-                        .accessibilityHidden(true)
-                    Text(m.title).ui(12)
-                }
-                .foregroundStyle(hidden ? Theme.warn : Theme.text)
-                .padding(.leading, 7)
-                .padding(.trailing, 9)
-                .frame(height: 24)
-                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(hidden ? Theme.warnBg : Theme.well))
-                .opacity(dragging == m ? 0.4 : 1)
-                .modifier(ReorderModifier(module: m, dragging: $dragging))
-                .accessibilityLabel(m.title)
+        let shown = prefs.menubar.order.filter { prefs.showsInMenubar($0) }
+        let hidden = prefs.menubar.order.filter { !prefs.showsInMenubar($0) }
+        FlowLayout(spacing: 4) {
+            ForEach(shown) { chip($0, shown: true) }
+            if !shown.isEmpty && !hidden.isEmpty {
+                Rectangle().fill(Theme.cross).frame(width: 1, height: 18).padding(.horizontal, 6).frame(height: 30)
             }
+            ForEach(hidden) { chip($0, shown: false) }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(L10n.Settings.orderA11y)
+        .accessibilityLabel(L10n.Settings.modulesInMenubar)
+    }
+
+    private func chip(_ m: Module, shown: Bool) -> some View {
+        let isBlocked = shown && blocked.contains(m)
+        return Button {
+            settings.prefs.setInMenubar(m, !shown)
+        } label: {
+            HStack(spacing: 6) {
+                LineIcon(d: Icons.module(m), size: 14, lineWidth: 1.5)
+                Text(m.title).ui(12).lineLimit(1)
+                if isBlocked {
+                    LineIcon(d: Icons.notch, size: 12, lineWidth: 1.5).foregroundStyle(Theme.warn)
+                }
+            }
+            .foregroundStyle(shown ? Theme.text : Theme.sub)
+            .padding(.horizontal, 10)
+            .frame(height: 30)
+            .background { if shown { GlassThumb() } }
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .opacity(dragging == m ? 0.4 : 1)
+        .modifier(ReorderModifier(module: m, dragging: $dragging))
+        .accessibilityLabel(isBlocked ? L10n.Settings.blockedChip(m.title) : m.title)
+        .accessibilityAddTraits(shown ? [.isSelected] : [])
     }
 }
 
@@ -362,41 +380,67 @@ struct MenubarPreview: View {
 
 // MARK: - Module settings (from a monitor page's settings button)
 
-/// Title row of a monitor page and of its settings: settings button and the module's switch.
+/// Title row of a monitor page and of its settings, with the "监视器 | 设置" switch.
 struct ModuleHeader<Extra: View>: View {
     let module: Module
     var settingsActive = false
     @ViewBuilder var extra: Extra
-    var settings = SettingsStore.shared
 
     var body: some View {
         HStack(spacing: 20) {
             Text(module.title).ui(20, 600).kerning(-0.2).accessibilityAddTraits(.isHeader)
             extra
             Spacer(minLength: 0)
-            HStack(spacing: 8) {
-                Button {
-                    Navigator.shared.page = settingsActive ? .monitor(module) : .moduleSettings(module)
-                } label: {
-                    LineIcon(d: Icons.general, size: 16, lineWidth: 1.5)
-                        .foregroundStyle(settingsActive ? Theme.text : Theme.sub)
-                        .frame(width: 28, height: 28)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(settingsActive ? Theme.raised : Color.clear)
-                                .raisedShadow(settingsActive)
-                        )
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(L10n.Settings.moduleSettings(module.title))
-                .accessibilityAddTraits(settingsActive ? [.isSelected] : [])
-                HumSwitch(isOn: Binding(get: { settings.prefs.isMonitored(module) }, set: { settings.prefs.setMonitored(module, $0) }),
-                          label: L10n.Settings.monitorModule(module.title))
-            }
+            ModuleViewToggle(module: module, settingsActive: settingsActive)
         }
         .frame(height: 36)
         .padding(.horizontal, 14)
+    }
+}
+
+/// Monitor / settings icons for one module on a glass track.
+struct ModuleViewToggle: View {
+    let module: Module
+    var settingsActive: Bool
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ViewSegment(d: Icons.monitorWindow, label: L10n.Settings.moduleMonitor(module.title), on: !settingsActive) {
+                Navigator.shared.page = .monitor(module)
+            }
+            ViewSegment(d: Icons.general, label: L10n.Settings.moduleSettings(module.title), on: settingsActive) {
+                Navigator.shared.page = .moduleSettings(module)
+            }
+        }
+        .padding(2)
+        .background(GlassTrack())
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L10n.Settings.moduleViews(module.title))
+    }
+}
+
+private struct ViewSegment: View {
+    var d: String
+    var label: String
+    var on: Bool
+    var action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            LineIcon(d: d, size: 16, lineWidth: 1.5)
+                .foregroundStyle(on || hovering ? Theme.text : Theme.sub)
+                .frame(width: 32, height: 24)
+                .background {
+                    if on { GlassThumb() } else if hovering { Capsule().fill(Theme.lgHover) }
+                }
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(label)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(on ? [.isSelected] : [])
     }
 }
 
@@ -435,43 +479,66 @@ struct ModuleSettingsPage: View {
     }
 }
 
-/// The module's widgets as they look in the menu bar: on (raised) | off. Click to toggle.
+/// "在菜单栏显示" over the module's widgets as they look in the menu bar: picked (glass) |
+/// available. Click a widget to toggle it; the widgets fade and lock while the switch is off.
 struct WidgetStrip: View {
     let module: Module
     var settings = SettingsStore.shared
 
     var body: some View {
         let prefs = settings.prefs
+        let shown = prefs.showsInMenubar(module)
         let on = prefs.widgets(module)
         let off = module.widgetKinds.filter { !on.contains($0) }
-        FlowLayout(spacing: 4) {
-            ForEach(on) { chip($0, on: true, prefs) }
-            Rectangle().fill(Theme.cross).frame(width: 1, height: 22).padding(.horizontal, 6).frame(height: 36)
-            ForEach(off) { chip($0, on: false, prefs) }
+        VStack(spacing: 0) {
+            SettingsRow(title: L10n.Settings.showInMenubar) {
+                HumSwitch(isOn: Binding(get: { settings.prefs.showsInMenubar(module) }, set: { settings.prefs.setInMenubar(module, $0) }),
+                          label: L10n.Settings.showInMenubar)
+            }
+            .padding(.horizontal, 14)
+            Hairline().padding(.horizontal, 14)
+            FlowLayout(spacing: 4) {
+                ForEach(on) { WidgetChip(module: module, kind: $0, on: true, prefs: prefs) }
+                Rectangle().fill(Theme.cross).frame(width: 1, height: 22).padding(.horizontal, 6).frame(height: 36)
+                ForEach(off) { WidgetChip(module: module, kind: $0, on: false, prefs: prefs) }
+            }
+            .padding(6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .opacity(shown ? 1 : 0.4)
+            .allowsHitTesting(shown)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(L10n.Settings.widgetStripA11y)
         }
-        .padding(6)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(L10n.Settings.widgetStripA11y)
     }
+}
 
-    private func chip(_ kind: WidgetKind, on: Bool, _ prefs: Preferences) -> some View {
+private struct WidgetChip: View {
+    let module: Module
+    let kind: WidgetKind
+    var on: Bool
+    var prefs: Preferences
+    var settings = SettingsStore.shared
+    @State private var hovering = false
+
+    var body: some View {
         Button {
             settings.prefs.setWidget(kind, !on, for: module)
-            if !on && !settings.prefs.isMonitored(module) { settings.prefs.setMonitored(module, true) }
         } label: {
             WidgetView(module: module, kind: kind, prefs: prefs)
                 .environment(\.widgetUIFont, true)
                 .foregroundStyle(on ? Theme.text : Theme.sub)
                 .opacity(on ? 1 : 0.6)
-                .padding(.horizontal, 9)
+                .padding(.horizontal, 8)
                 .frame(minWidth: 40)
                 .frame(height: 36)
-                .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(on ? Theme.raised : Color.clear).raisedShadow(on))
-                .contentShape(Rectangle())
+                .background {
+                    if on { GlassThumb() } else if hovering { Capsule().fill(Theme.well) }
+                }
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .onHover { hovering = $0 }
         .accessibilityLabel(L10n.Widget.name(kind, module))
         .accessibilityAddTraits(on ? [.isSelected] : [])
     }
@@ -559,7 +626,7 @@ struct WidgetsTab: View {
                 }
             }
             if widgets.isEmpty {
-                Text(L10n.Settings.notInMenubar).foregroundStyle(Theme.sub)
+                Text(L10n.Settings.noWidgets).foregroundStyle(Theme.sub)
                     .frame(maxWidth: .infinity)
                     .frame(height: 64)
                     .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))

@@ -69,8 +69,6 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
         requestAuthorizationIfNeeded()
         let now = s.date
         var next: [Module: BarTone] = [:]
-        // Modules switched off have no readings to judge.
-        let on = prefs.isMonitored
 
         func check(_ rule: Rule, enabled: Bool, condition: Bool, after: TimeInterval, tone: BarTone, notify: () -> (String, String, ProcessUsage?)) {
             guard enabled, condition else {
@@ -91,35 +89,35 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
         }
 
         let top = s.processes.byCPU.first
-        check(.cpu, enabled: a.cpuOn && on(.cpu), condition: s.cpu.total * 100 >= a.cpuThreshold, after: a.cpuMinutes * 60, tone: .warn) {
+        check(.cpu, enabled: a.cpuOn, condition: s.cpu.total * 100 >= a.cpuThreshold, after: a.cpuMinutes * 60, tone: .warn) {
             let culprit = top.map { L10n.Alerts.cpuCulprit($0.name, Format.percentValue($0.cpu)) } ?? ""
             return (L10n.Alerts.cpuTitle, L10n.Alerts.cpuBody(Format.percent(s.cpu.total), Self.minutes(a.cpuMinutes)) + culprit, top?.isSystem == false ? top : nil)
         }
 
         // Per-process GPU usage is only read while a GPU view is open, so the culprit may be missing.
         let gpuTop = s.processes.byGPU.first
-        check(.gpu, enabled: a.gpuOn && on(.gpu), condition: s.gpu.utilization * 100 >= a.gpuThreshold, after: a.gpuMinutes * 60, tone: .warn) {
+        check(.gpu, enabled: a.gpuOn, condition: s.gpu.utilization * 100 >= a.gpuThreshold, after: a.gpuMinutes * 60, tone: .warn) {
             let culprit = gpuTop.map { L10n.Alerts.gpuCulprit($0.name, Format.percentValue($0.gpu)) } ?? ""
             return (L10n.Alerts.gpuTitle, L10n.Alerts.gpuBody(Format.percent(s.gpu.utilization), Self.minutes(a.gpuMinutes)) + culprit, gpuTop?.isSystem == false ? gpuTop : nil)
         }
 
         let memTop = s.processes.byMemory.first
-        check(.memory, enabled: a.memoryOn && on(.memory), condition: s.memory.pressure.rawValue >= a.memoryLevel.rawValue, after: 10, tone: a.memoryLevel == .critical ? .crit : .warn) {
+        check(.memory, enabled: a.memoryOn, condition: s.memory.pressure.rawValue >= a.memoryLevel.rawValue, after: 10, tone: a.memoryLevel == .critical ? .crit : .warn) {
             let culprit = memTop.map { L10n.Alerts.memoryCulprit($0.name, Format.memory($0.memory)) } ?? ""
             return (L10n.Alerts.memoryTitle, L10n.Alerts.memoryBody + culprit, memTop?.isSystem == false ? memTop : nil)
         }
 
         let root = s.disk.root
-        check(.disk, enabled: a.diskOn && on(.disk), condition: root.map { Double($0.available) < a.diskFreeGB * 1_000_000_000 } ?? false, after: 0, tone: .warn) {
+        check(.disk, enabled: a.diskOn, condition: root.map { Double($0.available) < a.diskFreeGB * 1_000_000_000 } ?? false, after: 0, tone: .warn) {
             (L10n.Alerts.diskTitle, L10n.Alerts.diskBody(root?.name ?? "", Format.storage(root?.available ?? 0)), nil)
         }
 
-        check(.battery, enabled: a.batteryOn && on(.battery) && s.battery.hasBattery, condition: s.battery.level * 100 <= a.batteryPercent && !s.battery.onAC, after: 0, tone: .crit) {
+        check(.battery, enabled: a.batteryOn && s.battery.hasBattery, condition: s.battery.level * 100 <= a.batteryPercent && !s.battery.onAC, after: 0, tone: .crit) {
             (L10n.Alerts.batteryTitle, L10n.Alerts.batteryBody(Format.percent(s.battery.level)), nil)
         }
 
         let temp = s.sensors.cpuAverage ?? 0
-        check(.temperature, enabled: a.tempOn && on(.sensors), condition: temp >= a.tempThreshold, after: 10, tone: .crit) {
+        check(.temperature, enabled: a.tempOn, condition: temp >= a.tempThreshold, after: 10, tone: .crit) {
             (L10n.Alerts.tempTitle, L10n.Alerts.tempBody(Format.temperature(temp, unit: prefs.general.temperatureUnit, showUnit: true)) +
                 (top.map { L10n.Alerts.cpuCulprit($0.name, Format.percentValue($0.cpu)) } ?? ""), top?.isSystem == false ? top : nil)
         }
@@ -127,7 +125,7 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
         // Network: only counts after the Mac has been online during this session.
         let connected = s.network.connected
         if connected { everConnected = true }
-        check(.network, enabled: a.networkOn && on(.network), condition: !connected && everConnected, after: 5, tone: .dim) {
+        check(.network, enabled: a.networkOn, condition: !connected && everConnected, after: 5, tone: .dim) {
             (L10n.Alerts.networkTitle, L10n.Alerts.networkBody, nil)
         }
 
