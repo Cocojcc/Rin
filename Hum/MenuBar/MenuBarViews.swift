@@ -401,7 +401,8 @@ struct MenuBarItemView: View {
         HStack(spacing: prefs.widgetsMerged(module) ? 4 : 10) {
             ForEach(prefs.widgets(module)) { WidgetView(module: module, kind: $0, prefs: prefs) }
         }
-        .padding(.horizontal, 5)
+        // No side padding, as Stats draws its items: the menu bar adds its own spacing.
+        .padding(.horizontal, 0)
         .frame(maxHeight: .infinity)
         .foregroundStyle(tone.color ?? Theme.barInk)
         .fixedSize(horizontal: true, vertical: false)
@@ -831,7 +832,7 @@ struct CombinedMenuBarView: View {
                     .foregroundStyle(MenuBarText.tone(m, s, prefs).color ?? Theme.barInk)
             }
         }
-        .padding(.horizontal, 6)
+        .padding(.horizontal, 2)
         .frame(maxHeight: .infinity)
         .fixedSize(horizontal: true, vertical: false)
         .accessibilityElement(children: .ignore)
