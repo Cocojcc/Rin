@@ -47,6 +47,8 @@ enum Icons {
     static let bolt = "M6.8 1L2.8 6.8h2.7L5 11l4.2-6H6.4z"              // 12 × 12, filled
     static let bluetooth = "M4.5 5.2L11.5 11L8 14V2l3.5 3L4.5 10.8"
     static let chargingBolt = "M4.6 0.5L0.8 6.2h2.7L2.9 10.5l4.3-6.1H4.4z"  // 8 × 11, filled
+    static let bell = "M4 11V7a4 4 0 0 1 8 0v4l1.5 1.5h-11L4 11zM6.5 13.5a1.5 1.5 0 0 0 3 0"
+    static let plus = "M7 2.5v9M2.5 7h9"                              // 14 × 14
     static let processes = "M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.01M2.5 8h.01M2.5 12h.01"
     static let sleep = "M13.5 9.6A5.8 5.8 0 1 1 6.4 2.5a4.6 4.6 0 0 0 7.1 7.1z"
     static let mac = "M3.5 3.5h9a1 1 0 0 1 1 1v6.5h-11V4.5a1 1 0 0 1 1-1zM1 11h14l-.5 1a1 1 0 0 1-.9.5H2.4a1 1 0 0 1-.9-.5z"

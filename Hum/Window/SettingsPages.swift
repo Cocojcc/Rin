@@ -2,7 +2,6 @@ import AppKit
 import ServiceManagement
 import SwiftUI
 import UniformTypeIdentifiers
-import UserNotifications
 
 /// Binding into one field of the stored preferences.
 @MainActor
@@ -20,7 +19,6 @@ struct SettingsPage: View {
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var needsApproval = SMAppService.mainApp.status == .requiresApproval
     @State private var languageChanged = false
-    @State private var authorization: UNAuthorizationStatus = .notDetermined
     @State private var dragging: Module?
     /// The system-wide spacing lives in the system's preferences, not in Hum's.
     @State private var systemSpacing = MenuBarSpacing.preset
@@ -133,29 +131,6 @@ struct SettingsPage: View {
                 }
             }
 
-            SettingsGroup(title: L10n.Sidebar.alerts) {
-                SettingsRow(title: L10n.Settings.alertsEnabled) {
-                    HumSwitch(isOn: pref(\.alerts.enabled), label: L10n.Settings.alertsEnabled)
-                }
-                if authorization == .denied {
-                    SettingsRow(title: L10n.Settings.notificationsOff) {
-                        WellButton(title: L10n.Settings.openNotificationSettings) { openNotificationSettings() }
-                    }
-                }
-                SettingsRow(title: L10n.Settings.notificationStyle) {
-                    Segmented(label: L10n.Settings.notificationStyle,
-                              options: [(NotificationStyle.banner, L10n.Settings.banner), (.alert, L10n.Settings.alertStyle)],
-                              selection: Binding(get: { prefs.alerts.style }, set: { style in
-                                  guard style != settings.prefs.alerts.style else { return }
-                                  settings.prefs.alerts.style = style
-                                  // Banner vs. alert is a system setting per app; open the page where it is changed.
-                                  openNotificationSettings()
-                              }))
-                }
-                SettingsRow(title: L10n.Settings.playSound) { HumSwitch(isOn: pref(\.alerts.sound), label: L10n.Settings.playSound) }
-                SettingsRow(title: L10n.Settings.colorMenubar) { HumSwitch(isOn: pref(\.alerts.colorMenubar), label: L10n.Settings.colorMenubar) }
-            }
-
             SettingsGroup(title: L10n.Settings.performance) {
                 SettingsRow(title: L10n.Settings.slowOnBattery) {
                     HumSwitch(isOn: pref(\.general.slowOnBattery), label: L10n.Settings.slowOnBattery)
@@ -179,7 +154,6 @@ struct SettingsPage: View {
                 }
             }
         }
-        .task { await refreshAuthorization() }
     }
 
     private func setLaunchAtLogin(_ on: Bool) {
@@ -192,17 +166,6 @@ struct SettingsPage: View {
         needsApproval = SMAppService.mainApp.status == .requiresApproval
     }
 
-    private func openNotificationSettings() {
-        let id = Bundle.main.bundleIdentifier ?? ""
-        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)") {
-            NSWorkspace.shared.open(url)
-        }
-    }
-
-    private func refreshAuthorization() async {
-        let s = await UNUserNotificationCenter.current().notificationSettings()
-        authorization = s.authorizationStatus
-    }
 }
 
 /// Swatches in a well; the chosen one sits on a raised tile.
@@ -1173,72 +1136,15 @@ struct AlertsTab: View {
     var settings = SettingsStore.shared
 
     var body: some View {
-        let unit = settings.prefs.general.temperatureUnit
-        SettingsGroup {
-            switch module {
-            case .cpu:
-                rule(\.alerts.cpuOn, label: L10n.Settings.ruleCPUSwitch) {
-                    Text(L10n.Settings.ruleCPU)
-                    InlineChoice(label: L10n.Settings.ruleCPU, options: [70, 80, 90, 95].map { (Double($0), Format.percent(Double($0) / 100)) }, selection: pref(\.alerts.cpuThreshold))
-                    Text(L10n.Settings.ruleFor)
-                    InlineChoice(label: L10n.Settings.ruleFor, options: durations, selection: pref(\.alerts.cpuMinutes))
-                }
-            case .gpu:
-                rule(\.alerts.gpuOn, label: L10n.Settings.ruleGPUSwitch) {
-                    Text(L10n.Settings.ruleGPU)
-                    InlineChoice(label: L10n.Settings.ruleGPU, options: [70, 80, 90, 95].map { (Double($0), Format.percent(Double($0) / 100)) }, selection: pref(\.alerts.gpuThreshold))
-                    Text(L10n.Settings.ruleFor)
-                    InlineChoice(label: L10n.Settings.ruleFor, options: durations, selection: pref(\.alerts.gpuMinutes))
-                }
-            case .memory:
-                rule(\.alerts.memoryOn, label: L10n.Settings.ruleMemorySwitch) {
-                    Text(L10n.Settings.ruleMemory)
-                    InlineChoice(label: L10n.Settings.ruleMemory, options: [(MemoryPressure.warning, L10n.Settings.yellow), (.critical, L10n.Settings.red)], selection: pref(\.alerts.memoryLevel))
-                }
-            case .network:
-                rule(\.alerts.networkOn, label: L10n.Settings.ruleNetworkSwitch) { Text(L10n.Settings.ruleNetwork) }
-            case .disk:
-                rule(\.alerts.diskOn, label: L10n.Settings.ruleDiskSwitch) {
-                    Text(L10n.Settings.ruleDisk)
-                    InlineChoice(label: L10n.Settings.ruleDisk, options: [5, 10, 20, 50].map { (Double($0), L10n.Settings.gigabytes($0)) }, selection: pref(\.alerts.diskFreeGB))
-                }
-            case .battery:
-                rule(\.alerts.batteryOn, label: L10n.Settings.ruleBatterySwitch) {
-                    Text(L10n.Settings.ruleBattery)
-                    InlineChoice(label: L10n.Settings.ruleBattery, options: [10, 15, 20, 30].map { (Double($0), Format.percent(Double($0) / 100)) }, selection: pref(\.alerts.batteryPercent))
-                }
-            case .bluetooth:
-                rule(\.alerts.bluetoothLowOn, label: L10n.Settings.bluetoothLowAlertA11y) {
-                    Text(L10n.Settings.bluetoothLowAlert)
-                    InlineChoice(label: L10n.Settings.bluetoothLowAlert, options: [10, 15, 20, 25, 30].map { (Double($0) / 100, L10n.Settings.percentValue($0)) },
-                                 selection: pref(\.bluetooth.lowLevel))
-                }
-                rule(\.alerts.bluetoothDisconnectOn, label: L10n.Settings.bluetoothDisconnectAlertA11y) { Text(L10n.Settings.bluetoothDisconnectAlert) }
-            case .sensors:
-                rule(\.alerts.tempOn, label: L10n.Settings.ruleTempSwitch) {
-                    Text(L10n.Settings.ruleTemp)
-                    InlineChoice(label: L10n.Settings.ruleTemp, options: [85, 90, 95, 100].map { (Double($0), Format.temperature(Double($0), unit: unit, showUnit: true)) }, selection: pref(\.alerts.tempThreshold))
+        VStack(alignment: .trailing, spacing: 10) {
+            SettingsGroup {
+                ForEach(Alerts.Rule.allCases.filter { $0.module == module }, id: \.self) {
+                    AlertRuleRow(rule: $0, showsIcon: false, minHeight: 48)
                 }
             }
+            .opacity(settings.prefs.alerts.enabled ? 1 : 0.5)
+            AllAlertsLink().padding(.horizontal, 14)
         }
-        .opacity(settings.prefs.alerts.enabled ? 1 : 0.5)
-        .disabled(!settings.prefs.alerts.enabled)
-    }
-
-    private var durations: [(Double, String)] {
-        [(0.5, L10n.Alerts.seconds(30)), (1, L10n.Alerts.minutes(1)), (2, L10n.Alerts.minutes(2)), (5, L10n.Alerts.minutes(5))]
-    }
-
-    private func rule<Content: View>(_ keyPath: WritableKeyPath<Preferences, Bool>, label: String, @ViewBuilder sentence: () -> Content) -> some View {
-        let on = settings.prefs[keyPath: keyPath]
-        return HStack(spacing: 12) {
-            HStack(spacing: 4) { sentence() }
-                .opacity(on ? 1 : 0.5)
-                .padding(.vertical, 7)
-            Spacer(minLength: 8)
-            HumSwitch(isOn: pref(keyPath), label: label)
-        }
-        .frame(minHeight: 48)
     }
 }
 

@@ -85,6 +85,11 @@ struct LegendItem {
 /// Chart in an 18 pt panel that bleeds to the edges (12 pt above the plot).
 struct ChartPanel<Chart: View>: View {
     var height: CGFloat
+    /// The module's alert rule, offered at the top right.
+    var alert: Alerts.Rule? = nil
+    /// Where the rule's limit sits on the plot (0 bottom, 1 top); its label rides that line while on.
+    var alertLine: Double? = nil
+    var settings = SettingsStore.shared
     @ViewBuilder var chart: Chart
 
     var body: some View {
@@ -93,6 +98,17 @@ struct ChartPanel<Chart: View>: View {
             .padding(.top, 12)
             .background(Theme.panel)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(alignment: .topTrailing) {
+                if let alert {
+                    ChartAlertBadge(rule: alert).padding(.top, badgeTop(alert)).padding(.trailing, 8)
+                }
+            }
+    }
+
+    private func badgeTop(_ rule: Alerts.Rule) -> CGFloat {
+        guard rule.isOn(settings.prefs), let line = alertLine else { return 8 }
+        let center = 12 + (1 - CGFloat(min(max(line, 0), 1))) * height
+        return min(max(center - 10, 8), 12 + height - 28)
     }
 }
 

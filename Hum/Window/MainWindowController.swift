@@ -12,6 +12,8 @@ enum Page: Hashable {
     case processes
     /// Keep-awake and the apps holding the Mac awake.
     case sleep
+    /// Alert rules, what fired recently and how alerts are sent.
+    case alerts
     case about
 
     /// The sidebar entry that should look selected for this page.

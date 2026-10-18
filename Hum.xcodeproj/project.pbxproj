@@ -17,6 +17,8 @@
 		136D7549D0D7C31C06464C98 /* MenuBarViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD143F2A4BB967699026A73 /* MenuBarViews.swift */; };
 		1855ECB99BF4B80DDAB83BEB /* ModulePanels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88465B116A8456467F4CC604 /* ModulePanels.swift */; };
 		1D28E811DF284738D59BE365 /* SpaceGrotesk-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 0C8A9134B4881703AD004FEF /* SpaceGrotesk-OFL.txt */; };
+		1FDE6B0F2B0AE9DD32F8C4DE /* AlertsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 796E8BB5E7A9B51B81A3A39D /* AlertsPage.swift */; };
+		218F864144496DC790DC47D6 /* AlertRuleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E04EA3696805236B563F479 /* AlertRuleViews.swift */; };
 		269EE57790B363E2A8385D5B /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04179CCD06CACCC54DDBFCF9 /* Theme.swift */; };
 		28F530677FD8C1DF29A19F69 /* BluetoothReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63575017DB02E89CE764539F /* BluetoothReader.swift */; };
 		2B35672B9AA27D3B21146D88 /* PanelComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AE794FA598A873FE1A32F18 /* PanelComponents.swift */; };
@@ -41,6 +43,7 @@
 		A03349979B1A9A355992954A /* Widgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 489AE010CEEA6AC72240AB4D /* Widgets.swift */; };
 		A041BAE0AEC55365DB35F421 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDE7C33F710D6678B442295C /* Settings.swift */; };
 		A3147A483A153867C4D6E3A3 /* ProcessesPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFB6CCA1C5B513F9ED64F834 /* ProcessesPage.swift */; };
+		A386E07D911F7EF9D22268B7 /* AlertText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F1FE48AE2875874B08C9A37 /* AlertText.swift */; };
 		A7BE7D6E224A8F0737CF55E5 /* ProcessActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5F02B128B19D2B59B8B8F37 /* ProcessActions.swift */; };
 		A88E0B98231B7F9693E1A71E /* Icons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 588127709E64847CDE384FC6 /* Icons.swift */; };
 		A966696CDA4C93CF24F98FDC /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07E2918F40BBC93794845548 /* Models.swift */; };
@@ -84,6 +87,7 @@
 		391F7498F54D1E6B48DF82AC /* Snapshots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snapshots.swift; sourceTree = "<group>"; };
 		3AD143F2A4BB967699026A73 /* MenuBarViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarViews.swift; sourceTree = "<group>"; };
 		3B578739BDE158BCE27B897E /* SleepBlockers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepBlockers.swift; sourceTree = "<group>"; };
+		3F1FE48AE2875874B08C9A37 /* AlertText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertText.swift; sourceTree = "<group>"; };
 		427FDDA17BE5333ED16C8E6B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		43BAB34AF2B8A05A868D91CE /* NetworkReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkReader.swift; sourceTree = "<group>"; };
 		463AE72F5B46A5F4CE936956 /* UpdateChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChecker.swift; sourceTree = "<group>"; };
@@ -104,7 +108,9 @@
 		6D694CF0C3BB32EB574E495B /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		6FBCFF9AD6EF5660A3B48A2E /* Hum.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hum.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		71FA992FC9D448DBABB38331 /* MenuBarSpacing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarSpacing.swift; sourceTree = "<group>"; };
+		796E8BB5E7A9B51B81A3A39D /* AlertsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertsPage.swift; sourceTree = "<group>"; };
 		7C9713C2EDF382EB3C03F61F /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
+		7E04EA3696805236B563F479 /* AlertRuleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertRuleViews.swift; sourceTree = "<group>"; };
 		83AE685353EE9DBDB292DABA /* SMC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMC.swift; sourceTree = "<group>"; };
 		88465B116A8456467F4CC604 /* ModulePanels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModulePanels.swift; sourceTree = "<group>"; };
 		8F8A7F0CCB8C52D17A4F2BAF /* MainWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowController.swift; sourceTree = "<group>"; };
@@ -187,6 +193,7 @@
 			isa = PBXGroup;
 			children = (
 				23DC4DC7CF701F24F2479C5E /* Alerts.swift */,
+				3F1FE48AE2875874B08C9A37 /* AlertText.swift */,
 				6024D11DC2725FE0A455CB85 /* Format.swift */,
 				A03A44C15331ED91D900F23F /* History.swift */,
 				588127709E64847CDE384FC6 /* Icons.swift */,
@@ -209,6 +216,8 @@
 			isa = PBXGroup;
 			children = (
 				5E739F82D36B9BB914BCE975 /* AboutPage.swift */,
+				7E04EA3696805236B563F479 /* AlertRuleViews.swift */,
+				796E8BB5E7A9B51B81A3A39D /* AlertsPage.swift */,
 				EE404F90AE04E2A714129CCB /* BluetoothViews.swift */,
 				0F1DACE43B76D40CDAF8EB0F /* Charts.swift */,
 				20CB645470209ABE1CBEC44B /* Components.swift */,
@@ -372,7 +381,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				476EDE953F066E943290AB03 /* AboutPage.swift in Sources */,
+				218F864144496DC790DC47D6 /* AlertRuleViews.swift in Sources */,
+				A386E07D911F7EF9D22268B7 /* AlertText.swift in Sources */,
 				35AAE23E7483314C4BBC5846 /* Alerts.swift in Sources */,
+				1FDE6B0F2B0AE9DD32F8C4DE /* AlertsPage.swift in Sources */,
 				DA01DE74CD6F6B699510289F /* BatteryReader.swift in Sources */,
 				28F530677FD8C1DF29A19F69 /* BluetoothReader.swift in Sources */,
 				BE5BACBBEF2E8B5584926C24 /* BluetoothViews.swift in Sources */,

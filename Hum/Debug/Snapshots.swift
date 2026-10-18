@@ -74,6 +74,16 @@ enum Snapshots {
                 if let out = try? Process.run(URL(fileURLWithPath: "/usr/bin/pmset"), arguments: ["-g", "assertions"]) { out.waitUntilExit() }
                 KeepAwake.shared.stop()
             }
+            if want("page") || want("page-alerts") {
+                seedAlerts()
+                Navigator.shared.page = .alerts
+                save(MainView().frame(width: UIScale.of(800), height: UIScale.of(1100)).background(wall), appearance, dir.appendingPathComponent("page-alerts-\(tag).png"))
+                seedAlerts()
+                Navigator.shared.page = .overview
+                save(MainView().frame(width: UIScale.of(800), height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-overview-alert-\(tag).png"))
+                save(UIScaled { AlertQuickSettings(rule: .cpu) {} }.padding(20).background(wall), appearance, dir.appendingPathComponent("alert-quick-\(tag).png"))
+                Alerts.shared.debugSeed([], open: nil)
+            }
             for m in Module.allCases where want("tabs") {
                 for tab in ModuleSettingsTab.allCases where tab != .module {
                     ModuleSettingsPage.initialTab = tab
@@ -84,6 +94,19 @@ enum Snapshots {
                 ModuleSettingsPage.initialTab = .module
             }
         }
+    }
+
+    private static func seedAlerts() {
+        let now = Date()
+        var cpu = AlertEvent(rule: .cpu, date: now.addingTimeInterval(-300), value: 94, limit: 90, held: 60, culprit: "Xcode", culpritValue: "71%")
+        cpu.seen = false
+        var bt = AlertEvent(rule: .bluetoothLow, date: now.addingTimeInterval(-4000), value: 0.12, limit: 0.2, subject: "Magic Trackpad", timeLeft: 2 * 86400)
+        bt.seen = true
+        var disk = AlertEvent(rule: .disk, date: now.addingTimeInterval(-86400), value: 18e9, limit: 20e9, subject: "Macintosh HD", ended: now.addingTimeInterval(-80000), endValue: 182e9)
+        disk.seen = true
+        var net = AlertEvent(rule: .network, date: now.addingTimeInterval(-100000), value: 0, limit: 0, held: 5, ended: now.addingTimeInterval(-99880), endValue: 1)
+        net.seen = true
+        Alerts.shared.debugSeed([cpu, bt, disk, net], open: .cpu)
     }
 
     private static func save<V: View>(_ view: V, _ appearance: NSAppearance, _ url: URL) {

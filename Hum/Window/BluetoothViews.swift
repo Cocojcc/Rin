@@ -6,12 +6,7 @@ enum BluetoothText {
     /// "约 6 周", "约 2 天", "约 4 小时" from the store's discharge estimate.
     static func estimate(_ d: BluetoothDevice) -> String? {
         guard let level = d.level, let seconds = BluetoothStore.shared.timeLeft(d.id, level: level) else { return nil }
-        let hours = seconds / 3600
-        if hours < 1 { return L10n.Bluetooth.underHour }
-        if hours < 48 { return L10n.Bluetooth.hours(Int(hours.rounded())) }
-        let days = hours / 24
-        if days < 14 { return L10n.Bluetooth.days(Int(days.rounded())) }
-        return L10n.Bluetooth.weeks(Int((days / 7).rounded()))
+        return AlertText.estimate(seconds)
     }
 
     /// "昨天 18:20", or "3 天前" further back.
@@ -258,7 +253,7 @@ struct BluetoothPage: View {
                                  selection: Binding(get: { device.id }, set: { chosen = $0 }))
                     }
                     let end = Date()
-                    ChartPanel(height: 124) {
+                    ChartPanel(height: 124, alert: .bluetoothLow, alertLine: low) {
                         DeviceBatteryChart(points: BluetoothStore.shared.history(device.id), start: end.addingTimeInterval(-range.seconds), end: end, low: low)
                             .accessibilityElement()
                             .accessibilityLabel(L10n.Bluetooth.chartA11y(device.name, range.title, Format.percent(low)))

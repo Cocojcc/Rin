@@ -231,6 +231,55 @@ enum L10n {
         static func bluetoothLowBody(_ a: String) -> String { tr("alerts.bluetooth.lowBody", a) }
         static func bluetoothDisconnectTitle(_ a: String) -> String { tr("alerts.bluetooth.disconnectTitle", a) }
         static var bluetoothDisconnectBody: String { tr("alerts.bluetooth.disconnectBody") }
+        static var view: String { tr("alerts.view") }
+        static var snooze: String { tr("alerts.snooze") }
+        static var sentenceGap: String { tr("alerts.sentenceGap") }
+        static func overFor(_ a: String, _ b: String, _ c: String) -> String { tr("alerts.overFor", a, b, c) }
+        static func culpritSentence(_ a: String, _ b: String) -> String { tr("alerts.culpritSentence", a, b) }
+        static func culpritDetail(_ a: String, _ b: String) -> String { tr("alerts.culpritDetail", a, b) }
+        static func cpuHeadline(_ a: String, _ b: String, _ c: String) -> String { tr("alerts.cpuHeadline", a, b, c) }
+        static func gpuHeadline(_ a: String, _ b: String, _ c: String) -> String { tr("alerts.gpuHeadline", a, b, c) }
+        static func cpuBanner(_ a: String, _ b: String, _ c: String) -> String { tr("alerts.cpuBanner", a, b, c) }
+        static func gpuBanner(_ a: String, _ b: String, _ c: String) -> String { tr("alerts.gpuBanner", a, b, c) }
+        static func memoryHeadline(_ a: String) -> String { tr("alerts.memoryHeadline", a) }
+        static func diskHeadline(_ a: String, _ b: String, _ c: String) -> String { tr("alerts.diskHeadline", a, b, c) }
+        static func batteryHeadline(_ a: String, _ b: String) -> String { tr("alerts.batteryHeadline", a, b) }
+        static func tempHeadline(_ a: String, _ b: String) -> String { tr("alerts.tempHeadline", a, b) }
+        static var networkDown: String { tr("alerts.networkDown") }
+        static func networkDownFor(_ a: String) -> String { tr("alerts.networkDownFor", a) }
+        static func bluetoothLowHeadline(_ a: String, _ b: String, _ c: String) -> String { tr("alerts.bluetoothLowHeadline", a, b, c) }
+        static var recovered: String { tr("alerts.recovered") }
+        static func diskRecovered(_ a: String) -> String { tr("alerts.diskRecovered", a) }
+        static func untilEmpty(_ a: String) -> String { tr("alerts.untilEmpty", a) }
+        static func reconnected(_ a: String) -> String { tr("alerts.reconnected", a) }
+        static var reconnectedPlain: String { tr("alerts.reconnectedPlain") }
+        static var vpn: String { tr("alerts.vpn") }
+        static var pillPressureRed: String { tr("alerts.pillPressureRed") }
+        static var pillPressureYellow: String { tr("alerts.pillPressureYellow") }
+        static func pillBelow(_ a: String) -> String { tr("alerts.pillBelow", a) }
+        static func pillFreeBelow(_ a: String) -> String { tr("alerts.pillFreeBelow", a) }
+        static var pillDisconnect: String { tr("alerts.pillDisconnect") }
+        static func editA11y(_ a: String) -> String { tr("alerts.editA11y", a) }
+        static var edit: String { tr("alerts.edit") }
+        static var add: String { tr("alerts.add") }
+        static var above: String { tr("alerts.above") }
+        static var freeBelow: String { tr("alerts.freeBelow") }
+        static var levelBelow: String { tr("alerts.levelBelow") }
+        static var pressureTurns: String { tr("alerts.pressureTurns") }
+        static var whenDisconnected: String { tr("alerts.whenDisconnected") }
+        static var done: String { tr("alerts.done") }
+        static var all: String { tr("alerts.all") }
+        static var allA11y: String { tr("alerts.allA11y") }
+        static var rules: String { tr("alerts.rules") }
+        static func rulesOn(_ a: Int) -> String { tr("alerts.rulesOn", a) }
+        static var recent: String { tr("alerts.recent") }
+        static func thisWeek(_ a: Int) -> String { tr("alerts.thisWeek", a) }
+        static var delivery: String { tr("alerts.delivery") }
+        static var enabled: String { tr("alerts.enabled") }
+        static var newA11y: String { tr("alerts.newA11y") }
+        static func badgeA11y(_ a: Int) -> String { tr("alerts.badgeA11y", a) }
+        static var noneYet: String { tr("alerts.noneYet") }
+        static func overLimit(_ a: String) -> String { tr("alerts.overLimit", a) }
     }
 
     enum Panel {

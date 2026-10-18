@@ -180,7 +180,16 @@ struct OverviewPage: View {
         }
     }
 
-    private var status: some View {
+    /// A firing alert takes the status strip's place until it clears or is muted.
+    @ViewBuilder private var status: some View {
+        if let event = alerts.current {
+            AlertBanner(event: event)
+        } else {
+            healthStrip
+        }
+    }
+
+    private var healthStrip: some View {
         let issues = alerts.active.count
         return HStack(spacing: 12) {
             HStack(spacing: 8) {
@@ -199,8 +208,14 @@ struct OverviewPage: View {
 
     // MARK: Cards
 
+    /// "超过 90%" in red on a card whose usage rule is firing.
+    private func overLimit(_ rule: Alerts.Rule) -> (String, Color)? {
+        guard let e = alerts.firing(rule) else { return nil }
+        return (L10n.Alerts.overLimit(Format.percent(e.limit / 100)), Theme.danger)
+    }
+
     private func cpuCard(_ s: Snapshot, _ unit: TemperatureUnit) -> some View {
-        OverviewCard(module: .cpu, status: nil) {
+        OverviewCard(module: .cpu, status: overLimit(.cpu)) {
             ringRow(PageRing(segments: [.init(fraction: s.cpu.system, color: Theme.sys), .init(fraction: s.cpu.user, color: Theme.cpu)],
                              size: 56, lineWidth: 4, text: Format.percent(s.cpu.total))) {
                 pair(L10n.Panel.user, Format.percent(s.cpu.user), swatch: LegendItem(color: Theme.cpu, label: "", shape: .square))
@@ -310,7 +325,7 @@ struct OverviewPage: View {
 
     private func gpuCard(_ s: Snapshot, _ unit: TemperatureUnit) -> some View {
         let g = s.gpu
-        return OverviewCard(module: .gpu, status: nil) {
+        return OverviewCard(module: .gpu, status: overLimit(.gpu)) {
             ringRow(PageRing(segments: [.init(fraction: g.utilization, color: Theme.gpu)], size: 56, lineWidth: 4, text: Format.percent(g.utilization))) {
                 pair(L10n.Panel.vram, Format.memory(g.memoryUsed))
                 pair(L10n.Panel.frequency, g.frequencyMHz.map(Format.frequency) ?? L10n.Common.dash)
@@ -656,7 +671,7 @@ struct CPUPage: View {
                     if !lookback, let top = peaks.first { peakLink(top) }
                 }
                 VStack(alignment: .leading, spacing: 8) {
-                    ChartPanel(height: lookback ? 150 : 76) {
+                    ChartPanel(height: lookback ? 150 : 76, alert: .cpu, alertLine: settings.prefs.alerts.cpuThreshold / 100) {
                         MonitorChart(
                             series: [
                                 ChartSeries(id: "total", points: history.points(.cpu, range: range), color: Theme.cpu, fill: lookback ? 0.13 : 0.16, lineWidth: lookback ? 1.5 : 2),
@@ -668,7 +683,8 @@ struct CPUPage: View {
                                 if let nearest = peaks.min(by: { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) }),
                                    abs(nearest.date.timeIntervalSince(date)) < range.seconds / 30 { selectedPeak = nearest.date }
                             },
-                            pinnedTip: lookback ? selected.map { peakTip($0) } : nil
+                            pinnedTip: lookback ? selected.map { peakTip($0) } : nil,
+                            threshold: Alerts.Rule.cpu.isOn(settings.prefs) ? (settings.prefs.alerts.cpuThreshold, Theme.danger) : nil
                         )
                         .accessibilityLabel(L10n.Monitor.cpuChartA11y(range.title))
                     }
@@ -1094,12 +1110,13 @@ struct GPUPage: View {
                         LegendItem(color: Theme.faint, label: L10n.Monitor.tiler, value: g.tiler.map(Format.percent)),
                     ])
                 }
-                ChartPanel(height: 124) {
+                ChartPanel(height: 124, alert: .gpu, alertLine: settings.prefs.alerts.gpuThreshold / 100) {
                     MonitorChart(series: [
                         ChartSeries(id: "gpu", points: history.points(.gpu, range: range), color: Theme.gpu),
                         ChartSeries(id: "renderer", points: history.points(.gpuRenderer, range: range), color: Theme.gpu, fill: 0, lineWidth: 1.5, opacity: 0.5),
                         ChartSeries(id: "tiler", points: history.points(.gpuTiler, range: range), color: Theme.faint, fill: 0, lineWidth: 1.5, dash: [3, 3]),
-                    ], range: range, maxValue: 100, hoverText: { hover($0) })
+                    ], range: range, maxValue: 100, hoverText: { hover($0) },
+                       threshold: Alerts.Rule.gpu.isOn(settings.prefs) ? (settings.prefs.alerts.gpuThreshold, Theme.danger) : nil)
                     .accessibilityLabel(L10n.Monitor.gpuChartA11y(range.title))
                 }
             }
@@ -1213,7 +1230,7 @@ struct MemoryPage: View {
                 } trailing: {
                     ChartLegend(items: [LegendItem(color: pr.1, label: L10n.Monitor.memoryPressure)])
                 }
-                ChartPanel(height: 104) {
+                ChartPanel(height: 104, alert: .memory) {
                     MonitorChart(series: [ChartSeries(id: "pressure", points: monitor.history.points(.memoryPressure, range: range), color: pr.1)],
                                  range: range, maxValue: 100, hoverText: { date in hoverLine(.memoryPressure, range, date) { Format.percent($0 / 100) } },
                                  threshold: (50, Theme.sys))
@@ -1315,7 +1332,7 @@ struct NetworkPage: View {
                 } trailing: {
                     ChartLegend(items: [LegendItem(color: Theme.down, label: L10n.Panel.download), LegendItem(color: Theme.up, label: L10n.Panel.upload)])
                 }
-                ChartPanel(height: 90) { mirrored }
+                ChartPanel(height: 90, alert: .network) { mirrored }
             }
             Section(title: L10n.Monitor.connection) { connection(n) }
             Section(title: L10n.Monitor.topNetwork, link: .network) {
@@ -1473,7 +1490,7 @@ struct DiskPage: View {
                     ChartLegend(items: [LegendItem(color: Theme.read, label: L10n.Disk.read, value: Format.rate(d.read)),
                                         LegendItem(color: Theme.write, label: L10n.Disk.write, value: Format.rate(d.write))])
                 }
-                ChartPanel(height: 88) {
+                ChartPanel(height: 88, alert: .disk) {
                     MonitorChart(series: [
                         ChartSeries(id: "read", points: monitor.history.points(.diskRead, range: range), color: Theme.read),
                         ChartSeries(id: "write", points: monitor.history.points(.diskWrite, range: range), color: Theme.write, fill: 0, lineWidth: 1.5),
@@ -1624,9 +1641,11 @@ struct BatteryPage: View {
                         ChartLegend(items: [LegendItem(color: Theme.bat, label: L10n.Battery.level),
                                             LegendItem(color: Theme.bat, label: L10n.Monitor.chargingLegend, shape: .bar, opacity: 0.25)])
                     }
-                    ChartPanel(height: 136) {
+                    ChartPanel(height: 136, alert: .battery, alertLine: settings.prefs.alerts.batteryPercent / 100) {
                         MonitorChart(series: [ChartSeries(id: "battery", points: monitor.history.points(.battery, range: range), color: Theme.bat)],
-                                     range: range, maxValue: 100, hoverText: { hover($0) }, bands: ChargingBands.of(range))
+                                     range: range, maxValue: 100, hoverText: { hover($0) },
+                                     threshold: Alerts.Rule.battery.isOn(settings.prefs) ? (settings.prefs.alerts.batteryPercent, Theme.danger) : nil,
+                                     bands: ChargingBands.of(range))
                             .accessibilityLabel(L10n.Monitor.batteryChartA11y(range.title))
                     }
                 }
@@ -1806,10 +1825,11 @@ struct SensorsPage: View {
                 } trailing: {
                     ChartLegend(items: [LegendItem(color: Theme.temp, label: L10n.Monitor.cpuAverageShort)])
                 }
-                ChartPanel(height: 76) {
+                ChartPanel(height: 76, alert: .temperature, alertLine: settings.prefs.alerts.tempThreshold / 110) {
                     MonitorChart(series: [ChartSeries(id: "cpu", points: monitor.history.points(.cpuTemp, range: range), color: Theme.temp)],
                                  range: range, maxValue: 110,
-                                 hoverText: { date in hoverLine(.cpuTemp, range, date) { Format.temperature($0, unit: unit, showUnit: true) } })
+                                 hoverText: { date in hoverLine(.cpuTemp, range, date) { Format.temperature($0, unit: unit, showUnit: true) } },
+                                 threshold: Alerts.Rule.temperature.isOn(settings.prefs) ? (settings.prefs.alerts.tempThreshold, Theme.danger) : nil)
                         .accessibilityLabel(L10n.Monitor.tempChartA11y(range.title))
                 }
             }

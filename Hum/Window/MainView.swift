@@ -80,6 +80,7 @@ struct PageView: View {
         case .settings: SettingsPage()
         case .processes: ProcessesPage()
         case .sleep: SleepPage()
+        case .alerts: AlertsPage()
         case .about: AboutPage()
         }
     }
@@ -88,6 +89,7 @@ struct PageView: View {
 struct Sidebar: View {
     var navigator = Navigator.shared
     var monitor = Monitor.shared
+    var alerts = Alerts.shared
 
     private let overviewPage: (Page, String, String) = (.overview, Icons.overview, L10n.Sidebar.overview)
     private let pages: [(Page, String, String)] = [
@@ -102,6 +104,7 @@ struct Sidebar: View {
         (.monitor(.bluetooth), Icons.bluetooth, L10n.Module.bluetooth),
         (.monitor(.sensors), Icons.sensors, L10n.Module.sensors),
     ]
+    private let alertsPage: (Page, String, String) = (.alerts, Icons.bell, L10n.Sidebar.alerts)
     private let aboutPage: (Page, String, String) = (.about, Icons.mac, L10n.Sidebar.aboutMac)
 
     var body: some View {
@@ -118,10 +121,11 @@ struct Sidebar: View {
             .padding(.bottom, 18)
 
             VStack(alignment: .leading, spacing: 2) {
-                // The overview, the pages under it and About This Mac sit in three groups.
+                // The overview, the monitors, then Alerts and About This Mac sit in three groups.
                 item(overviewPage).padding(.bottom, 12)
                 ForEach(pages, id: \.0) { item($0) }
-                item(aboutPage).padding(.top, 12)
+                item(alertsPage, badge: alerts.unseenCount).padding(.top, 12)
+                item(aboutPage)
             }
             .slidingThumb(navigator.page.sidebarPage) { GlassThumb() }
             Spacer(minLength: 12)
@@ -149,7 +153,8 @@ struct Sidebar: View {
         .accessibilityLabel(L10n.Sidebar.label)
     }
 
-    private func item(_ entry: (Page, String, String)) -> some View {
+    /// `badge`: new alerts, a red count on the right.
+    private func item(_ entry: (Page, String, String), badge: Int = 0) -> some View {
         let on = navigator.page.sidebarPage == entry.0
         return Button {
             navigator.page = entry.0
@@ -158,6 +163,13 @@ struct Sidebar: View {
                 LineIcon(d: entry.1, size: 15, lineWidth: 1.5)
                 Text(entry.2).ui(13, on ? 500 : 400)
                 Spacer(minLength: 0)
+                if badge > 0 {
+                    Text("\(badge)").ui(12, 500).foregroundStyle(Theme.onDanger)
+                        .padding(.horizontal, 5)
+                        .frame(minWidth: 18, minHeight: 18)
+                        .background(Capsule().fill(Theme.danger))
+                        .accessibilityLabel(L10n.Alerts.badgeA11y(badge))
+                }
             }
             .foregroundStyle(on ? Theme.text : Theme.sub)
             .padding(.horizontal, 10)
