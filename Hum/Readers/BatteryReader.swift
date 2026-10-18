@@ -60,7 +60,11 @@ final class BatteryReader {
            let full = int("NominalChargeCapacity") ?? int("AppleRawMaxCapacity") {
             // Same figure System Settings shows as "Maximum Capacity".
             sample.health = min(1, Double(full) / Double(design))
+            sample.maxCapacity = int("AppleRawMaxCapacity") ?? full
+            sample.designCapacity = design
         }
+        // Apple's rated endurance (DesignCycleCount9C) when the gauge reports it.
+        sample.designCycles = int("DesignCycleCount9C") ?? int("DesignCycleCount") ?? 1000
         if let t = d["Temperature"] as? Int { sample.temperature = Double(t) / 100 }
         if let mv = d["Voltage"] as? Int {
             let ma = (d["InstantAmperage"] as? Int) ?? (d["Amperage"] as? Int) ?? 0

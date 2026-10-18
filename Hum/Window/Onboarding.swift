@@ -115,8 +115,12 @@ struct OnboardingView: View {
                 Text(m.title)
             }
             Spacer(minLength: 0)
-            StyleMini(module: m, style: StylePicker.selectedIndex(m, settings.prefs), large: true)
-                .ui(12)
+            HStack(spacing: 4) {
+                ForEach(settings.prefs.widgets(m).isEmpty ? [m.primaryWidget] : settings.prefs.widgets(m)) {
+                    WidgetView(module: m, kind: $0, prefs: settings.prefs)
+                }
+            }
+                .environment(\.widgetUIFont, true)
                 .padding(.horizontal, 7)
                 .frame(height: 24)
                 .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.well))

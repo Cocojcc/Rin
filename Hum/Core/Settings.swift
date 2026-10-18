@@ -21,7 +21,6 @@ struct GeneralPrefs: Codable, Equatable {
     var accent: AccentPalette = .graphite
     var temperatureUnit: TemperatureUnit = .celsius
     var language: LanguageChoice = .system
-    var refreshInterval: Double = 2
     var slowOnBattery = true
     var autoCheckUpdates = true
     /// Set once the first-launch window has been finished or closed.
@@ -30,10 +29,8 @@ struct GeneralPrefs: Codable, Equatable {
 
 struct CPUPrefs: Codable, Equatable {
     var visible = true
-    var style: CPUStyle = .graph
-    var showValue = true
-    var graphContent: CPUGraphContent = .total
-    var color: ColorMode = .mono
+    var refresh: Double = 1
+    var processRefresh: Double = 3
     var showCores = true
     var splitCoreKinds = true
     var showLoad = true
@@ -43,23 +40,21 @@ struct CPUPrefs: Codable, Equatable {
 
 struct GPUPrefs: Codable, Equatable {
     var visible = false
-    var style: GPUStyle = .iconValue
-    var showValue = true
+    var refresh: Double = 1
     var valueType: GPUValueType = .utilization
-    var color: ColorMode = .mono
     var showMemory = true
     var showFrequency = true
     var showTempPower = true
+    var showVideo = true
     var showProcesses = true
     var processCount = 4
 }
 
 struct MemoryPrefs: Codable, Equatable {
     var visible = true
-    var style: MemoryStyle = .bar
-    var showValue = true
+    var refresh: Double = 1
+    var processRefresh: Double = 3
     var valueType: MemoryValueType = .percent
-    var color: MemoryColor = .mono
     var showComposition = true
     var showPressure = true
     var showSwap = true
@@ -69,11 +64,9 @@ struct MemoryPrefs: Codable, Equatable {
 
 struct NetworkPrefs: Codable, Equatable {
     var visible = true
-    var style: NetworkStyle = .arrows
-    var showUnit = true
-    var order: NetworkOrder = .uploadTop
-    var color: ColorMode = .mono
+    var refresh: Double = 1
     var speedUnit: SpeedUnit = .auto
+    var showLatency = true
     var showProcesses = true
     var showPublicIP = false
     var graphSeconds = 60
@@ -82,31 +75,31 @@ struct NetworkPrefs: Codable, Equatable {
 
 struct DiskPrefs: Codable, Equatable {
     var visible = false
-    var style: DiskStyle = .iconValue
+    var refresh: Double = 1
     var content: DiskContent = .free
     var volume: String = ""      // empty = startup disk
     var showAllDisks = true
     var showGraph = true
+    var showHealth = true
     var showProcesses = false
 }
 
 struct BatteryPrefs: Codable, Equatable {
     var visible = false
-    var style: BatteryStyle = .iconPercent
-    var showTimeRemaining = false
-    var showBolt = true
-    var colorWhenLow = true
+    var refresh: Double = 10
+    var timeFormat: TimeFormat = .clock
     var showHealth = true
     var showCycles = true
+    var showTemperature = true
     var showPower = true
     var showBluetooth = false
 }
 
 struct SensorsPrefs: Codable, Equatable {
     var visible = false
-    var style: SensorsStyle = .iconTemp
+    var refresh: Double = 2
     var sensor: SensorChoice = .cpuAverage
-    var color: TempColor = .mono
+    var showThermal = true
     var showAllTemps = true
     var showFans = true
     var showPower = true
@@ -126,6 +119,9 @@ struct AlertPrefs: Codable, Equatable {
     var cpuOn = true
     var cpuThreshold: Double = 90
     var cpuMinutes: Double = 1
+    var gpuOn = false
+    var gpuThreshold: Double = 90
+    var gpuMinutes: Double = 1
     var memoryOn = true
     var memoryLevel: MemoryPressure = .critical
     var diskOn = true
@@ -151,6 +147,8 @@ struct Preferences: Codable, Equatable {
     var battery = BatteryPrefs()
     var sensors = SensorsPrefs()
     var alerts = AlertPrefs()
+    /// Menu bar widgets per module (keyed by module raw value); missing entries use the defaults.
+    var widgetState: [String: ModuleWidgets] = [:]
 
     func isVisible(_ module: Module) -> Bool {
         switch module {
@@ -164,7 +162,22 @@ struct Preferences: Codable, Equatable {
         }
     }
 
+    /// Seconds between samples for a module (doubled on battery when that is switched on).
+    func refresh(_ module: Module) -> Double {
+        switch module {
+        case .cpu: return cpu.refresh
+        case .gpu: return gpu.refresh
+        case .memory: return memory.refresh
+        case .network: return network.refresh
+        case .disk: return disk.refresh
+        case .battery: return battery.refresh
+        case .sensors: return sensors.refresh
+        }
+    }
+
     mutating func setVisible(_ module: Module, _ value: Bool) {
+        // Switching a module on with no widget selected brings back its main widget.
+        if value && widgets(module).isEmpty { setWidget(module.primaryWidget, true, for: module) }
         switch module {
         case .cpu: cpu.visible = value
         case .gpu: gpu.visible = value
@@ -251,5 +264,6 @@ final class SettingsStore {
         prefs.disk = defaults.disk
         prefs.battery = defaults.battery
         prefs.sensors = defaults.sensors
+        prefs.widgetState = [:]
     }
 }

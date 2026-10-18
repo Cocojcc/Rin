@@ -7,6 +7,8 @@ struct ChartSeries: Identifiable {
     var color: Color
     var fill: Double = 0.13
     var lineWidth: CGFloat = 2
+    var opacity: Double = 1
+    var dash: [CGFloat] = []
 }
 
 /// Time chart for monitor pages: area + line series over a fixed time window, three grid
@@ -23,25 +25,48 @@ struct MonitorChart: View {
     var onTap: ((Date) -> Void)? = nil
     /// Lines for a tooltip pinned to the selected marker (the peak lookback).
     var pinnedTip: [String]? = nil
+    /// Fixed value domain (the mirrored network chart plots -1...1).
+    var domain: ClosedRange<Double>? = nil
+    /// Grid line values; three evenly spaced lines when nil.
+    var gridValues: [Double]? = nil
+    /// Horizontal rule at 0 (mirrored charts) and a dashed threshold line.
+    var centerLine = false
+    var threshold: (Double, Color)? = nil
+    /// Shaded time spans behind the series (charging on the battery chart).
+    var bands: [ClosedRange<Date>] = []
+    var bandColor: Color = Theme.bat
     @State private var hoverDate: Date?
 
     var body: some View {
         let end = Date()
         let start = end.addingTimeInterval(-range.seconds)
-        let peak = maxValue ?? max(series.flatMap { $0.points.map(\.value) }.max() ?? 1, 1) * 1.15
+        let peak = domain?.upperBound ?? maxValue ?? max(series.flatMap { $0.points.map(\.value) }.max() ?? 1, 1) * 1.15
+        let floor = domain?.lowerBound ?? 0
         Chart {
+            ForEach(Array(bands.enumerated()), id: \.offset) { _, band in
+                RectangleMark(xStart: .value("t0", band.lowerBound), xEnd: .value("t1", band.upperBound),
+                              yStart: .value("v0", floor), yEnd: .value("v1", peak))
+                    .foregroundStyle(bandColor.opacity(0.1))
+            }
             ForEach(series) { s in
                 ForEach(s.points) { p in
+                    let v = min(max(p.value, floor), peak)
                     if s.fill > 0 {
-                        AreaMark(x: .value("t", p.date), yStart: .value("v0", 0), yEnd: .value("v", min(p.value, peak)), series: .value("s", s.id))
+                        AreaMark(x: .value("t", p.date), yStart: .value("v0", 0), yEnd: .value("v", v), series: .value("s", s.id))
                             .foregroundStyle(s.color.opacity(s.fill))
                             .interpolationMethod(.linear)
                     }
-                    LineMark(x: .value("t", p.date), y: .value("v", min(p.value, peak)), series: .value("s", s.id))
-                        .foregroundStyle(s.color)
-                        .lineStyle(StrokeStyle(lineWidth: s.lineWidth, lineCap: .round, lineJoin: .round))
+                    LineMark(x: .value("t", p.date), y: .value("v", v), series: .value("s", s.id))
+                        .foregroundStyle(s.color.opacity(s.opacity))
+                        .lineStyle(StrokeStyle(lineWidth: s.lineWidth, lineCap: s.dash.isEmpty ? .round : .butt, lineJoin: .round, dash: s.dash))
                         .interpolationMethod(.linear)
                 }
+            }
+            if centerLine {
+                RuleMark(y: .value("c", 0)).foregroundStyle(Theme.cross).lineStyle(StrokeStyle(lineWidth: 1))
+            }
+            if let threshold {
+                RuleMark(y: .value("th", threshold.0)).foregroundStyle(threshold.1).lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
             }
             if let selectedMarker {
                 RuleMark(x: .value("t", selectedMarker))
@@ -68,9 +93,9 @@ struct MonitorChart: View {
             }
         }
         .chartXScale(domain: start...end)
-        .chartYScale(domain: 0...peak)
+        .chartYScale(domain: floor...peak)
         .chartYAxis {
-            AxisMarks(values: [peak * 0.25, peak * 0.5, peak * 0.75]) { _ in
+            AxisMarks(values: gridValues ?? [peak * 0.25, peak * 0.5, peak * 0.75]) { _ in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 1)).foregroundStyle(Theme.grid)
             }
         }

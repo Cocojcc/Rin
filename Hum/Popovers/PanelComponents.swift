@@ -16,12 +16,12 @@ struct PanelHeader: View {
             VStack(spacing: 0) {
                 Text(module.title).ui(15, 500).frame(height: 20).accessibilityAddTraits(.isHeader)
                 if let subtitle {
-                    Text(subtitle).ui(11).foregroundStyle(Theme.sub).lineLimit(1).frame(height: 14)
+                    Text(subtitle).ui(12).foregroundStyle(Theme.sub).lineLimit(1).frame(height: 14)
                 }
             }
             .frame(maxWidth: .infinity)
             headerButton(Icons.general, label: L10n.Panel.moduleSettings(module.title)) {
-                MainWindowController.shared.show(.menubarModule(module))
+                MainWindowController.shared.show(.moduleSettings(module))
             }
         }
         .padding(.horizontal, 6)
@@ -83,7 +83,7 @@ struct HeroItem<Content: View>: View {
             content.frame(height: height)
             HStack(spacing: 6) {
                 if let dot { Circle().fill(dot).frame(width: 6, height: 6) }
-                Text(label).ui(11).foregroundStyle(Theme.sub).lineLimit(1)
+                Text(label).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
             }
             .frame(height: 14)
         }
@@ -319,7 +319,7 @@ struct ConfirmForceQuitRow: View {
                 ProcessIcon(process: process, size: 18)
                 Text(process.name).ui(13, 500).lineLimit(1)
                 Text(L10n.Panel.notResponding)
-                    .ui(11, 500)
+                    .ui(12, 500)
                     .foregroundStyle(Theme.danger)
                     .padding(.horizontal, 6)
                     .frame(height: 16)
@@ -380,5 +380,119 @@ struct QuitToast: View {
         .frame(height: 32)
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.okBg))
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Top-process list on a panel. Hovering a row raises it and offers Quit; right click has the rest.
+struct ProcessListPanel: View {
+    var processes: [ProcessUsage]
+    var metric: ProcessMetric
+    var color: Color
+    var rowHeight: CGFloat = 34
+    var nameWidth: CGFloat = 130
+    var valueWidth: CGFloat = 60
+    var rowPadding: CGFloat = 10
+    var fill: Color = Theme.panel
+    var radius: CGFloat = 16
+    var quitCenter = QuitCenter.shared
+    @State private var hovered: String?
+
+    var body: some View {
+        let maxValue = max(processes.map(metric.value).max() ?? 1, 0.0001)
+        let stuck = processes.filter { quitCenter.states[$0.id] == .unresponsive }
+        let rest = processes.filter { quitCenter.states[$0.id] != .unresponsive }
+        VStack(spacing: 6) {
+            // An app that didn't quit asks for confirmation above the list.
+            ForEach(stuck) { ConfirmForceQuitRow(process: $0, value: metric.text($0)) }
+            if !rest.isEmpty || stuck.isEmpty {
+                VStack(spacing: 0) {
+                    if processes.isEmpty {
+                        Text(L10n.Panel.noProcesses).ui(13).foregroundStyle(Theme.faint)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, rowPadding)
+                            .frame(height: rowHeight)
+                    }
+                    ForEach(rest) { row($0, fraction: metric.value($0) / maxValue) }
+                }
+                .padding(4)
+                .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill))
+            }
+        }
+    }
+
+    private func row(_ p: ProcessUsage, fraction: Double) -> some View {
+        let isHover = hovered == p.id && !p.isSystem
+        return HStack(spacing: 10) {
+            ProcessIcon(process: p, size: 18)
+            Text(p.name).ui(13, isHover ? 500 : 400).lineLimit(1).truncationMode(.tail)
+                .frame(width: nameWidth, alignment: .leading)
+            if isHover {
+                Spacer(minLength: 0)
+                Button {
+                    quitCenter.quit(p)
+                } label: {
+                    Text(quitCenter.states[p.id] == .quitting ? L10n.Panel.quitting : L10n.Panel.quit)
+                        .ui(12)
+                        .foregroundStyle(Theme.text)
+                        .padding(.horizontal, 9)
+                        .frame(height: 22)
+                        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.well))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(L10n.Panel.quitNamed(p.name))
+            } else {
+                MeterBar(fraction: fraction, color: color)
+            }
+            Text(metric.text(p)).ui(13, 500).lineLimit(1).frame(width: valueWidth, alignment: .trailing)
+        }
+        .padding(.horizontal, rowPadding)
+        .frame(height: rowHeight)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(isHover ? Theme.raised : Color.clear)
+                .raisedShadow(isHover)
+        )
+        .contentShape(Rectangle())
+        .onHover { inside in
+            if inside { hovered = p.id } else if hovered == p.id { hovered = nil }
+        }
+        .contextMenu { ProcessContextMenu(process: p) }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Network dropdown's busiest processes: name, download (500) and upload (grey) columns.
+struct TrafficList: View {
+    var processes: [ProcessUsage]
+    var unit: SpeedUnit
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if processes.isEmpty {
+                Text(L10n.Panel.noProcesses).ui(13).foregroundStyle(Theme.faint)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 8)
+                    .frame(height: 30)
+            }
+            ForEach(processes) { p in
+                HStack(spacing: 10) {
+                    ProcessIcon(process: p, size: 18)
+                    Text(p.name).lineLimit(1).truncationMode(.tail).frame(maxWidth: .infinity, alignment: .leading)
+                    Text(MenuBarText.downArrow + " " + Format.rate(p.netDown, unit: unit)).fontWeight(.medium).lineLimit(1)
+                        .frame(width: 76, alignment: .trailing)
+                    Text(MenuBarText.upArrow + " " + Format.rate(p.netUp, unit: unit)).foregroundStyle(Theme.sub).lineLimit(1)
+                        .frame(width: 64, alignment: .trailing)
+                }
+                .ui(13)
+                .padding(.horizontal, 8)
+                .frame(height: 30)
+                .contentShape(Rectangle())
+                .contextMenu { ProcessContextMenu(process: p) }
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .padding(4)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.well))
     }
 }

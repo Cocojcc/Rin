@@ -50,7 +50,7 @@ final class StatusBarController: NSObject {
         let prefs = SettingsStore.shared.prefs
         let s = Monitor.shared.snapshot
         let ready = Monitor.shared.tick > 0
-        return prefs.menubar.order.filter { prefs.isVisible($0) && (!ready || MenuBarText.available($0, s)) }
+        return prefs.menubar.order.filter { prefs.showsInMenubar($0) && (!ready || MenuBarText.available($0, s)) }
     }
 
     /// There is one status item per module (plus the combined one), created in settings order.
@@ -115,7 +115,7 @@ final class StatusBarController: NSObject {
                 colored = MenuBarText.needsColor(m, s, prefs)
                 label = MenuBarText.accessibility(m, s, prefs)
             } else {
-                let modules = prefs.menubar.order.filter { prefs.isVisible($0) && MenuBarText.available($0, s) }
+                let modules = prefs.menubar.order.filter { prefs.showsInMenubar($0) && MenuBarText.available($0, s) }
                 colored = modules.contains { MenuBarText.tone($0, s, prefs).emphasized }
                 label = MenuBarText.combinedAccessibility(modules, s, prefs)
             }
@@ -175,7 +175,7 @@ final class StatusBarController: NSObject {
     #endif
 
     @objc private func openMain() { MainWindowController.shared.show(.overview) }
-    @objc private func openSettings() { MainWindowController.shared.show(.general) }
+    @objc private func openSettings() { MainWindowController.shared.show(.settings) }
     @objc private func quit() { NSApp.terminate(nil) }
 }
 

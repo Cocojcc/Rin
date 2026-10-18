@@ -18,6 +18,14 @@ enum Module: String, Codable, CaseIterable, Identifiable {
     }
 
     /// Short Latin label used by the two-line compact style (Chinese is unreadable at 7 pt).
+    /// Default text of the "label" and "mini" widgets.
+    var widgetLabel: String {
+        switch self {
+        case .memory: return "RAM"
+        default: return compactLabel
+        }
+    }
+
     var compactLabel: String {
         switch self {
         case .cpu: return "CPU"
@@ -33,13 +41,6 @@ enum Module: String, Codable, CaseIterable, Identifiable {
 
 // MARK: - Menu bar styles
 
-enum CPUStyle: String, Codable, CaseIterable { case graph, bar, iconValue, twoLine }
-enum GPUStyle: String, Codable, CaseIterable { case graph, bar, iconValue, twoLine }
-enum MemoryStyle: String, Codable, CaseIterable { case bar, ring, iconValue, twoLine }
-enum NetworkStyle: String, Codable, CaseIterable { case arrows, dots, singleLine, iconOnly }
-enum DiskStyle: String, Codable, CaseIterable { case iconValue, bar, readWrite, twoLine }
-enum BatteryStyle: String, Codable, CaseIterable { case iconPercent, iconOnly, percentOnly, twoLine }
-enum SensorsStyle: String, Codable, CaseIterable { case iconTemp, tempOnly, fan, twoLine }
 
 enum ColorMode: String, Codable, CaseIterable { case mono, color }
 
@@ -53,7 +54,14 @@ struct CPUSample {
     var system: Double = 0
     var perCore: [Double] = []
     var coreKinds: [CoreKind] = []
+    /// Per-core user / system split (0...1 of each core), same order as `perCore`.
+    var perCoreUser: [Double] = []
+    var perCoreSystem: [Double] = []
     var load: (Double, Double, Double) = (0, 0, 0)
+    /// Average running frequency (MHz) over the last interval: all cores, P cluster, E cluster.
+    var frequencyMHz: Double?
+    var performanceMHz: Double?
+    var efficiencyMHz: Double?
 }
 
 enum MemoryPressure: Int, Codable {
@@ -69,6 +77,7 @@ struct MemorySample {
     var cached: UInt64 = 0
     var free: UInt64 = 0
     var swapUsed: UInt64 = 0
+    var swapTotal: UInt64 = 0
     var pressure: MemoryPressure = .normal
     /// 0...1, derived from kern.memorystatus_level (share of memory still available to the system).
     var pressureLevel: Double = 0
@@ -91,7 +100,13 @@ struct NetworkSample {
     var todayDown: UInt64 = 0
     var todayUp: UInt64 = 0
     var lastConnected: Date?
+    /// Round trip to the router (or a public resolver) from the latest connection check.
+    var latencyMS: Double?
+    /// Recent connection checks, oldest first (at most 48).
+    var checks: [ConnectionCheck] = []
 }
+
+enum ConnectionCheck: Int, Codable { case ok, slow, failed }
 
 struct Volume: Identifiable, Equatable {
     var id: String { url.path }
@@ -102,6 +117,8 @@ struct Volume: Identifiable, Equatable {
     var isInternal: Bool
     var isEjectable: Bool
     var isRoot: Bool
+    /// Space macOS can free on demand (caches, local snapshots), counted as used.
+    var purgeable: Int64 = 0
 
     var used: Int64 { max(0, total - available) }
     var usedFraction: Double { total > 0 ? Double(used) / Double(total) : 0 }
@@ -113,8 +130,17 @@ struct DiskSample {
     var write: Double = 0
     var totalRead: UInt64 = 0   // since boot
     var totalWritten: UInt64 = 0
+    /// S.M.A.R.T. of the internal SSD, when the NVMe controller reports it.
+    var health: DiskHealth?
 
     var root: Volume? { volumes.first(where: \.isRoot) ?? volumes.first }
+}
+
+struct DiskHealth {
+    var ok: Bool
+    var lifeRemaining: Double       // 0...1
+    var totalWritten: UInt64        // bytes over the drive's life
+    var temperature: Double?
 }
 
 struct PowerSource: Identifiable {
@@ -140,6 +166,9 @@ struct BatterySample {
     var power: Double?              // W, positive while charging
     var systemPowerIn: Double?      // W drawn from the adapter by the whole Mac
     var adapterWatts: Int?
+    var maxCapacity: Int?           // mAh when full
+    var designCapacity: Int?        // mAh
+    var designCycles: Int?
     var ups: [PowerSource] = []
 }
 
@@ -181,6 +210,12 @@ struct SensorsSample {
     var cpuPower: Double?
     var gpuPower: Double?
     var thermal: ThermalLevel = .nominal
+    /// Fans run under automatic control (no manual override).
+    var fansAuto = true
+
+    var cpuMax: Double? {
+        temps.filter { $0.group == .cpuPerformance || $0.group == .cpuEfficiency }.map(\.value).max()
+    }
 
     var cpuAverage: Double? {
         let cpu = temps.filter { $0.group == .cpuPerformance || $0.group == .cpuEfficiency }
@@ -202,6 +237,14 @@ struct GPUSample {
     var power: Double?
     var cores: Int = 0
     var model: String = ""
+    var renderer: Double?           // 0...1
+    var tiler: Double?              // 0...1
+    /// Media engine power (W): macOS reports their energy, not utilization or codec.
+    var decodeWatts: Double?
+    var encodeWatts: Double?
+    /// Main display: current refresh (frames per second) and its maximum.
+    var fps: Double?
+    var maxFPS: Int = 60
 }
 
 /// One row in a "top processes" list. Helper processes are folded into their app.
@@ -231,6 +274,8 @@ struct ProcessSnapshot {
     var byDisk: [ProcessUsage] = []
     var byNetwork: [ProcessUsage] = []
     var byGPU: [ProcessUsage] = []
+    var processCount = 0
+    var threadCount = 0
 }
 
 /// The tick's full reading, produced on the sampler queue and applied on the main thread.

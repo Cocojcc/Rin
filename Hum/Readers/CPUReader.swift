@@ -30,7 +30,7 @@ final class CPUReader {
 
         if previous.count == current.count {
             var user: UInt64 = 0, system: UInt64 = 0, idle: UInt64 = 0, nice: UInt64 = 0
-            var perCore: [Double] = []
+            var perCore: [Double] = [], perUser: [Double] = [], perSystem: [Double] = []
             for (now, before) in zip(current, previous) {
                 let u = UInt64(now[Int(CPU_STATE_USER)] &- before[Int(CPU_STATE_USER)])
                 let s = UInt64(now[Int(CPU_STATE_SYSTEM)] &- before[Int(CPU_STATE_SYSTEM)])
@@ -39,6 +39,8 @@ final class CPUReader {
                 user += u; system += s; idle += i; nice += n
                 let total = u + s + i + n
                 perCore.append(total > 0 ? Double(u + s + n) / Double(total) : 0)
+                perUser.append(total > 0 ? Double(u + n) / Double(total) : 0)
+                perSystem.append(total > 0 ? Double(s) / Double(total) : 0)
             }
             let total = user + system + idle + nice
             if total > 0 {
@@ -47,6 +49,8 @@ final class CPUReader {
                 sample.total = sample.user + sample.system
             }
             sample.perCore = perCore
+            sample.perCoreUser = perUser
+            sample.perCoreSystem = perSystem
         } else {
             sample.perCore = [Double](repeating: 0, count: current.count)
         }

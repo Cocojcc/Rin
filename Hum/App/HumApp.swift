@@ -119,6 +119,6 @@ enum MainMenu {
 
 final class AppActions: NSObject {
     static let shared = AppActions()
-    @objc func showAbout() { MainWindowController.shared.show(.about) }
-    @objc func showSettings() { MainWindowController.shared.show(.general) }
+    @objc func showAbout() { MainWindowController.shared.show(.settings) }
+    @objc func showSettings() { MainWindowController.shared.show(.settings) }
 }

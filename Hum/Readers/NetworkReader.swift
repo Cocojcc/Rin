@@ -29,8 +29,10 @@ final class NetworkReader {
         }
     }
 
+    private let latency = LatencyProbe()
+
     /// `preferred` empty means "the interface macOS currently routes through".
-    func read(preferred: String) -> NetworkSample {
+    func read(preferred: String, probeLatency: Bool = false) -> NetworkSample {
         var sample = NetworkSample()
         let global = store.flatMap { SCDynamicStoreCopyValue($0, "State:/Network/Global/IPv4" as CFString) as? [String: Any] }
         let primary = global?["PrimaryInterface"] as? String
@@ -67,6 +69,10 @@ final class NetworkReader {
         sample.sessionUp = sessionUp
         sample.todayDown = today.down
         sample.todayUp = today.up
+        if probeLatency {
+            latency.tick(connected: sample.connected)
+            (sample.latencyMS, sample.checks) = latency.results()
+        }
         return sample
     }
 
@@ -150,5 +156,83 @@ final class NetworkReader {
             }
         }
         return nil
+    }
+}
+
+
+/// Round-trip time to a public resolver over ICMP (an unprivileged datagram socket), every
+/// 30 seconds on its own queue. Keeps the last 48 checks for the connection log.
+final class LatencyProbe {
+    private let queue = DispatchQueue(label: "hum.latency", qos: .utility)
+    private let lock = NSLock()
+    private var lastStart = Date.distantPast
+    private var latest: Double?
+    private var checks: [ConnectionCheck] = []
+    private static let target = "1.1.1.1"
+    private static let slowMS = 100.0
+
+    func tick(connected: Bool) {
+        let now = Date()
+        guard now.timeIntervalSince(lastStart) >= 30 else { return }
+        lastStart = now
+        guard connected else { record(nil); return }
+        queue.async { [weak self] in self?.record(Self.ping(Self.target)) }
+    }
+
+    func results() -> (Double?, [ConnectionCheck]) {
+        lock.lock(); defer { lock.unlock() }
+        return (latest, checks)
+    }
+
+    private func record(_ ms: Double?) {
+        lock.lock(); defer { lock.unlock() }
+        latest = ms
+        checks.append(ms.map { $0 < Self.slowMS ? .ok : .slow } ?? .failed)
+        if checks.count > 48 { checks.removeFirst(checks.count - 48) }
+    }
+
+    /// One echo request; nil on timeout (1 s) or error.
+    private static func ping(_ host: String) -> Double? {
+        var address = sockaddr_in()
+        address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        address.sin_family = sa_family_t(AF_INET)
+        guard inet_pton(AF_INET, host, &address.sin_addr) == 1 else { return nil }
+        let fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
+        guard fd >= 0 else { return nil }
+        defer { close(fd) }
+        var timeout = timeval(tv_sec: 1, tv_usec: 0)
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+
+        let identifier = UInt16.random(in: 1...UInt16.max)
+        var packet = [UInt8](repeating: 0, count: 16)
+        packet[0] = 8   // echo request
+        packet[4] = UInt8(identifier >> 8); packet[5] = UInt8(identifier & 0xFF)
+        packet[7] = 1   // sequence
+        var sum: UInt32 = 0
+        for i in stride(from: 0, to: packet.count, by: 2) { sum += UInt32(packet[i]) << 8 | UInt32(packet[i + 1]) }
+        while sum >> 16 != 0 { sum = (sum & 0xFFFF) + (sum >> 16) }
+        let checksum = ~UInt16(sum)
+        packet[2] = UInt8(checksum >> 8); packet[3] = UInt8(checksum & 0xFF)
+
+        let start = DispatchTime.now()
+        let sent = withUnsafePointer(to: &address) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                sendto(fd, packet, packet.count, 0, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        guard sent == packet.count else { return nil }
+        var buffer = [UInt8](repeating: 0, count: 256)
+        while true {
+            let n = recv(fd, &buffer, buffer.count, 0)
+            guard n > 0 else { return nil }
+            // Replies may arrive with the IP header in front.
+            let offset = buffer[0] >> 4 == 4 ? Int(buffer[0] & 0x0F) * 4 : 0
+            guard n >= offset + 8 else { continue }
+            if buffer[offset] == 0 { // echo reply
+                let elapsed = Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000
+                return elapsed
+            }
+            if Double(DispatchTime.now().uptimeNanoseconds - start.uptimeNanoseconds) > 1_000_000_000 { return nil }
+        }
     }
 }

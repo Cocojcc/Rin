@@ -33,6 +33,7 @@ final class MemoryReader {
         var size = MemoryLayout<xsw_usage>.size
         if sysctlbyname("vm.swapusage", &swap, &size, nil, 0) == 0 {
             sample.swapUsed = swap.xsu_used
+            sample.swapTotal = swap.xsu_total
         }
 
         var level: Int32 = 0

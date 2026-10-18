@@ -73,9 +73,9 @@ enum Theme {
     static let onInk = Color.dyn(RGBA(0xFFFFFF), RGBA(0x1D1D1D))
 
     // Status
-    static let ok = Color.dyn(RGBA(0x3F7F4C), RGBA(0x8FD09C))
+    static let ok = Color.dyn(RGBA(0x316A3C), RGBA(0x8FD09C))
     static let okBg = Color.dyn(RGBA(79, 143, 92, 0.15), RGBA(127, 192, 140, 0.18))
-    static let warn = Color.dyn(RGBA(0x9A6220), RGBA(0xF0C080))
+    static let warn = Color.dyn(RGBA(0x85541A), RGBA(0xF0C080))
     static let warnBg = Color.dyn(RGBA(201, 138, 62, 0.18), RGBA(226, 168, 98, 0.2))
     static let danger = Color.dyn(RGBA(0xB23F2C), RGBA(0xF09A88))
     static let dangerBg = Color.dyn(RGBA(196, 80, 60, 0.12), RGBA(238, 138, 120, 0.16))
@@ -106,6 +106,33 @@ enum Theme {
     static let barGPU = Color.dyn(RGBA(0xFF6B98), RGBA(0xFF6B98))
     static let barWarn = NSColor.dynamic(RGBA(0xB25000), RGBA(0xFF9F0A))
     static let barCrit = NSColor.dynamic(RGBA(0xD70015), RGBA(0xFF453A))
+
+    /// The vivid menu bar color for a module ("彩色").
+    static func barColor(_ module: Module) -> Color {
+        switch module {
+        case .cpu: return barCPU
+        case .gpu: return barGPU
+        case .memory: return barMem
+        case .network: return barDown
+        case .disk: return barDisk
+        case .battery: return barBat
+        case .sensors: return barTemp
+        }
+    }
+
+    /// Named colors offered for chart and status widgets.
+    static func palette(_ p: PaletteColor) -> Color {
+        switch p {
+        case .blue: return barDown
+        case .orange: return barUp
+        case .purple: return .dyn(RGBA(0xAF52DE), RGBA(0xBF5AF2))
+        case .green: return barCPU
+        case .red: return Color(nsColor: barCrit)
+        case .pink: return barTemp
+        case .teal: return .dyn(RGBA(0x30B0C7), RGBA(0x40C8E0))
+        case .yellow: return .dyn(RGBA(0xD9A400), RGBA(0xFFD60A))
+        }
+    }
 
     static func color(for module: Module) -> Color {
         switch module {

@@ -16,11 +16,11 @@ struct CombinedPanel: View {
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(L10n.Overview.title).ui(17, 500).kerning(-0.17).accessibilityAddTraits(.isHeader)
-                    Text(L10n.Panel.updatedEvery(Int(prefs.general.refreshInterval))).ui(11).foregroundStyle(Theme.sub)
+                    Text(L10n.Panel.updatedEvery(Int(prefs.refresh(.cpu)))).ui(11).foregroundStyle(Theme.sub)
                 }
                 Spacer(minLength: 0)
                 IconButton(d: Icons.general, size: 28, iconSize: 16, viewBox: 16, lineWidth: 1.5, fill: .clear, tint: Theme.sub, label: L10n.Menu.settings) {
-                    MainWindowController.shared.show(.general)
+                    MainWindowController.shared.show(.settings)
                 }
             }
             .padding(.leading, 6)
@@ -32,7 +32,7 @@ struct CombinedPanel: View {
                         Spacer(minLength: 4)
                         bigValue(percentNumber(s.cpu.total), L10n.Common.percentSign)
                         Spacer(minLength: 4)
-                        HistoryBars(values: monitor.history.latest(.cpu, seconds: 32 * prefs.general.refreshInterval).map { $0 / 100 }, color: Theme.cpu)
+                        HistoryBars(values: monitor.history.latest(.cpu, seconds: 32 * prefs.refresh(.cpu)).map { $0 / 100 }, color: Theme.cpu)
                             .frame(height: 26)
                     }
                     tile(.memory) {
@@ -73,8 +73,8 @@ struct CombinedPanel: View {
                                 }
                             }
                             VStack(alignment: .trailing, spacing: 6) {
-                                let d = monitor.history.latest(.netDown, seconds: 30 * prefs.general.refreshInterval)
-                                let u = monitor.history.latest(.netUp, seconds: 30 * prefs.general.refreshInterval)
+                                let d = monitor.history.latest(.netDown, seconds: 30 * prefs.refresh(.network))
+                                let u = monitor.history.latest(.netUp, seconds: 30 * prefs.refresh(.network))
                                 let peak = max(d.max() ?? 0, u.max() ?? 0, 10_000) * 1.1
                                 MiniChart(series: [.init(values: d.map { $0 / peak }, color: Theme.down),
                                                    .init(values: u.map { $0 / peak }, color: Theme.up, fill: 0, lineWidth: 1.25)], gridLines: 1)

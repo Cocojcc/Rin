@@ -136,10 +136,10 @@ struct CPUPanel: View {
             }
         }
         Well {
-            WellChart(legend: [(Theme.cpu, L10n.Panel.user), (Theme.sys, L10n.Panel.system)], right: L10n.Range.last60s) {
+            WellChart(legend: [(Theme.sys, L10n.Panel.system), (Theme.cpu, L10n.Panel.user)], right: L10n.Range.last60s) {
                 MiniChart(series: [
-                    .init(values: monitor.history.latest(.cpuUser, seconds: 60).map { $0 / 100 }, color: Theme.cpu),
-                    .init(values: monitor.history.latest(.cpuSystem, seconds: 60).map { $0 / 100 }, color: Theme.sys, fill: 0, lineWidth: 1.25),
+                    .init(values: monitor.history.latest(.cpu, seconds: 60).map { $0 / 100 }, color: Theme.cpu, fill: 0.16, lineWidth: 2),
+                    .init(values: monitor.history.latest(.cpuSystem, seconds: 60).map { $0 / 100 }, color: Theme.sys, fill: 0.24, lineWidth: 1.5),
                 ])
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(L10n.Panel.cpuChartA11y)
@@ -236,10 +236,8 @@ struct GPUPanel: View {
     private func gpuStats(_ g: GPUSample, _ p: GPUPrefs, _ unit: TemperatureUnit) -> [(String, String)] {
         var out: [(String, String)] = []
         if p.showFrequency, let f = g.frequencyMHz { out.append((Format.frequency(f), L10n.Panel.frequency)) }
-        if p.showTempPower {
-            if let t = g.temperature { out.append((Format.temperature(t, unit: unit, showUnit: true), L10n.Panel.temperature)) }
-            if let w = g.power { out.append((Format.watts(w), L10n.Panel.power)) }
-        }
+        if p.showVideo { out.append((MediaText.state(g.decodeWatts), L10n.Monitor.videoDecode)) }
+        if p.showTempPower, let w = g.power { out.append((Format.watts(w), L10n.Panel.power)) }
         return out
     }
 }
@@ -287,7 +285,7 @@ struct MemoryPanel: View {
         let _ = monitor.tick
         let total = max(Double(m.total), 1)
         let pr = PanelText.pressure(m.pressure)
-        PanelHeader(module: .memory)
+        PanelHeader(module: .memory, subtitle: L10n.Monitor.unifiedMemory)
         HeroPair {
             HeroItem(label: L10n.Panel.pressure) {
                 PressureGauge(level: m.pressureLevel, pressure: m.pressure)
@@ -304,11 +302,11 @@ struct MemoryPanel: View {
             PanelSection(title: L10n.Panel.composition) {
                 Well(padding: EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12)) {
                     MemoryComposition(m: m)
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 24), GridItem(.flexible())], alignment: .leading, spacing: 6) {
-                        MemoryLegend(color: Theme.mem, label: L10n.Memory.app, bytes: m.app)
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible())], alignment: .leading, spacing: 6) {
+                        MemoryLegend(color: Theme.mem, label: L10n.Monitor.appMemory, bytes: m.app)
                         MemoryLegend(color: Theme.mem.opacity(0.6), label: L10n.Memory.wired, bytes: m.wired)
-                        MemoryLegend(color: Theme.mem.opacity(0.35), label: L10n.Memory.compressed, bytes: m.compressed)
-                        MemoryLegend(color: Theme.cache, label: L10n.Memory.cached, bytes: m.cached)
+                        MemoryLegend(color: Theme.mem.opacity(0.35), label: L10n.Monitor.compressed, bytes: m.compressed)
+                        MemoryLegend(color: Theme.cache, label: L10n.Monitor.cache, bytes: m.cached)
                         MemoryLegend(color: Theme.track, label: L10n.Memory.free, bytes: m.free, ring: true)
                     }
                     .padding(.top, 12)
@@ -389,7 +387,7 @@ struct NetworkPanel: View {
                 MiniChart(series: [
                     .init(values: down.map { $0 / peak }, color: Theme.down, fill: n.connected ? 0.13 : 0.1),
                     .init(values: up.map { $0 / peak }, color: Theme.up, fill: 0, lineWidth: 1.25),
-                ], minCount: Int(seconds / max(settings.prefs.general.refreshInterval, 1)))
+                ], minCount: Int(seconds / max(settings.prefs.refresh(.network), 1)))
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(L10n.Panel.networkChartA11y)
             }
@@ -400,6 +398,7 @@ struct NetworkPanel: View {
                     KVRow(key: L10n.Network.localIP, value: n.localIP.isEmpty ? L10n.Common.dash : n.localIP)
                     if !n.router.isEmpty { KVRow(key: L10n.Network.router, value: n.router) }
                     if p.showPublicIP { KVRow(key: L10n.Network.publicIP, value: monitor.publicIP ?? L10n.Common.dash) }
+                    if p.showLatency { KVRow(key: L10n.Monitor.latency, value: n.latencyMS.map { L10n.Monitor.milliseconds(Int($0.rounded())) } ?? L10n.Common.dash) }
                 } else if let last = n.lastConnected {
                     KVRow(key: L10n.Network.lastConnected, value: Format.time(last))
                 }
@@ -407,8 +406,9 @@ struct NetworkPanel: View {
             }
         }
         if p.showProcesses && n.connected {
-            PanelProcessList(title: L10n.Panel.topTraffic, processes: Array(monitor.snapshot.processes.byNetwork.prefix(5)), metric: .network, color: Theme.down,
-                             nameWidth: 84, valueWidth: 68)
+            PanelSection(title: L10n.Panel.topTraffic) {
+                TrafficList(processes: Array(monitor.snapshot.processes.byNetwork.prefix(5)), unit: p.speedUnit)
+            }
         }
     }
 
@@ -463,7 +463,13 @@ struct DiskPanel: View {
             }
         }
         Well {
-            KVRow(key: L10n.Disk.sinceBoot, value: L10n.Disk.readWriteTotals(Format.storage(d.totalRead), Format.storage(d.totalWritten)))
+            DividedRows {
+                KVRow(key: L10n.Disk.sinceBoot, value: L10n.Disk.readWriteTotals(Format.storage(d.totalRead), Format.storage(d.totalWritten)))
+                if p.showHealth, let h = d.health {
+                    KVRow(key: L10n.Panel.health, value: L10n.Panel.healthValue(Format.percent(h.lifeRemaining), h.ok ? L10n.Monitor.smartGood : L10n.Monitor.smartFailing),
+                          valueColor: h.ok ? Theme.ok : Theme.danger)
+                }
+            }
         }
         if p.showProcesses {
             PanelProcessList(title: L10n.Panel.topDisk, processes: Array(monitor.snapshot.processes.byDisk.prefix(5)), metric: .disk, color: Theme.disk,
@@ -485,17 +491,22 @@ struct VolumeBlock: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Text(volume.name).ui(13, 500).lineLimit(1)
-                if !volume.isInternal {
-                    StatusPill(text: L10n.Disk.external, fg: Theme.sub, bg: Theme.raised, fontSize: 11, height: 16, radius: 5)
-                }
-                if volume.isEjectable && !volume.isRoot { EjectButton(volume: volume) }
+                Text(volume.isInternal ? L10n.Disk.internalDrive : L10n.Disk.external).ui(12).foregroundStyle(Theme.sub)
+                    .padding(.horizontal, 6)
+                    .frame(height: 16)
+                    .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.raised))
+                if volume.isEjectable && !volume.isRoot { EjectButton(volume: volume, size: 24) }
                 Spacer(minLength: 4)
                 Text(L10n.Disk.available(Format.storage(volume.available))).foregroundStyle(Theme.sub).lineLimit(1)
             }
             .frame(height: 20)
-            MeterBar(fraction: volume.usedFraction, color: Theme.disk).padding(.top, 8)
-            Text(L10n.Disk.usedOf(Format.storage(volume.used), Format.storage(volume.total)))
-                .ui(12).foregroundStyle(Theme.sub).padding(.top, 6)
+            StackedBar(parts: [(Double(max(0, volume.used - volume.purgeable)), Theme.disk), (Double(volume.purgeable), Theme.disk.opacity(0.4)),
+                               (Double(volume.available), Theme.track)], height: 3)
+                .padding(.top, 8)
+            Text(volume.purgeable > 0
+                 ? L10n.Panel.volumeUsedPurgeable(Format.storage(volume.used), Format.storage(volume.purgeable), Format.storage(volume.total))
+                 : L10n.Disk.usedOf(Format.storage(volume.used), Format.storage(volume.total)))
+                .ui(12).foregroundStyle(Theme.sub).lineLimit(1).padding(.top, 6)
         }
         .padding(12)
     }
@@ -512,13 +523,16 @@ struct BatteryPanel: View {
         let p = settings.prefs.battery
         let _ = monitor.tick
         let low = b.level <= 0.2 && !b.onAC
-        PanelHeader(module: .battery)
+        PanelHeader(module: .battery, subtitle: b.onAC ? b.adapterWatts.map { L10n.Battery.adapter($0) } : nil)
         if b.hasBattery {
             HeroRow {
                 timeItem(b)
             } center: {
                 HeroItem(label: PanelText.batteryState(b)) {
-                    ValueRing(fraction: b.level, color: low ? Theme.danger : Theme.bat, value: Format.percent(b.level))
+                    VStack(spacing: 6) {
+                        LargeBattery(level: b.level, charging: b.isCharging, color: low ? Theme.danger : Theme.bat).frame(width: 80, height: 37)
+                        Text(Format.percent(b.level)).ui(22, 500).kerning(-0.44)
+                    }
                 }
             } trailing: {
                 powerItem(b)
@@ -531,7 +545,7 @@ struct BatteryPanel: View {
                 Well {
                     WellChart(labels: [L10n.Range.ago24h, L10n.Range.ago12h, L10n.Range.now]) {
                         MonitorChart(series: [ChartSeries(id: "battery", points: monitor.history.points(.battery, range: .h24), color: Theme.bat, lineWidth: 1.5)],
-                                     range: .h24, maxValue: 100)
+                                     range: .h24, maxValue: 100, bands: ChargingBands.of(.h24))
                             .accessibilityElement(children: .ignore)
                             .accessibilityLabel(L10n.Panel.batteryChartA11y)
                     }
@@ -562,11 +576,11 @@ struct BatteryPanel: View {
     @ViewBuilder private func timeItem(_ b: BatterySample) -> some View {
         if b.isCharging {
             HeroItem(label: L10n.Panel.untilFullLabel) {
-                BigReadout(value: b.minutesToFull.map { Format.clockDuration(minutes: $0) } ?? L10n.Common.dash)
+                BigReadout(value: b.minutesToFull.map { BatteryTime.text($0) } ?? L10n.Common.dash)
             }
         } else {
             HeroItem(label: L10n.Panel.timeLeftLabel) {
-                BigReadout(value: b.onAC ? L10n.Common.dash : (b.minutesToEmpty.map { Format.clockDuration(minutes: $0) } ?? L10n.Common.dash))
+                BigReadout(value: b.onAC ? L10n.Common.dash : (b.minutesToEmpty.map { BatteryTime.text($0) } ?? L10n.Common.dash))
             }
         }
     }
@@ -581,8 +595,10 @@ struct BatteryPanel: View {
     private func batteryCells(_ b: BatterySample, _ p: BatteryPrefs) -> [(String, String)] {
         var out: [(String, String)] = []
         if p.showHealth, let h = b.health { out.append((Format.percent(h), L10n.Battery.health)) }
-        if p.showCycles, let c = b.cycles { out.append(("\(c)", L10n.Battery.cycles)) }
-        if p.showPower, let a = b.adapterWatts, b.onAC { out.append((L10n.Common.watts(a), L10n.Battery.adapterLabel)) }
+        if p.showCycles, let c = b.cycles { out.append((L10n.Monitor.cyclesOf(c, b.designCycles ?? 1000), L10n.Battery.cycles)) }
+        if p.showTemperature, let t = b.temperature ?? monitor.snapshot.sensors.value(.battery) {
+            out.append((Format.temperature(t, unit: settings.prefs.general.temperatureUnit, showUnit: true), L10n.Battery.temperature))
+        }
         return out
     }
 }
@@ -603,7 +619,7 @@ struct PanelDeviceRow: View {
                     Text(name).lineLimit(1)
                     if low { StatusPill(text: L10n.Battery.low, fg: Theme.danger, bg: Theme.dangerBg, fontSize: 10, height: 16, radius: 5) }
                 }
-                if let detail { Text(detail).ui(11).foregroundStyle(Theme.sub).lineLimit(1) }
+                if let detail { Text(detail).ui(12).foregroundStyle(Theme.sub).lineLimit(1) }
             }
             Spacer(minLength: 4)
             BatteryGlyph(level: level, fill: low ? Theme.danger : Theme.bat, rim: Theme.faint, rimOpacity: 1)
@@ -626,7 +642,7 @@ struct SensorsPanel: View {
         let p = settings.prefs.sensors
         let unit = settings.prefs.general.temperatureUnit
         let _ = monitor.tick
-        PanelHeader(module: .sensors)
+        PanelHeader(module: .sensors, subtitle: s.fans.isEmpty ? L10n.Panel.passiveCooling : L10n.Panel.fanCount(s.fans.count))
         HeroRow {
             HeroItem(label: L10n.Sensors.gpu) { tempRing(s.value(.gpu), unit, large: false) }
         } center: {
@@ -634,14 +650,31 @@ struct SensorsPanel: View {
         } trailing: {
             HeroItem(label: L10n.Sensors.ssd) { tempRing(s.value(.ssd), unit, large: false) }
         }
-        let th = PanelText.thermal(s.thermal)
-        Well { KVRow(key: L10n.Sensors.thermalState, value: th.0, valueColor: th.1) }
+        if p.showThermal {
+            let th = PanelText.thermal(s.thermal)
+            Well(padding: EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12)) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(L10n.Sensors.thermalState).foregroundStyle(Theme.sub)
+                    Spacer(minLength: 8)
+                    Text(th.0).fontWeight(.medium).foregroundStyle(th.1).lineLimit(1)
+                }
+                LevelSegments(level: s.thermal.rawValue, color: th.1, height: 3, gap: 3).padding(.top, 10)
+            }
+            .accessibilityElement(children: .combine)
+        }
         if p.showAllTemps, !s.temps.isEmpty {
             PanelSection(title: L10n.Sensors.temperatures) {
                 Well(padding: EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4)) {
                     ForEach(s.temps) { t in
-                        MeterRow(name: PanelText.tempName(t.group), fraction: t.value / 110,
-                                 value: Format.temperature(t.value, unit: unit, showUnit: true), color: Theme.temp)
+                        HStack(spacing: 10) {
+                            Text(PanelText.tempName(t.group)).lineLimit(1).frame(width: 84, alignment: .leading)
+                            ZoneTrack(zones: [(50, Theme.ok), (20, Theme.sys), (10, Theme.temp)], position: (t.value - 20) / 80,
+                                      knob: TempZone.color(t.value), zoneOpacity: 0.3)
+                            Text(Format.temperature(t.value, unit: unit, showUnit: true)).ui(13, 500).lineLimit(1).frame(width: 48, alignment: .trailing)
+                        }
+                        .padding(.horizontal, 8)
+                        .frame(height: 28)
+                        .accessibilityElement(children: .combine)
                     }
                 }
             }

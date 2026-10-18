@@ -6,6 +6,8 @@ final class DiskReader {
     private var previous: (date: Date, read: UInt64, write: UInt64)?
     private var volumes: [Volume] = []
     private var lastVolumeScan = Date.distantPast
+    private var health: DiskHealth?
+    private var lastHealthRead = Date.distantPast
 
     private static let keys: [URLResourceKey] = [
         .volumeNameKey, .volumeLocalizedNameKey, .volumeTotalCapacityKey,
@@ -23,6 +25,12 @@ final class DiskReader {
             lastVolumeScan = now
         }
         sample.volumes = volumes
+        // S.M.A.R.T. counters move slowly; read them every few minutes.
+        if force || now.timeIntervalSince(lastHealthRead) > 300 {
+            health = Self.readHealth()
+            lastHealthRead = now
+        }
+        sample.health = health
 
         let (read, write) = Self.ioCounters()
         sample.totalRead = read
@@ -49,6 +57,7 @@ final class DiskReader {
                   let total = v.volumeTotalCapacity, total > 0 else { continue }
             let isRoot = v.volumeIsRootFileSystem ?? (url.path == "/")
             let available = v.volumeAvailableCapacityForImportantUsage ?? Int64(v.volumeAvailableCapacity ?? 0)
+            let strict = Int64(v.volumeAvailableCapacity ?? 0)
             result.append(Volume(
                 url: url,
                 name: v.volumeLocalizedName ?? v.volumeName ?? url.lastPathComponent,
@@ -56,7 +65,8 @@ final class DiskReader {
                 available: available,
                 isInternal: v.volumeIsInternal ?? isRoot,
                 isEjectable: (v.volumeIsEjectable ?? false) || (v.volumeIsRemovable ?? false) || !(v.volumeIsInternal ?? true),
-                isRoot: isRoot
+                isRoot: isRoot,
+                purgeable: max(0, available - strict)
             ))
         }
         return result.sorted { a, b in
@@ -64,6 +74,15 @@ final class DiskReader {
             if a.isInternal != b.isInternal { return a.isInternal }
             return a.name.localizedStandardCompare(b.name) == .orderedAscending
         }
+    }
+
+    private static func readHealth() -> DiskHealth? {
+        var smart = HumNVMeSMART()
+        guard HumReadNVMeSMART(&smart) == 1 else { return nil }
+        return DiskHealth(ok: smart.criticalWarning == 0,
+                          lifeRemaining: max(0, 1 - Double(smart.percentageUsed) / 100),
+                          totalWritten: smart.bytesWritten,
+                          temperature: smart.temperatureC > 0 ? smart.temperatureC : nil)
     }
 
     /// Cumulative bytes read / written across all block storage drivers since boot.

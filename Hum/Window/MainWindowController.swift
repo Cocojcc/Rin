@@ -5,15 +5,13 @@ import SwiftUI
 enum Page: Hashable {
     case overview
     case monitor(Module)
-    case general
-    case menubar
-    case menubarModule(Module)
-    case alerts
-    case about
+    /// A module's settings: widgets, dropdown, alerts (from the monitor page's settings button).
+    case moduleSettings(Module)
+    case settings
 
     /// The sidebar entry that should look selected for this page.
     var sidebarPage: Page {
-        if case .menubarModule = self { return .menubar }
+        if case .moduleSettings(let m) = self { return .monitor(m) }
         return self
     }
 }
@@ -64,12 +62,12 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         // The SwiftUI root draws the frosted glass, so the window itself is clear.
         window.isOpaque = false
         window.backgroundColor = .clear
-        window.setContentSize(NSSize(width: UIScale.of(860), height: UIScale.of(760)))
-        window.contentMinSize = NSSize(width: UIScale.of(760), height: UIScale.of(600))
-        window.setFrameAutosaveName("HumMainWindow.v3")
+        window.setContentSize(NSSize(width: UIScale.of(800), height: UIScale.of(700)))
+        window.contentMinSize = NSSize(width: UIScale.of(720), height: UIScale.of(560))
+        window.setFrameAutosaveName("HumMainWindow.v4")
         window.isReleasedWhenClosed = false
         window.delegate = self
-        if !window.setFrameUsingName("HumMainWindow.v3") { window.center() }
+        if !window.setFrameUsingName("HumMainWindow.v4") { window.center() }
         self.window = window
     }
 

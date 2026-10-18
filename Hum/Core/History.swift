@@ -4,6 +4,7 @@ enum Metric: Int, CaseIterable, Codable {
     case cpu, cpuUser, cpuSystem, gpu, memory, memoryPressure, swap
     case netDown, netUp, diskRead, diskWrite, battery
     case cpuTemp, gpuTemp, fan, power
+    case charging, gpuRenderer, gpuTiler, videoDecode, videoEncode, fps
 }
 
 enum TimeRange: String, CaseIterable, Identifiable {
@@ -134,6 +135,12 @@ final class History {
         if let t = s.sensors.value(.gpu) { values[Metric.gpuTemp.rawValue] = Float(t) }
         if let f = s.sensors.fans.first { values[Metric.fan.rawValue] = Float(f.rpm) }
         if let p = s.sensors.systemPower { values[Metric.power.rawValue] = Float(p) }
+        if s.battery.hasBattery { values[Metric.charging.rawValue] = s.battery.isCharging ? 1 : 0 }
+        if let v = s.gpu.renderer { values[Metric.gpuRenderer.rawValue] = Float(v * 100) }
+        if let v = s.gpu.tiler { values[Metric.gpuTiler.rawValue] = Float(v * 100) }
+        if let v = s.gpu.decodeWatts { values[Metric.videoDecode.rawValue] = Float(v) }
+        if let v = s.gpu.encodeWatts { values[Metric.videoEncode.rawValue] = Float(v) }
+        if let v = s.gpu.fps { values[Metric.fps.rawValue] = Float(v) }
 
         rawDates.append(s.date)
         for i in 0..<metricCount { raw[i].append(values[i]) }
@@ -204,6 +211,11 @@ final class History {
         }
     }
 
+    /// The most recent `count` samples, oldest first.
+    func last(_ metric: Metric, count: Int) -> [Double] {
+        raw[metric.rawValue].suffix(count).map { $0.isNaN ? 0 : Double($0) }
+    }
+
     func latest(_ metric: Metric, seconds: TimeInterval, now: Date = Date()) -> [Double] {
         let from = now.addingTimeInterval(-seconds)
         guard let first = rawDates.firstIndex(where: { $0 >= from }) else { return [] }
@@ -256,8 +268,16 @@ final class History {
         guard let data = try? Data(contentsOf: Self.fileURL),
               let stored = try? PropertyListDecoder().decode(Stored.self, from: data) else { return }
         let now = Date().timeIntervalSince1970
-        let valid: (HistoryBucket) -> Bool = { $0.avg.count == self.metricCount && $0.max.count == self.metricCount }
-        minutes = stored.minutes.filter { valid($0) && $0.start >= now - 86_400 }
-        fives = stored.fives.filter { valid($0) && $0.start >= now - 604_800 }
+        // Buckets saved before metrics were added are padded rather than dropped.
+        let count = metricCount
+        let fit: (HistoryBucket) -> HistoryBucket? = { b in
+            guard b.avg.count <= count, b.max.count == b.avg.count else { return nil }
+            var b = b
+            b.avg += [Float](repeating: 0, count: count - b.avg.count)
+            b.max += [Float](repeating: 0, count: count - b.max.count)
+            return b
+        }
+        minutes = stored.minutes.compactMap(fit).filter { $0.start >= now - 86_400 }
+        fives = stored.fives.compactMap(fit).filter { $0.start >= now - 604_800 }
     }
 }

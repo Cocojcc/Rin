@@ -186,15 +186,20 @@ struct HumSwitch: View {
 }
 
 /// Grey well with a raised selected segment. `.compact` for settings rows (24 pt),
-/// `.range` for the time ranges on monitor pages (28 pt, segments share the width),
-/// `.tab` for small inline switches (22 pt, 11 pt text).
+/// `.range` for the time ranges on monitor pages (26 pt, 12 pt side padding),
+/// `.tab` for small inline switches (22 pt, 11 pt text), `.tabs` for a page's tab bar
+/// (26 pt, full width), `.sort` for the overview's sort switch (26 pt).
 struct Segmented<Value: Hashable>: View {
-    enum Style { case compact, range, tab }
+    enum Style { case compact, range, tab, tabs, sort }
 
     var label: String
     var options: [(Value, String)]
     @Binding var selection: Value
     var style: Style = .compact
+    /// Draws a segment as an icon instead of text.
+    var glyph: ((Value) -> AnyView)? = nil
+
+    private var fills: Bool { style == .tabs }
 
     var body: some View {
         HStack(spacing: 2) {
@@ -203,32 +208,45 @@ struct Segmented<Value: Hashable>: View {
                 Button {
                     selection = option.0
                 } label: {
-                    Text(option.1)
-                        .ui(fontSize, on ? 500 : 400)
-                        .lineLimit(1)
-                        .foregroundStyle(on ? Theme.text : Theme.sub)
-                        .padding(.horizontal, style == .range ? 6 : 7)
-                        .frame(maxWidth: style == .range ? .infinity : nil)
-                        .frame(height: height)
-                        .background(
-                            RoundedRectangle(cornerRadius: innerRadius, style: .continuous)
-                                .fill(on ? Theme.raised : Color.clear)
-                                .raisedShadow(on)
-                        )
-                        .contentShape(Rectangle())
+                    Group {
+                        if let glyph {
+                            glyph(option.0).frame(width: 18)
+                        } else {
+                            Text(option.1).ui(fontSize, on ? 500 : 400).lineLimit(1)
+                        }
+                    }
+                    .foregroundStyle(on ? Theme.text : Theme.sub)
+                    .padding(.horizontal, style == .range ? 12 : 7)
+                    .frame(maxWidth: fills ? .infinity : nil)
+                    .frame(height: height)
+                    .background(
+                        RoundedRectangle(cornerRadius: innerRadius, style: .continuous)
+                            .fill(on ? Theme.raised : Color.clear)
+                            .raisedShadow(on)
+                    )
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(option.1.isEmpty ? label : option.1)
                 .accessibilityAddTraits(on ? [.isSelected] : [])
             }
         }
-        .padding(style == .range ? 3 : 2)
-        .background(RoundedRectangle(cornerRadius: style == .range ? 11 : 9, style: .continuous).fill(Theme.well))
+        .padding(fills ? 3 : 2)
+        .background(RoundedRectangle(cornerRadius: fills ? 11 : 9, style: .continuous).fill(Theme.well))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(label)
     }
 
-    private var height: CGFloat { style == .range ? 28 : style == .tab ? 22 : 24 }
-    private var innerRadius: CGFloat { style == .range ? 8 : 7 }
+    private var height: CGFloat {
+        switch style {
+        case .range: return 26
+        case .tab: return 22
+        case .tabs, .sort: return 26
+        case .compact: return 24
+        }
+    }
+
+    private var innerRadius: CGFloat { fills ? 8 : 7 }
     private var fontSize: CGFloat { style == .tab ? 11 : 12 }
 }
 
@@ -237,6 +255,8 @@ struct MenuPill<Value: Hashable>: View {
     var label: String
     var options: [(Value, String)]
     @Binding var selection: Value
+    /// Optional color dot in front of the current choice (color menus).
+    var dot: ((Value) -> Color)? = nil
 
     var body: some View {
         Menu {
@@ -249,6 +269,7 @@ struct MenuPill<Value: Hashable>: View {
             }
         } label: {
             HStack(spacing: 8) {
+                if let dot { Circle().fill(dot(selection)).frame(width: 9, height: 9) }
                 Text(options.first(where: { $0.0 == selection })?.1 ?? "").ui(13)
                 LineIcon(d: Icons.upDown, width: 8, height: 12, viewBox: CGSize(width: 8, height: 12), lineWidth: 1.4)
             }
@@ -272,12 +293,13 @@ struct WellButton: View {
     var height: CGFloat = 28
     var radius: CGFloat = 8
     var horizontalPadding: CGFloat = 12
+    var fontSize: CGFloat = 13
     var expands = false
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Text(title).ui(13)
+            Text(title).ui(fontSize)
                 .lineLimit(1)
                 .foregroundStyle(Theme.text)
                 .padding(.horizontal, horizontalPadding)
@@ -372,7 +394,7 @@ struct CellStrip: View {
             ForEach(Array(cells.enumerated()), id: \.offset) { i, cell in
                 VStack(alignment: .leading, spacing: 2) {
                     Text(cell.0).ui(compact ? 14 : 15, 500).lineLimit(1).minimumScaleFactor(0.8)
-                    Text(cell.1).ui(compact ? 11 : 12).foregroundStyle(Theme.sub).lineLimit(1)
+                    Text(cell.1).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
                 }
                 .padding(.horizontal, compact ? 12 : 14)
                 .padding(.vertical, compact ? 10 : 12)
@@ -416,17 +438,20 @@ struct Ring: View {
     var segments: [Segment]
     var size: CGFloat
     var lineWidth: CGFloat
+    var butt: Bool
 
-    init(fraction: Double, color: Color, size: CGFloat, lineWidth: CGFloat) {
+    init(fraction: Double, color: Color, size: CGFloat, lineWidth: CGFloat, forceButt: Bool = false) {
         segments = [Segment(fraction: fraction, color: color)]
         self.size = size
         self.lineWidth = lineWidth
+        butt = forceButt
     }
 
-    init(segments: [Segment], size: CGFloat, lineWidth: CGFloat) {
+    init(segments: [Segment], size: CGFloat, lineWidth: CGFloat, forceButt: Bool = false) {
         self.segments = segments
         self.size = size
         self.lineWidth = lineWidth
+        butt = forceButt || segments.count > 1
     }
 
     var body: some View {
@@ -436,7 +461,7 @@ struct Ring: View {
                 let seg = segments[i]
                 Circle()
                     .trim(from: start, to: min(1, start + max(0, seg.fraction)))
-                    .stroke(seg.color.opacity(seg.opacity), style: StrokeStyle(lineWidth: lineWidth, lineCap: segments.count > 1 ? .butt : .round))
+                    .stroke(seg.color.opacity(seg.opacity), style: StrokeStyle(lineWidth: lineWidth, lineCap: butt ? .butt : .round))
                     .rotationEffect(.degrees(-90))
             }
         }
@@ -510,7 +535,7 @@ struct LetterTile: View {
 
     var body: some View {
         Text(String(name.prefix(1)).uppercased())
-            .ui(11, 600)
+            .ui(12, 600)
             .foregroundStyle(Theme.sub)
             .frame(width: size, height: size)
             .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.well))

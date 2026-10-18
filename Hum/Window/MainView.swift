@@ -7,7 +7,7 @@ struct MainView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            UIScaled { Sidebar().frame(width: 200) }
+            UIScaled { Sidebar().frame(width: 184) }
             PageView(page: navigator.page)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -37,7 +37,7 @@ struct PageView: View {
 
     private var stack: some View {
         content
-            .padding(EdgeInsets(top: 46, leading: 30, bottom: 30, trailing: 30))
+            .padding(EdgeInsets(top: 46, leading: 24, bottom: 24, trailing: 24))
             .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
@@ -54,19 +54,17 @@ struct PageView: View {
             case .battery: BatteryPage()
             case .sensors: SensorsPage()
             }
-        case .general: GeneralSettingsPage()
-        case .menubar: MenubarSettingsPage()
-        case .menubarModule(let m): MenubarModulePage(module: m)
-        case .alerts: AlertsSettingsPage()
-        case .about: AboutPage()
+        case .moduleSettings(let m): ModuleSettingsPage(module: m)
+        case .settings: SettingsPage()
         }
     }
 }
 
 struct Sidebar: View {
     var navigator = Navigator.shared
+    var monitor = Monitor.shared
 
-    private let monitors: [(Page, String, String)] = [
+    private let pages: [(Page, String, String)] = [
         (.overview, Icons.overview, L10n.Sidebar.overview),
         (.monitor(.cpu), Icons.cpu, L10n.Module.cpu),
         (.monitor(.gpu), Icons.gpu, L10n.Module.gpu),
@@ -77,46 +75,43 @@ struct Sidebar: View {
         (.monitor(.sensors), Icons.sensors, L10n.Module.sensors),
     ]
 
-    private let settingsPages: [(Page, String, String)] = [
-        (.general, Icons.general, L10n.Sidebar.general),
-        (.menubar, Icons.menubar, L10n.Sidebar.menubar),
-        (.alerts, Icons.alert, L10n.Sidebar.alerts),
-        (.about, Icons.about, L10n.Sidebar.about),
-    ]
-
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Color.clear.frame(height: 32)   // traffic lights
             HStack(spacing: 10) {
                 AppMark(size: 26)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(L10n.App.name).ui(18, 600).kerning(-0.18)
-                    Text(L10n.App.version(SystemInfo.appVersion)).ui(11).foregroundStyle(Theme.sub)
+                    Text(L10n.App.name).ui(20, 600).kerning(-0.2)
+                    Text(L10n.App.version(SystemInfo.appVersion)).ui(12).foregroundStyle(Theme.sub)
                 }
             }
             .padding(.horizontal, 10)
             .padding(.bottom, 18)
 
-            sectionTitle(L10n.Sidebar.monitors)
-            ForEach(monitors, id: \.0) { item($0) }
-            sectionTitle(L10n.Sidebar.settings).padding(.top, 14)
-            ForEach(settingsPages, id: \.0) { item($0) }
-            Spacer(minLength: 0)
+            ForEach(pages, id: \.0) { item($0) }
+            Spacer(minLength: 12)
+            HStack {
+                footerButton(Icons.gear, lineWidth: 1.3, label: L10n.Sidebar.settings, selected: navigator.page == .settings) {
+                    navigator.page = .settings
+                }
+                Spacer(minLength: 0)
+                footerButton(monitor.isPaused ? Icons.play : Icons.pause, lineWidth: monitor.isPaused ? 1.5 : 1.8,
+                             label: monitor.isPaused ? L10n.Sidebar.resume : L10n.Sidebar.pause, selected: false) {
+                    monitor.togglePause()
+                }
+                Spacer(minLength: 0)
+                footerButton(Icons.power, lineWidth: 1.5, label: L10n.Menu.quit, selected: false) {
+                    NSApp.terminate(nil)
+                }
+            }
+            .padding(.horizontal, 2)
         }
-        .padding(.horizontal, 12)
-        .padding(.bottom, 16)
+        .padding(EdgeInsets(top: 0, leading: 12, bottom: 16, trailing: 12))
         .frame(maxHeight: .infinity, alignment: .top)
         .background(Theme.side)
         .overlay(alignment: .trailing) { Rectangle().fill(Theme.line).frame(width: 0.5) }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Sidebar.label)
-    }
-
-    private func sectionTitle(_ text: String) -> some View {
-        Text(text).ui(11, 500)
-            .foregroundStyle(Theme.sub)
-            .padding(.horizontal, 10)
-            .padding(.bottom, 6)
     }
 
     private func item(_ entry: (Page, String, String)) -> some View {
@@ -141,6 +136,23 @@ struct Sidebar: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(on ? [.isSelected] : [])
+    }
+
+    private func footerButton(_ d: String, lineWidth: CGFloat, label: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            LineIcon(d: d, size: 16, lineWidth: lineWidth)
+                .foregroundStyle(selected ? Theme.text : Theme.sub)
+                .frame(width: 32, height: 32)
+                .background(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(selected ? Theme.raised : Color.clear)
+                        .raisedShadow(selected)
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 }
 

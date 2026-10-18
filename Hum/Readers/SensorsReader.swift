@@ -88,6 +88,8 @@ final class SensorsReader {
                 let rpm = smc.value("F\(i)Ac") ?? 0
                 sample.fans.append(Fan(id: i, rpm: max(0, rpm), min: smc.value("F\(i)Mn") ?? 0, max: smc.value("F\(i)Mx") ?? 0))
             }
+            // F0Md: 0 = automatic, 1 = forced (a fan control app has taken over).
+            if fanCount > 0 { sample.fansAuto = (smc.value("F0Md") ?? 0) == 0 }
             if hasSystemPower, let w = smc.value("PSTR"), w > 0 { sample.systemPower = w }
         }
         sample.hasFans = fanCount > 0

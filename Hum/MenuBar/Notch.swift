@@ -155,7 +155,7 @@ struct NotchAlertView: View {
                 }
                 IconButton(d: Icons.general, size: 38, radius: 12, iconSize: 15, viewBox: 16, lineWidth: 1.6, tint: Theme.text, label: L10n.Notch.openSettings) {
                     NotchAlertController.shared.close()
-                    MainWindowController.shared.show(.menubar)
+                    MainWindowController.shared.show(.settings)
                 }
             }
         }
@@ -172,6 +172,7 @@ struct NotchAlertView: View {
 /// Left-to-right wrapping layout (chips).
 struct FlowLayout: Layout {
     var spacing: CGFloat = 6
+    var lineSpacing: CGFloat? = nil
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let rows = arrange(width: proposal.width ?? .infinity, subviews: subviews)
@@ -207,7 +208,7 @@ struct FlowLayout: Layout {
             let needed = row.indices.isEmpty ? size.width : row.width + spacing + size.width
             if needed > width, !row.indices.isEmpty {
                 rows.append(row)
-                row = Row(y: row.y + row.height + spacing)
+                row = Row(y: row.y + row.height + (lineSpacing ?? spacing))
             }
             row.width = row.indices.isEmpty ? size.width : row.width + spacing + size.width
             row.height = max(row.height, size.height)

@@ -19,6 +19,8 @@ final class Monitor {
     private(set) var bluetooth: [BluetoothDevice] = []
     private(set) var publicIP: String?
     private(set) var interfaces: [(name: String, kind: InterfaceKind)] = []
+    /// Sampling stopped from the sidebar's pause button; everything keeps its last values.
+    private(set) var isPaused = false
 
     @ObservationIgnored let history = History()
     @ObservationIgnored private let sampler = Sampler()
@@ -45,6 +47,11 @@ final class Monitor {
         history.save()
     }
 
+    func togglePause() {
+        isPaused.toggle()
+        if isPaused { sampler.pause() } else { sampler.resume() }
+    }
+
     func setVisible(_ consumer: Consumer, _ visible: Bool) {
         let changed = visible ? consumers.insert(consumer).inserted : consumers.remove(consumer) != nil
         if changed {
@@ -57,7 +64,9 @@ final class Monitor {
     func applyConfiguration() {
         let prefs = SettingsStore.shared.prefs
         var config = Sampler.Config()
-        config.interval = prefs.general.refreshInterval
+        for m in Module.allCases { config.intervals[m] = prefs.refresh(m) }
+        config.processInterval = min(prefs.cpu.processRefresh, prefs.memory.processRefresh)
+        config.latency = prefs.network.showLatency
         config.slowOnBattery = prefs.general.slowOnBattery
         config.interface = prefs.network.interface
         let anyUI = !consumers.isEmpty
@@ -100,7 +109,10 @@ final class Monitor {
 /// Owns the readers and drives them from a timer on its own serial queue.
 final class Sampler {
     struct Config {
-        var interval: Double = 2
+        /// Seconds between reads per module; the timer ticks at the shortest of them.
+        var intervals: [Module: Double] = [:]
+        var processInterval: Double = 3
+        var latency = false
         var slowOnBattery = true
         var interface = ""
         var processes = ProcessReader.Request()
@@ -115,8 +127,11 @@ final class Sampler {
     private var config = Config()
     private var currentInterval: Double = 0
     private var onBattery = false
-    private var tickCount = 0
     private var lastProcesses: (ProcessSnapshot, [PeakProcess])?
+    private var lastProcessRead = Date.distantPast
+    private var lastRead: [Module: Date] = [:]
+    private var lastPower = PowerReport.Reading()
+    private var current = Snapshot()
 
     // Readers are created on the queue and only touched there.
     private lazy var cpu = CPUReader()
@@ -151,14 +166,34 @@ final class Sampler {
         }
     }
 
+    /// An immediate full read, e.g. when a dropdown opens.
     func sampleNow() {
-        queue.async { self.sample() }
+        queue.async { if !self.paused { self.sample(force: true) } }
+    }
+
+    private var paused = false
+
+    func pause() {
+        queue.async {
+            self.paused = true
+            self.timer?.cancel()
+            self.timer = nil
+        }
+    }
+
+    func resume() {
+        queue.async {
+            self.paused = false
+            self.currentInterval = 0
+            self.sample(force: true)
+            self.reschedule()
+        }
     }
 
     func volumesChanged() {
         queue.async {
             self.disk.invalidateVolumes()
-            self.sample()
+            self.sample(force: true)
         }
     }
 
@@ -166,8 +201,13 @@ final class Sampler {
         queue.sync { network.availableInterfaces() }
     }
 
+    private var slowFactor: Double { config.slowOnBattery && onBattery ? 2 : 1 }
+
+    private func interval(_ m: Module) -> Double { (config.intervals[m] ?? 2) * slowFactor }
+
     private func reschedule() {
-        let interval = config.interval * (config.slowOnBattery && onBattery ? 2 : 1)
+        guard !paused else { return }
+        let interval = (Module.allCases.map(interval).min() ?? 2)
         guard interval != currentInterval || timer == nil else { return }
         currentInterval = interval
         timer?.cancel()
@@ -178,26 +218,47 @@ final class Sampler {
         timer = t
     }
 
-    private func sample() {
-        var s = Snapshot()
-        s.date = Date()
-        s.cpu = cpu.read()
-        s.memory = memory.read()
-        s.network = network.read(preferred: config.interface)
-        s.disk = disk.read()
-        s.battery = battery.read()
-        let reading = power.read()
-        s.sensors = sensors.read(power: reading)
-        s.gpu = gpu.read(power: reading, temperature: s.sensors.value(.gpu))
-        tickCount &+= 1
-        if config.processes.includeOtherUsers || tickCount % 3 == 0 || lastProcesses == nil {
+    /// Whether a module's interval has elapsed (with a little slack for timer jitter).
+    private func due(_ m: Module, _ now: Date, force: Bool) -> Bool {
+        guard !force, let last = lastRead[m] else { lastRead[m] = now; return true }
+        guard now.timeIntervalSince(last) >= interval(m) - 0.25 else { return false }
+        lastRead[m] = now
+        return true
+    }
+
+    private func sample(force: Bool = false) {
+        let now = Date()
+        var s = current
+        s.date = now
+        if due(.cpu, now, force: force) { s.cpu = cpu.read() }
+        if due(.memory, now, force: force) { s.memory = memory.read() }
+        if due(.network, now, force: force) { s.network = network.read(preferred: config.interface, probeLatency: config.latency) }
+        if due(.disk, now, force: force) { s.disk = disk.read() }
+        if due(.battery, now, force: force) { s.battery = battery.read() }
+        let cpuDue = lastRead[.cpu] == now
+        let sensorsDue = due(.sensors, now, force: force)
+        let gpuDue = due(.gpu, now, force: force)
+        if sensorsDue || gpuDue || cpuDue {
+            lastPower = power.read()
+            if sensorsDue { s.sensors = sensors.read(power: lastPower) }
+            if gpuDue { s.gpu = gpu.read(power: lastPower, temperature: s.sensors.value(.gpu)) }
+        }
+        if cpuDue {
+            s.cpu.frequencyMHz = lastPower.cpuMHz
+            s.cpu.performanceMHz = lastPower.performanceMHz
+            s.cpu.efficiencyMHz = lastPower.efficiencyMHz
+        }
+        if force || config.processes.includeOtherUsers && lastProcesses == nil
+            || now.timeIntervalSince(lastProcessRead) >= config.processInterval * slowFactor - 0.25 {
             lastProcesses = processes.read(config.processes)
+            lastProcessRead = now
         }
         let (procs, top) = lastProcesses ?? (ProcessSnapshot(), [])
         s.processes = procs
         s.topCPUNow = top
         s.selfCPU = processes.selfUsage.cpu
         s.selfMemory = processes.selfUsage.memory
+        current = s
 
         let devices = config.bluetooth ? bluetooth.read(includeHeadphones: config.headphones) : nil
 

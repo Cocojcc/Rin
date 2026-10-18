@@ -33,10 +33,12 @@
 		907903AC9BAD966A7C770058 /* CPUReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA3A71829E860A80EC988D38 /* CPUReader.swift */; };
 		971A50A8FC11E45F8F815BCF /* SettingsPages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 685F75579EAB4FDB21290FC1 /* SettingsPages.swift */; };
 		9A35E9C73B5283C9037E4A09 /* SystemInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D7F43B6B5C4E5BA4F430F3D /* SystemInfo.swift */; };
+		A03349979B1A9A355992954A /* Widgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 489AE010CEEA6AC72240AB4D /* Widgets.swift */; };
 		A041BAE0AEC55365DB35F421 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDE7C33F710D6678B442295C /* Settings.swift */; };
 		A7BE7D6E224A8F0737CF55E5 /* ProcessActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5F02B128B19D2B59B8B8F37 /* ProcessActions.swift */; };
 		A88E0B98231B7F9693E1A71E /* Icons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 588127709E64847CDE384FC6 /* Icons.swift */; };
 		A966696CDA4C93CF24F98FDC /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07E2918F40BBC93794845548 /* Models.swift */; };
+		ABFB4CAC9744F35D7AB3163C /* NVMeSMART.c in Sources */ = {isa = PBXBuildFile; fileRef = B4DC69D211183B0E8480DC8B /* NVMeSMART.c */; };
 		B5A3F2EB5E437A7CCA731D7A /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1487EDB70AC3323FF568D160 /* Localizable.strings */; };
 		B82AA4D315B51D25C19E14D4 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C9713C2EDF382EB3C03F61F /* MainView.swift */; };
 		BB9B06360E9C7897A825B96E /* HumApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0E8451C99E7C665060C2E22 /* HumApp.swift */; };
@@ -58,6 +60,7 @@
 		04179CCD06CACCC54DDBFCF9 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		04C6D3B6A80860ABA8C8F919 /* MonitorComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonitorComponents.swift; sourceTree = "<group>"; };
 		07E2918F40BBC93794845548 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		096C5AADF10ABE1212C6E941 /* NVMeSMART.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NVMeSMART.h; sourceTree = "<group>"; };
 		0C8A9134B4881703AD004FEF /* SpaceGrotesk-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "SpaceGrotesk-OFL.txt"; sourceTree = "<group>"; };
 		0D7F43B6B5C4E5BA4F430F3D /* SystemInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemInfo.swift; sourceTree = "<group>"; };
 		0F1DACE43B76D40CDAF8EB0F /* Charts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Charts.swift; sourceTree = "<group>"; };
@@ -72,6 +75,7 @@
 		427FDDA17BE5333ED16C8E6B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		43BAB34AF2B8A05A868D91CE /* NetworkReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkReader.swift; sourceTree = "<group>"; };
 		463AE72F5B46A5F4CE936956 /* UpdateChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChecker.swift; sourceTree = "<group>"; };
+		489AE010CEEA6AC72240AB4D /* Widgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Widgets.swift; sourceTree = "<group>"; };
 		49E212393C664A081B5F6CCE /* GPUReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPUReader.swift; sourceTree = "<group>"; };
 		4D3674A6D4B70F69AA910022 /* SensorsReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorsReader.swift; sourceTree = "<group>"; };
 		532A9AC06A5C0806EFB21775 /* MemoryReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryReader.swift; sourceTree = "<group>"; };
@@ -89,6 +93,7 @@
 		9AE794FA598A873FE1A32F18 /* PanelComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelComponents.swift; sourceTree = "<group>"; };
 		A03A44C15331ED91D900F23F /* History.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = History.swift; sourceTree = "<group>"; };
 		AF210D028FB046E9D9730536 /* Hum.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Hum.entitlements; sourceTree = "<group>"; };
+		B4DC69D211183B0E8480DC8B /* NVMeSMART.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = NVMeSMART.c; sourceTree = "<group>"; };
 		B8C7E3F28D7B4B5820BE5327 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		BDCE63CCCB1EA89CCFD17215 /* BatteryReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryReader.swift; sourceTree = "<group>"; };
 		C0989713A4B2C4594CEA76FF /* Monitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Monitor.swift; sourceTree = "<group>"; };
@@ -120,6 +125,8 @@
 				CD4E6DA38B983BDF1A7191A2 /* Hum-Bridging-Header.h */,
 				AF210D028FB046E9D9730536 /* Hum.entitlements */,
 				F368566357389AEB3FB8AE06 /* Info.plist */,
+				B4DC69D211183B0E8480DC8B /* NVMeSMART.c */,
+				096C5AADF10ABE1212C6E941 /* NVMeSMART.h */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -168,6 +175,7 @@
 				CBB0B2FEF9D0DF8929297856 /* SVGPath.swift */,
 				04179CCD06CACCC54DDBFCF9 /* Theme.swift */,
 				463AE72F5B46A5F4CE936956 /* UpdateChecker.swift */,
+				489AE010CEEA6AC72240AB4D /* Widgets.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -352,6 +360,7 @@
 				E6E670D12546B65E83DC86FB /* Monitor.swift in Sources */,
 				BF2F619F7B64A5303F0556F9 /* MonitorComponents.swift in Sources */,
 				7173723CE49D4735DA284275 /* MonitorPages.swift in Sources */,
+				ABFB4CAC9744F35D7AB3163C /* NVMeSMART.c in Sources */,
 				0506A62D34D6201EAD0B0ACF /* NetworkReader.swift in Sources */,
 				7758C734A021545D797D8A7C /* Notch.swift in Sources */,
 				488897E1931C164CE22BA106 /* Onboarding.swift in Sources */,
@@ -370,6 +379,7 @@
 				9A35E9C73B5283C9037E4A09 /* SystemInfo.swift in Sources */,
 				269EE57790B363E2A8385D5B /* Theme.swift in Sources */,
 				ECA714B250A64150613A856D /* UpdateChecker.swift in Sources */,
+				A03349979B1A9A355992954A /* Widgets.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

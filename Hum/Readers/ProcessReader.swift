@@ -54,8 +54,9 @@ final class ProcessReader {
         var rows: [pid_t: ProcessUsage] = [:]
         var current: [pid_t: Counters] = [:]
         var unreadable: [pid_t] = []
+        let pids = Self.allPIDs()
 
-        for pid in Self.allPIDs() where pid > 0 {
+        for pid in pids where pid > 0 {
             var info = rusage_info_v4()
             let ok = withUnsafeMutablePointer(to: &info) {
                 $0.withMemoryRebound(to: rusage_info_t?.self, capacity: 1) { proc_pid_rusage(pid, RUSAGE_INFO_V4, $0) }
@@ -129,6 +130,9 @@ final class ProcessReader {
         if request.gpu {
             snapshot.byGPU = Array(grouped.filter { $0.gpu > 0.05 }.sorted { $0.gpu > $1.gpu }.prefix(n))
         }
+        let load = Self.loadInfo()
+        snapshot.processCount = load?.tasks ?? pids.count
+        snapshot.threadCount = load?.threads ?? 0
         return (snapshot, peaks)
     }
 
@@ -225,6 +229,21 @@ final class ProcessReader {
         var buffer = [CChar](repeating: 0, count: 2 * Int(MAXCOMLEN) + 1)
         let n = proc_name(pid, &buffer, UInt32(buffer.count))
         return n > 0 ? String(cString: buffer) : nil
+    }
+
+    /// System-wide task and thread counts, as `top` reports them.
+    private static func loadInfo() -> (tasks: Int, threads: Int)? {
+        var pset = processor_set_name_t()
+        guard processor_set_default(mach_host_self(), &pset) == KERN_SUCCESS else { return nil }
+        var info = processor_set_load_info()
+        var count = mach_msg_type_number_t(MemoryLayout<processor_set_load_info>.size / MemoryLayout<integer_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                processor_set_statistics(pset, PROCESSOR_SET_LOAD_INFO, $0, &count)
+            }
+        }
+        guard result == KERN_SUCCESS else { return nil }
+        return (Int(info.task_count), Int(info.thread_count))
     }
 
     private static func allPIDs() -> [pid_t] {

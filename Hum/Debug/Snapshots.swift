@@ -43,19 +43,27 @@ enum Snapshots {
             if want("notch") {
                 NotchWatcher.shared.debugSetHidden([.cpu, .memory])
                 save(NotchAlertRoot().padding(40).background(wall), appearance, dir.appendingPathComponent("notch-alert-\(tag).png"))
-                Navigator.shared.page = .menubar
-                save(MainView().frame(width: UIScale.of(860), height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-menubar-notch-\(tag).png"))
+                Navigator.shared.page = .settings
+                save(MainView().frame(width: UIScale.of(800), height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-settings-notch-\(tag).png"))
                 NotchWatcher.shared.debugSetHidden([])
             }
             let pages: [(Page, String)] = [
                 (.overview, "overview"), (.monitor(.cpu), "cpu"), (.monitor(.gpu), "gpu"), (.monitor(.memory), "memory"),
                 (.monitor(.network), "network"), (.monitor(.disk), "disk"), (.monitor(.battery), "battery"), (.monitor(.sensors), "sensors"),
-                (.general, "general"), (.menubar, "menubar-settings"), (.menubarModule(.cpu), "menubar-cpu"), (.menubarModule(.network), "menubar-network"),
-                (.alerts, "alerts"), (.about, "about"),
-            ]
+                (.settings, "settings"),
+            ] + Module.allCases.map { (.moduleSettings($0), "module-\($0.rawValue)") }
             for (page, name) in pages where want("page") || want("page-\(name)") {
                 Navigator.shared.page = page
-                save(MainView().frame(width: UIScale.of(860), height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-\(name)-\(tag).png"))
+                save(MainView().frame(width: UIScale.of(800), height: UIScale.of(1400)).background(wall), appearance, dir.appendingPathComponent("page-\(name)-\(tag).png"))
+            }
+            for m in Module.allCases where want("tabs") {
+                for tab in ModuleSettingsTab.allCases where tab != .module {
+                    ModuleSettingsPage.initialTab = tab
+                    Navigator.shared.page = .moduleSettings(m)
+                    save(MainView().frame(width: UIScale.of(800), height: UIScale.of(2000)).background(wall), appearance,
+                         dir.appendingPathComponent("tabs-\(m.rawValue)-\(tab.rawValue)-\(tag).png"))
+                }
+                ModuleSettingsPage.initialTab = .module
             }
         }
     }
@@ -100,7 +108,7 @@ enum LiveDump {
 
     private static func dumpWindow(_ dir: URL) {
         let pages: [(Page, String)] = [(.overview, "overview"), (.monitor(.cpu), "cpu"), (.monitor(.network), "network"),
-                                       (.monitor(.battery), "battery"), (.menubar, "menubar"), (.menubarModule(.network), "menubar-network")]
+                                       (.monitor(.battery), "battery"), (.settings, "settings"), (.moduleSettings(.network), "module-network")]
         MainWindowController.shared.show(.overview)
         var queue = pages
         func next() {
@@ -184,8 +192,8 @@ private struct MenubarSheet: View {
             ForEach(Module.allCases) { m in
                 HStack(spacing: 14) {
                     Text(m.rawValue).font(.system(size: 11)).frame(width: 60, alignment: .leading)
-                    ForEach(0..<4, id: \.self) { i in
-                        bar(MenuBarItemView(module: m, override: variant(base, m, i)))
+                    ForEach(m.widgetKinds, id: \.self) { k in
+                        bar(WidgetView(module: m, kind: k, prefs: base).padding(.horizontal, 5))
                     }
                 }
             }
@@ -203,20 +211,6 @@ private struct MenubarSheet: View {
         v.frame(height: 24)
             .background(dark ? Color(red: 0.165, green: 0.169, blue: 0.188) : Color(red: 0.9, green: 0.9, blue: 0.918))
             .clipShape(RoundedRectangle(cornerRadius: 4))
-    }
-
-    private func variant(_ base: Preferences, _ m: Module, _ i: Int) -> Preferences {
-        var p = base
-        switch m {
-        case .cpu: p.cpu.style = CPUStyle.allCases[i]
-        case .gpu: p.gpu.style = GPUStyle.allCases[i]
-        case .memory: p.memory.style = MemoryStyle.allCases[i]
-        case .network: p.network.style = NetworkStyle.allCases[i]
-        case .disk: p.disk.style = DiskStyle.allCases[i]
-        case .battery: p.battery.style = BatteryStyle.allCases[i]
-        case .sensors: p.sensors.style = SensorsStyle.allCases[i]
-        }
-        return p
     }
 }
 #endif
