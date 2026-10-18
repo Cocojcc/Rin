@@ -120,6 +120,9 @@
 "alerts.cpu.title" = "CPU 使用率过高";
 "alerts.cpu.body" = "CPU %1$@ 已持续%2$@";
 "alerts.cpu.culprit" = "，主要是%1$@ %2$@";
+"alerts.gpu.title" = "GPU 使用率过高";
+"alerts.gpu.body" = "GPU %1$@ 已持续%2$@";
+"alerts.gpu.culprit" = "，主要是%1$@ %2$@";
 "alerts.memory.title" = "内存紧张";
 "alerts.memory.body" = "内存压力升高，Mac 可能会变慢";
 "alerts.memory.culprit" = "，占用最多的是%1$@（%2$@）";

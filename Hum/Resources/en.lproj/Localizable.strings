@@ -120,6 +120,9 @@
 "alerts.cpu.title" = "High CPU usage";
 "alerts.cpu.body" = "CPU at %1$@ for %2$@";
 "alerts.cpu.culprit" = ", mostly %1$@ %2$@";
+"alerts.gpu.title" = "High GPU usage";
+"alerts.gpu.body" = "GPU at %1$@ for %2$@";
+"alerts.gpu.culprit" = ", mostly %1$@ %2$@";
 "alerts.memory.title" = "Memory is tight";
 "alerts.memory.body" = "Memory pressure is up; your Mac may slow down";
 "alerts.memory.culprit" = ". Largest: %1$@ (%2$@)";

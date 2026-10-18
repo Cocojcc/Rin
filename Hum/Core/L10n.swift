@@ -184,6 +184,9 @@ enum L10n {
         static var cpuTitle: String { tr("alerts.cpu.title") }
         static func cpuBody(_ v: String, _ duration: String) -> String { tr("alerts.cpu.body", v, duration) }
         static func cpuCulprit(_ name: String, _ v: String) -> String { tr("alerts.cpu.culprit", name, v) }
+        static var gpuTitle: String { tr("alerts.gpu.title") }
+        static func gpuBody(_ v: String, _ duration: String) -> String { tr("alerts.gpu.body", v, duration) }
+        static func gpuCulprit(_ name: String, _ v: String) -> String { tr("alerts.gpu.culprit", name, v) }
         static var memoryTitle: String { tr("alerts.memory.title") }
         static var memoryBody: String { tr("alerts.memory.body") }
         static func memoryCulprit(_ name: String, _ v: String) -> String { tr("alerts.memory.culprit", name, v) }

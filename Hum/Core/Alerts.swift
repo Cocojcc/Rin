@@ -10,11 +10,12 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
     static let shared = Alerts()
 
     enum Rule: String, CaseIterable {
-        case cpu, memory, disk, battery, temperature, network
+        case cpu, gpu, memory, disk, battery, temperature, network
 
         var module: Module {
             switch self {
             case .cpu: return .cpu
+            case .gpu: return .gpu
             case .memory: return .memory
             case .disk: return .disk
             case .battery: return .battery
@@ -93,6 +94,13 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
         check(.cpu, enabled: a.cpuOn && on(.cpu), condition: s.cpu.total * 100 >= a.cpuThreshold, after: a.cpuMinutes * 60, tone: .warn) {
             let culprit = top.map { L10n.Alerts.cpuCulprit($0.name, Format.percentValue($0.cpu)) } ?? ""
             return (L10n.Alerts.cpuTitle, L10n.Alerts.cpuBody(Format.percent(s.cpu.total), Self.minutes(a.cpuMinutes)) + culprit, top?.isSystem == false ? top : nil)
+        }
+
+        // Per-process GPU usage is only read while a GPU view is open, so the culprit may be missing.
+        let gpuTop = s.processes.byGPU.first
+        check(.gpu, enabled: a.gpuOn && on(.gpu), condition: s.gpu.utilization * 100 >= a.gpuThreshold, after: a.gpuMinutes * 60, tone: .warn) {
+            let culprit = gpuTop.map { L10n.Alerts.gpuCulprit($0.name, Format.percentValue($0.gpu)) } ?? ""
+            return (L10n.Alerts.gpuTitle, L10n.Alerts.gpuBody(Format.percent(s.gpu.utilization), Self.minutes(a.gpuMinutes)) + culprit, gpuTop?.isSystem == false ? gpuTop : nil)
         }
 
         let memTop = s.processes.byMemory.first
