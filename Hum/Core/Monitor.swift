@@ -82,9 +82,9 @@ final class Monitor {
         config.interface = prefs.network.interface
         let anyUI = !consumers.isEmpty
         config.processes.includeOtherUsers = anyUI
+        // Per-app traffic is a difference between two nettop reads (about 10 ms each), so it is
+        // kept up whenever the network is read; a list that opens shows the latest one at once.
         config.processes.network = config.monitored.contains(.network)
-            && (consumers.contains(.popover(.network)) || consumers.contains(.window(.monitor(.network)))
-                || consumers.contains(.combinedPanel) || consumers.contains(.window(.overview)))
         config.processes.gpu = config.monitored.contains(.gpu)
             && (consumers.contains(.popover(.gpu)) || consumers.contains(.window(.monitor(.gpu))))
         config.processes.limit = max(8, prefs.cpu.processCount, prefs.memory.processCount, prefs.gpu.processCount)
@@ -146,6 +146,8 @@ final class Sampler {
     private var onBattery = false
     private var lastProcesses: (ProcessSnapshot, [PeakProcess])?
     private var lastProcessRead = Date.distantPast
+    /// Read processes on the next sample whatever the interval.
+    private var processesDue = false
     private var lastRead: [Module: Date] = [:]
     private var lastPower = PowerReport.Reading()
     private var current = Snapshot()
@@ -164,8 +166,19 @@ final class Sampler {
 
     func configure(_ config: Config) {
         queue.async {
+            let old = self.config.processes
             self.config = config
             self.reschedule()
+            // Per-app traffic and GPU time are rates between two reads, and the first read after
+            // they switch on only sets the baseline. Read again a second later rather than after
+            // the full process interval, so a list that just opened fills in at once.
+            if (config.processes.network && !old.network) || (config.processes.gpu && !old.gpu) {
+                self.queue.asyncAfter(deadline: .now() + 1) {
+                    guard !self.paused else { return }
+                    self.processesDue = true
+                    self.sample()
+                }
+            }
         }
     }
 
@@ -281,10 +294,11 @@ final class Sampler {
         let wantsProcesses = !config.monitored.isDisjoint(with: [.cpu, .memory, .gpu, .network, .disk])
         if !wantsProcesses {
             lastProcesses = nil
-        } else if force || config.processes.includeOtherUsers && lastProcesses == nil
+        } else if force || processesDue || config.processes.includeOtherUsers && lastProcesses == nil
             || now.timeIntervalSince(lastProcessRead) >= config.processInterval * slowFactor - 0.25 {
             lastProcesses = processes.read(config.processes)
             lastProcessRead = now
+            processesDue = false
         }
         let (procs, top) = lastProcesses ?? (ProcessSnapshot(), [])
         s.processes = procs

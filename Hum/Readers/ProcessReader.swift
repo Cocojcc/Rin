@@ -10,7 +10,8 @@ private func responsibility_get_pid_responsible_for_pid(_ pid: pid_t) -> pid_t
 ///
 /// CPU and disk come from proc_pid_rusage deltas (no subprocess). Processes owned by other
 /// users can't be read that way, so while a window or panel is open `ps` fills them in.
-/// Network (nettop) and GPU (IORegistry) are only sampled while something shows them.
+/// Network (nettop) is sampled while the network is read; GPU (IORegistry) only while
+/// something shows it.
 final class ProcessReader {
     struct Request {
         var includeOtherUsers = false
