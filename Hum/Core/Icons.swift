@@ -44,6 +44,8 @@ enum Icons {
     static let upDown = "M1.5 4.5L4 2l2.5 2.5M1.5 7.5L4 10l2.5-2.5"     // 8 × 12
     static let chevronSmallRight = "M4.5 2.5L8 6l-3.5 3.5"             // 12 × 12
     static let chevronSmallLeft = "M7.5 2.5L4 6l3.5 3.5"               // 12 × 12
+    static let minusSmall = "M2 5h6"                                   // 10 × 10
+    static let plusSmall = "M2 5h6M5 2v6"                              // 10 × 10
     static let arrowUpSmall = "M3 5.4V0.9M1.1 2.7L3 0.8L4.9 2.7"       // 6 × 6
     static let arrowDownSmall = "M3 0.6V5.1M1.1 3.3L3 5.2L4.9 3.3"     // 6 × 6
     static let bolt = "M6.8 1L2.8 6.8h2.7L5 11l4.2-6H6.4z"              // 12 × 12, filled

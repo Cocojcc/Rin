@@ -9,6 +9,9 @@ enum WidgetKind: String, Codable, CaseIterable, Identifiable {
     case value
     case battery, details
     case temp, fan, stack
+    /// From the design's pick sheet: an icon with the value, a stacked label beside a graph, a
+    /// capsule meter, two readings, a status dot, the number inside a battery, battery and time.
+    case iconValue, labelLine, pill, pair, dot, inside, time
 
     var id: String { rawValue }
 }
@@ -17,13 +20,14 @@ extension Module {
     /// Widgets this module offers, in the order the settings strip shows them.
     var widgetKinds: [WidgetKind] {
         switch self {
-        case .cpu: return [.label, .mini, .line, .bar, .pie, .tacho, .icon]
-        case .gpu: return [.label, .mini, .line, .bar, .tacho, .icon]
-        case .memory: return [.label, .mini, .bar, .ring, .memory, .line, .icon]
+        // The pick sheet's styles in its order, then the plain label and icon.
+        case .cpu: return [.iconValue, .line, .mini, .labelLine, .bar, .pie, .tacho, .pill, .label, .icon]
+        case .gpu: return [.iconValue, .line, .mini, .bar, .ring, .pair, .tacho, .label, .icon]
+        case .memory: return [.bar, .ring, .mini, .memory, .dot, .line, .iconValue, .label, .icon]
         case .network: return [.label, .speed, .chart, .state, .icon]
-        case .disk: return [.label, .mini, .value, .bar, .pie, .speed, .chart, .icon]
-        case .battery: return [.label, .mini, .battery, .details, .bar, .icon]
-        case .sensors: return [.label, .mini, .temp, .fan, .stack, .bar]
+        case .disk: return [.value, .bar, .speed, .chart, .mini, .pie, .iconValue, .label, .icon]
+        case .battery: return [.battery, .inside, .time, .details, .iconValue, .ring, .bar, .label, .mini, .icon]
+        case .sensors: return [.temp, .value, .fan, .stack, .bar, .pair, .iconValue, .label, .mini]
         }
     }
 
@@ -54,7 +58,9 @@ extension Module {
 
 enum WidgetColor: String, Codable, CaseIterable { case mono, colored, byValue }
 enum WidgetAlign: String, Codable, CaseIterable { case leading, center, trailing }
-enum SpeedGlyph: String, Codable, CaseIterable { case arrows, dots, none }
+enum SpeedGlyph: String, Codable, CaseIterable { case arrows, triangles, dots, letters, none }
+/// How a rate's unit is written: "120 KB/s", "120 KB" or "120K".
+enum RateUnitStyle: String, Codable, CaseIterable { case perSecond, bytes, letter }
 enum ValueLayout: String, Codable, CaseIterable { case twoLine, singleLine }
 enum PaletteColor: String, Codable, CaseIterable { case blue, orange, purple, green, red, pink, teal, yellow }
 enum BatteryDetails: String, Codable, CaseIterable { case percentAndTime, percent, time }
@@ -90,6 +96,13 @@ struct WidgetOptions: Codable, Equatable {
     var showBolt = true
     var colorWhenLow = true
     var details: BatteryDetails = .percentAndTime
+    /// Network speed: the glyph after the number instead of before it.
+    var glyphAfter = false
+    var glyphGap = 3
+    var unitStyle: RateUnitStyle = .perSecond
+    /// Room for the widest value, so the item keeps its width as the numbers change.
+    var fixedWidth = true
+    var numberAlign: WidgetAlign = .trailing
 
 
     init() {}
@@ -124,6 +137,11 @@ struct WidgetOptions: Codable, Equatable {
         if let v = try c.decodeIfPresent(type(of: showBolt), forKey: .showBolt) { showBolt = v }
         if let v = try c.decodeIfPresent(type(of: colorWhenLow), forKey: .colorWhenLow) { colorWhenLow = v }
         if let v = try c.decodeIfPresent(type(of: details), forKey: .details) { details = v }
+        if let v = try c.decodeIfPresent(type(of: glyphAfter), forKey: .glyphAfter) { glyphAfter = v }
+        if let v = try c.decodeIfPresent(type(of: glyphGap), forKey: .glyphGap) { glyphGap = v }
+        if let v = try c.decodeIfPresent(type(of: unitStyle), forKey: .unitStyle) { unitStyle = v }
+        if let v = try c.decodeIfPresent(type(of: fixedWidth), forKey: .fixedWidth) { fixedWidth = v }
+        if let v = try c.decodeIfPresent(type(of: numberAlign), forKey: .numberAlign) { numberAlign = v }
     }
 
     static func defaults(_ module: Module, _ kind: WidgetKind) -> WidgetOptions {
@@ -131,10 +149,12 @@ struct WidgetOptions: Codable, Equatable {
         switch (module, kind) {
         case (_, .mini): o.showLabel = true
         case (.cpu, .bar), (.memory, .ring), (.battery, .bar), (.sensors, .bar): o.color = .byValue
-        case (.disk, .bar): o.showValue = false
         case (.disk, .speed): o.showUnit = false
         case (.disk, .chart): o.secondColor = .purple
         case (.network, .state): o.firstColor = .green; o.secondColor = .red
+        case (.gpu, .tacho): o.showValue = false
+        // The pick sheet pairs these with a cylinder, a bolt and a flame.
+        case (.disk, .iconValue), (.battery, .iconValue), (.sensors, .iconValue): o.icon = 2
         default: break
         }
         return o

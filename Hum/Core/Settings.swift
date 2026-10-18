@@ -114,7 +114,12 @@ struct MenubarPrefs: Codable, Equatable {
     var order: [Module] = Module.allCases
     /// "不再提醒" on the notch card.
     var notchAlertDismissed = false
+    /// Space between Hum's own items in points; nil keeps the system's spacing.
+    var humSpacing: Int? = nil
+    var typeface: BarTypeface = .system
 }
+
+enum BarTypeface: String, Codable, CaseIterable { case system, monospaced }
 
 struct AlertPrefs: Codable, Equatable {
     var enabled = true

@@ -35,6 +35,7 @@ struct BarText: View {
     var text: String
     var font: BarFontSpec
     var kerning: CGFloat = 0
+    @Environment(\.barTypeface) private var typeface
 
     init(_ text: String, font: BarFontSpec, kerning: CGFloat = 0) {
         self.text = text
@@ -46,7 +47,7 @@ struct BarText: View {
         if font.ui {
             Text(text).font(font.font).kerning(kerning).lineLimit(1).fixedSize()
         } else {
-            SmoothText(text: text, font: font.nsFont, kerning: kerning)
+            SmoothText(text: text, font: font.nsFont(typeface), kerning: kerning)
         }
     }
 }
@@ -113,13 +114,16 @@ struct BarFontSpec {
         return monospaced ? .system(size: size, weight: w).monospacedDigit() : .system(size: size, weight: w)
     }
 
-    var nsFont: NSFont {
+    /// The menu bar font: SF with tabular digits, or SF Mono when the menu bar is set to monospaced.
+    func nsFont(_ typeface: BarTypeface = .system) -> NSFont {
         let w: NSFont.Weight = weight >= 600 ? .semibold : weight >= 500 ? .medium : weight <= 300 ? .light : .regular
+        if typeface == .monospaced { return .monospacedSystemFont(ofSize: size, weight: w) }
         return monospaced ? .monospacedDigitSystemFont(ofSize: size, weight: w) : .systemFont(ofSize: size, weight: w)
     }
 }
 
 private struct WidgetUIFontKey: EnvironmentKey { static let defaultValue = false }
+private struct BarTypefaceKey: EnvironmentKey { static let defaultValue = BarTypeface.system }
 
 extension EnvironmentValues {
     /// Widgets draw in the system font in the menu bar and in Space Grotesk where the settings
@@ -127,6 +131,12 @@ extension EnvironmentValues {
     var widgetUIFont: Bool {
         get { self[WidgetUIFontKey.self] }
         set { self[WidgetUIFontKey.self] = newValue }
+    }
+
+    /// The menu bar typeface chosen in settings.
+    var barTypeface: BarTypeface {
+        get { self[BarTypefaceKey.self] }
+        set { self[BarTypefaceKey.self] = newValue }
     }
 }
 
@@ -226,15 +236,76 @@ struct VerticalMeter: View {
     var fraction: Double
     var color: Color
     var boxed = true
+    var radius: CGFloat = 1.5
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
                 .strokeBorder(boxed ? Theme.barInk.opacity(0.4) : .clear, lineWidth: 1)
             Rectangle().fill(color).frame(height: 16 * min(1, max(0, fraction)))
         }
         .frame(width: 5, height: 16)
-        .clipShape(RoundedRectangle(cornerRadius: 1.5, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .accessibilityHidden(true)
+    }
+}
+
+/// A ring (14 × 14) of segments laid end to end on a faint track: CPU system then user, or
+/// one value. Each segment is the color at its own opacity.
+struct SplitRing: View {
+    var segments: [(fraction: Double, opacity: Double)]
+    var color: Color
+
+    var body: some View {
+        Canvas { ctx, size in
+            let s = size.width / 14
+            let center = CGPoint(x: 7 * s, y: 7 * s)
+            let radius = 5.8 * s, width = 2.4 * s
+            ctx.stroke(Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)),
+                       with: .color(color.opacity(0.22)), lineWidth: width)
+            var start = 0.0
+            for segment in segments {
+                let f = min(max(0, segment.fraction), 1 - start)
+                guard f > 0 else { continue }
+                var arc = Path()
+                arc.addArc(center: center, radius: radius, startAngle: .degrees(-90 + 360 * start), endAngle: .degrees(-90 + 360 * (start + f)), clockwise: false)
+                ctx.stroke(arc, with: .color(color.opacity(segment.opacity)), lineWidth: width)
+                start += f
+            }
+        }
+        .frame(width: 14, height: 14)
+        .accessibilityHidden(true)
+    }
+}
+
+/// A battery (30 × 14) with the charge as a faint fill and the percentage written inside.
+struct BatteryNumber: View {
+    var level: Double
+    var text: String
+    var tint: Color?
+    @Environment(\.widgetUIFont) private var ui
+
+    var body: some View {
+        Canvas { ctx, _ in
+            var rim = ctx
+            rim.opacity = 0.5
+            rim.stroke(Path(roundedRect: CGRect(x: 0.75, y: 0.75, width: 25.5, height: 12.5), cornerRadius: 3.5), with: .foreground, lineWidth: 1)
+            var cap = Path()
+            cap.move(to: CGPoint(x: 28.2, y: 5))
+            cap.addLine(to: CGPoint(x: 28.2, y: 9))
+            rim.stroke(cap, with: .foreground, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+            var fill = ctx
+            fill.opacity = 0.28
+            let width = max(1, 22.5 * min(1, max(0, level)))
+            fill.fill(Path(roundedRect: CGRect(x: 2.25, y: 2.25, width: width, height: 9.5), cornerRadius: 2),
+                      with: tint.map { .color($0) } ?? .foreground)
+        }
+        .frame(width: 30, height: 14)
+        .overlay(alignment: .leading) {
+            BarText(text, font: BarFont.font(8.5, 600, ui: ui))
+                .foregroundStyle(tint.map(AnyShapeStyle.init) ?? AnyShapeStyle(.foreground))
+                .frame(width: 27)
+        }
         .accessibilityHidden(true)
     }
 }
@@ -371,17 +442,99 @@ struct ArrowRows: View {
         }
     }
 
-    @ViewBuilder private func marker(top: Bool) -> some View {
+    private func marker(top: Bool) -> some View {
+        SpeedMark(glyph: glyph, up: top == upOnTop, size: 6, letterSize: 8)
+    }
+}
+
+/// The mark beside a rate: an arrow, a triangle, a ring (up) or dot (down), or U / D.
+struct SpeedMark: View {
+    var glyph: SpeedGlyph
+    var up: Bool
+    var size: CGFloat
+    var letterSize: CGFloat
+    @Environment(\.widgetUIFont) private var ui
+
+    var body: some View {
         switch glyph {
         case .arrows:
-            LineIcon(d: (top == upOnTop) ? Icons.arrowUpSmall : Icons.arrowDownSmall, size: 6, viewBox: 6, lineWidth: 1.1)
+            LineIcon(d: up ? Icons.arrowUpSmall : Icons.arrowDownSmall, size: size, viewBox: 6, lineWidth: 1.1)
+        case .triangles:
+            SpeedTriangle(up: up).fill(.foreground).frame(width: size, height: size)
         case .dots:
             Group {
-                if top == upOnTop { Circle().strokeBorder(.foreground, lineWidth: 1) } else { Circle().fill(.foreground) }
+                if up { Circle().strokeBorder(.foreground, lineWidth: 1) } else { Circle().fill(.foreground) }
             }
-            .frame(width: 4, height: 4)
+            .frame(width: size, height: size)
+        case .letters:
+            BarText(up ? L10n.Widget.uploadLetter : L10n.Widget.downloadLetter, font: BarFont.font(letterSize, 500, ui: ui))
         case .none:
             EmptyView()
+        }
+    }
+}
+
+/// A small filled triangle in a 6 × 6 box, pointing up or down.
+struct SpeedTriangle: Shape {
+    var up: Bool
+
+    func path(in rect: CGRect) -> Path {
+        let s = rect.width / 6
+        var p = Path()
+        if up {
+            p.move(to: CGPoint(x: 3 * s, y: 0.9 * s))
+            p.addLine(to: CGPoint(x: 5.4 * s, y: 5.1 * s))
+            p.addLine(to: CGPoint(x: 0.6 * s, y: 5.1 * s))
+        } else {
+            p.move(to: CGPoint(x: 3 * s, y: 5.1 * s))
+            p.addLine(to: CGPoint(x: 0.6 * s, y: 0.9 * s))
+            p.addLine(to: CGPoint(x: 5.4 * s, y: 0.9 * s))
+        }
+        p.closeSubpath()
+        return p.offsetBy(dx: rect.minX, dy: rect.minY)
+    }
+}
+
+/// Upload and download with their marks, on two rows or one line: the network speed widget.
+struct SpeedPair: View {
+    struct Item {
+        var up: Bool
+        var text: String
+        var markColor: Color?
+    }
+
+    var items: [Item]
+    var template: String
+    var options: WidgetOptions
+    @Environment(\.widgetUIFont) private var ui
+
+    var body: some View {
+        if options.layout == .twoLine {
+            VStack(alignment: options.numberAlign == .leading ? .leading : .trailing, spacing: 0) {
+                ForEach(items.indices, id: \.self) { i in
+                    group(items[i], BarFont.twoLine(ui: ui), mark: 6, letter: 8).frame(height: BarFont.twoLineRow)
+                }
+            }
+        } else {
+            HStack(spacing: 8) {
+                ForEach(items.indices, id: \.self) { i in
+                    group(items[i], BarFont.font(12, 400, ui: ui), mark: 8, letter: 10)
+                }
+            }
+        }
+    }
+
+    private func group(_ item: Item, _ font: BarFontSpec, mark: CGFloat, letter: CGFloat) -> some View {
+        let glyph = SpeedMark(glyph: options.glyph, up: item.up, size: mark, letterSize: letter)
+            .foregroundStyle(item.markColor.map(AnyShapeStyle.init) ?? AnyShapeStyle(.foreground))
+        return HStack(spacing: options.glyph == .none ? 0 : CGFloat(options.glyphGap)) {
+            if !options.glyphAfter { glyph }
+            if options.fixedWidth {
+                FixedText(text: item.text, template: template, font: font, alignment: options.numberAlign == .leading ? .leading : .trailing)
+            } else {
+                BarText(item.text, font: font)
+            }
+            if options.glyphAfter { glyph }
         }
     }
 }
@@ -405,6 +558,7 @@ struct MenuBarItemView: View {
         .padding(.horizontal, 0)
         .frame(maxHeight: .infinity)
         .foregroundStyle(tone.color ?? Theme.barInk)
+        .environment(\.barTypeface, prefs.menubar.typeface)
         .fixedSize(horizontal: true, vertical: false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(MenuBarText.accessibility(module, s, prefs))
@@ -522,19 +676,55 @@ struct WidgetView: View {
         case .mini: mini
         case .line: line
         case .bar: bar
-        case .pie: PieMeter(fraction: fraction, color: o.monochrome ? Theme.barInk : color(.byValue))
-        case .tacho: TachoMeter(fraction: fraction, color: o.monochrome ? Theme.barInk : color(.byValue))
-        case .icon: LineIcon(d: WidgetView.iconPath(module, o.icon), size: 16, lineWidth: 1.4).foregroundStyle(color(.mono))
+        case .pie:
+            HStack(spacing: 3) {
+                if module == .cpu {
+                    SplitRing(segments: [(s.cpu.system, 0.55), (s.cpu.user, 1)], color: color(.mono))
+                } else {
+                    PieMeter(fraction: fraction, color: o.monochrome ? Theme.barInk : color(.byValue))
+                }
+                if o.showValue { value }
+            }
+        case .tacho:
+            HStack(spacing: 3) {
+                TachoMeter(fraction: fraction, color: o.monochrome ? Theme.barInk : color(.byValue))
+                if o.showValue { value }
+            }
+        case .icon: MenuIconView(icon: MenuIcons.icon(module, o.icon), module: module).foregroundStyle(color(.mono))
         case .ring:
             HStack(spacing: 3) {
-                RingMeter(fraction: fraction, color: color(o.color))
-                if o.showValue { FixedText(text: valueText, template: valueTemplate, font: valueFont) }
+                if module == .memory {
+                    RingMeter(fraction: fraction, color: color(o.color))
+                } else {
+                    SplitRing(segments: [(fraction, 1)], color: color(o.color))
+                }
+                if o.showValue { value }
             }
+        case .iconValue: iconValue
+        case .labelLine:
+            HStack(spacing: 3) {
+                VerticalLabel(text: labelText)
+                GraphTile(values: monitor.history.last(metric, count: max(10, o.points)).map { $0 / 100 }, color: color(o.color),
+                          boxed: o.boxed, points: max(10, o.points))
+            }
+        case .pill:
+            HStack(spacing: 3) {
+                PillMeter(fraction: fraction, color: color(o.color), width: 18, height: 9)
+                if o.showValue { value }
+            }
+        case .pair: pair
+        case .dot:
+            HStack(spacing: 3) {
+                Circle().fill(color(o.color)).frame(width: 7, height: 7)
+                if o.showValue { value }
+            }
+        case .inside: batteryNumber
+        case .time: batteryTime
         case .memory: memoryPair
         case .speed: module == .network ? AnyView(networkSpeed) : AnyView(diskSpeed)
         case .chart: chart
         case .state: state
-        case .value: diskValue
+        case .value: module == .sensors ? AnyView(temperatureOnly) : AnyView(diskValue)
         case .battery: battery
         case .details: batteryDetails
         case .temp: temperature
@@ -574,9 +764,6 @@ struct WidgetView: View {
         case .cpu:
             let cores = s.cpu.perCore
             BarRow(values: cores, colors: cores.map { color(o.color, $0) }, boxed: o.boxed)
-        case .sensors:
-            let temps = [s.sensors.cpuAverage, s.sensors.value(.gpu), s.sensors.value(.ssd)].compactMap { $0 }.map { $0 / 100 }
-            BarRow(values: temps, colors: temps.map { color(o.color, $0) }, boxed: o.boxed)
         case .memory:
             HStack(spacing: 4) {
                 PillMeter(fraction: fraction, color: color(o.color))
@@ -588,8 +775,80 @@ struct WidgetView: View {
                 if o.showValue { FixedText(text: Format.percent(fraction), template: "100%", font: valueFont) }
             }
         default:
-            VerticalMeter(fraction: fraction, color: color(o.color), boxed: o.boxed)
+            HStack(spacing: 3) {
+                VerticalMeter(fraction: fraction, color: color(o.color), boxed: o.boxed, radius: module == .sensors ? 2.5 : 1.5)
+                if o.showValue { value }
+            }
         }
+    }
+
+    private var value: some View { FixedText(text: valueText, template: valueTemplate, font: valueFont) }
+
+    /// Two figures stacked in the small two-row type.
+    private func twoRows(_ rows: [String], template: String) -> some View {
+        let font = BarFont.twoLine(ui: ui)
+        return VStack(alignment: .trailing, spacing: 0) {
+            ForEach(rows.indices, id: \.self) { i in
+                FixedText(text: rows[i], template: template, font: font).frame(height: BarFont.twoLineRow)
+            }
+        }
+    }
+
+    private var iconValue: some View {
+        HStack(spacing: 3) {
+            MenuIconView(icon: MenuIcons.icon(module, o.icon), module: module)
+            switch module {
+            case .memory: FixedText(text: MenuBarText.gigabytes(s.memory.used, binary: true), template: "99.9G", font: valueFont)
+            case .disk: twoRows([Format.rateCompact(s.disk.read), Format.rateCompact(s.disk.write)], template: "999M")
+            default: value
+            }
+        }
+        .foregroundStyle(color(.mono))
+    }
+
+    @ViewBuilder private var pair: some View {
+        switch module {
+        case .gpu:
+            twoRows([Format.percent(s.gpu.utilization), MenuBarText.gigabytes(s.gpu.memoryUsed)], template: "99.9G")
+        case .sensors:
+            let unit = prefs.general.temperatureUnit
+            let fan = s.sensors.fans.first
+            HStack(spacing: 2) {
+                LineIcon(d: Icons.sensors, size: 16, lineWidth: 1.4)
+                FixedText(text: MenuBarText.sensorValue(s.sensors, prefs.sensors.sensor).map { Format.temperature($0, unit: unit) } ?? L10n.Common.dash,
+                          template: "100°", font: valueFont)
+                LineIcon(d: Icons.fan, size: 14, lineWidth: 1.3).padding(.leading, 4)
+                FixedText(text: fan.map { "\(Int($0.rpm.rounded()))" } ?? L10n.Common.dash, template: "8888", font: valueFont)
+            }
+        default:
+            value
+        }
+    }
+
+    private var batteryLow: Bool {
+        let b = s.battery
+        return o.colorWhenLow && b.level <= 0.2 && !b.isCharging && !b.onAC
+    }
+
+    private var batteryNumber: some View {
+        BatteryNumber(level: s.battery.level, text: "\(Int((s.battery.level * 100).rounded()))",
+                      tint: batteryLow ? Color(nsColor: Theme.barCrit) : (globallyColored && !preview ? Theme.barBat : nil))
+    }
+
+    private var batteryTime: some View {
+        let b = s.battery
+        let fill: Color? = batteryLow ? Color(nsColor: Theme.barCrit) : (globallyColored && !preview ? Theme.barBat : nil)
+        return HStack(spacing: 4) {
+            BatteryGlyph(level: b.level, charging: o.showBolt && b.isCharging, fill: fill)
+            FixedText(text: WidgetView.batteryTime(b, prefs) ?? L10n.Common.dash, template: "10:00", font: valueFont)
+        }
+    }
+
+    private var temperatureOnly: some View {
+        let reading = MenuBarText.sensorValue(s.sensors, prefs.sensors.sensor)
+        return FixedText(text: reading.map { Format.temperature($0, unit: prefs.general.temperatureUnit) } ?? L10n.Common.dash,
+                         template: "100°", font: valueFont)
+            .foregroundStyle(color(o.color == .byValue ? .byValue : .mono))
     }
 
     private var memoryPair: some View {
@@ -609,31 +868,13 @@ struct WidgetView: View {
         let unit = prefs.network.speedUnit
         let offline = !n.connected
         let colored = (o.color == .colored || globallyColored) && !offline && tone.color == nil && !preview
-        let upColor: Color = colored ? Theme.barUp : Theme.barInk
-        let downColor: Color = colored ? Theme.barDown : Theme.barInk
-        let format = { (v: Double) in offline ? L10n.Common.dash : (o.showUnit ? Format.rate(v, unit: unit) : Format.rateCompact(v, unit: unit)) }
-        let up = format(n.up), down = format(n.down)
-        let upTop = o.firstOnTop
-        return Group {
-            if o.layout == .twoLine {
-                ArrowRows(top: upTop ? up : down, bottom: upTop ? down : up,
-                          topColor: upTop ? upColor : downColor, bottomColor: upTop ? downColor : upColor,
-                          upOnTop: upTop, template: o.showUnit ? "999 KB/s" : "999K", glyph: o.glyph)
-            } else {
-                HStack(spacing: 4) {
-                    singleRate(MenuBarText.downArrow, down, downColor)
-                    singleRate(MenuBarText.upArrow, up, upColor)
-                }
-            }
+        let rates = [(true, n.up), (false, n.down)]
+        let items = (o.firstOnTop ? rates : rates.reversed()).map { up, v in
+            SpeedPair.Item(up: up, text: offline ? L10n.Common.dash : Format.rate(v, unit: unit, style: o.unitStyle, showUnit: o.showUnit),
+                           markColor: colored ? (up ? Theme.barUp : Theme.barDown) : nil)
         }
-        .opacity(offline ? 0.45 : 1)
-    }
-
-    private func singleRate(_ arrow: String, _ value: String, _ arrowColor: Color) -> some View {
-        HStack(spacing: 1) {
-            if o.glyph != .none { BarText(arrow, font: BarFont.font(11, 400, ui: ui)).foregroundStyle(arrowColor) }
-            FixedText(text: value, template: o.showUnit ? "999 KB/s" : "999K", font: BarFont.font(12, 400, ui: ui))
-        }
+        return SpeedPair(items: items, template: Format.rateTemplate(unit: unit, style: o.unitStyle, showUnit: o.showUnit), options: o)
+            .opacity(offline ? 0.45 : 1)
     }
 
     private var diskSpeed: some View {
@@ -802,16 +1043,6 @@ struct WidgetView: View {
             }
         }
     }
-
-    /// The "icon" widget's four choices: the module's own icon, a gauge, a waveform, a display.
-    static func iconPath(_ m: Module, _ index: Int) -> String {
-        switch index {
-        case 1: return Icons.gauge
-        case 2: return Icons.wave
-        case 3: return Icons.monitorWindow
-        default: return Icons.module(m)
-        }
-    }
 }
 
 /// Everything in one item: label-over-value columns, the "合并成一项" layout.
@@ -834,6 +1065,7 @@ struct CombinedMenuBarView: View {
         }
         .padding(.horizontal, 2)
         .frame(maxHeight: .infinity)
+        .environment(\.barTypeface, prefs.menubar.typeface)
         .fixedSize(horizontal: true, vertical: false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(MenuBarText.combinedAccessibility(modules, s, prefs))

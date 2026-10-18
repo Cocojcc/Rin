@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		00B593A03A0DDDB34A4DC079 /* GPUReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49E212393C664A081B5F6CCE /* GPUReader.swift */; };
+		01EA37BEA18E1A3570EDEEF6 /* MenuIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A95AED474684F4B4D527739 /* MenuIcons.swift */; };
 		0506A62D34D6201EAD0B0ACF /* NetworkReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43BAB34AF2B8A05A868D91CE /* NetworkReader.swift */; };
 		06E31D7D97FF5763B4430C74 /* Snapshots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 391F7498F54D1E6B48DF82AC /* Snapshots.swift */; };
 		093523A5AD28D4F2EDA4D49E /* StatusBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D71AD8C5F4642986F51365FA /* StatusBarController.swift */; };
@@ -19,6 +20,7 @@
 		2B35672B9AA27D3B21146D88 /* PanelComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AE794FA598A873FE1A32F18 /* PanelComponents.swift */; };
 		34442FCA38E0901A0553A4DD /* PowerReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 274FFFC5492A70A9E9F5EFB3 /* PowerReport.swift */; };
 		35AAE23E7483314C4BBC5846 /* Alerts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23DC4DC7CF701F24F2479C5E /* Alerts.swift */; };
+		36AEE4FEE9D7EA1B60235024 /* MenuBarSpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71FA992FC9D448DBABB38331 /* MenuBarSpacing.swift */; };
 		42C7C45AB7E698DB3999B23D /* ProcessReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2402EA382ADE563F180F2054 /* ProcessReader.swift */; };
 		4501AD66950AD7CEB485729F /* DiskReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D558D58F1C173D8F69BD725 /* DiskReader.swift */; };
 		488897E1931C164CE22BA106 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B450EC4272069FE1CB45E6 /* Onboarding.swift */; };
@@ -82,9 +84,11 @@
 		588127709E64847CDE384FC6 /* Icons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Icons.swift; sourceTree = "<group>"; };
 		6024D11DC2725FE0A455CB85 /* Format.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Format.swift; sourceTree = "<group>"; };
 		685F75579EAB4FDB21290FC1 /* SettingsPages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPages.swift; sourceTree = "<group>"; };
+		6A95AED474684F4B4D527739 /* MenuIcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuIcons.swift; sourceTree = "<group>"; };
 		6D558D58F1C173D8F69BD725 /* DiskReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiskReader.swift; sourceTree = "<group>"; };
 		6D694CF0C3BB32EB574E495B /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		6FBCFF9AD6EF5660A3B48A2E /* Hum.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Hum.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		71FA992FC9D448DBABB38331 /* MenuBarSpacing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarSpacing.swift; sourceTree = "<group>"; };
 		7C9713C2EDF382EB3C03F61F /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
 		83AE685353EE9DBDB292DABA /* SMC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMC.swift; sourceTree = "<group>"; };
 		88465B116A8456467F4CC604 /* ModulePanels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModulePanels.swift; sourceTree = "<group>"; };
@@ -143,6 +147,7 @@
 			isa = PBXGroup;
 			children = (
 				3AD143F2A4BB967699026A73 /* MenuBarViews.swift */,
+				6A95AED474684F4B4D527739 /* MenuIcons.swift */,
 				DA660A20219F7020AC152FEE /* Notch.swift */,
 				C487978258A383465651437D /* PanelController.swift */,
 				D71AD8C5F4642986F51365FA /* StatusBarController.swift */,
@@ -168,6 +173,7 @@
 				A03A44C15331ED91D900F23F /* History.swift */,
 				588127709E64847CDE384FC6 /* Icons.swift */,
 				6D694CF0C3BB32EB574E495B /* L10n.swift */,
+				71FA992FC9D448DBABB38331 /* MenuBarSpacing.swift */,
 				07E2918F40BBC93794845548 /* Models.swift */,
 				C0989713A4B2C4594CEA76FF /* Monitor.swift */,
 				D5F02B128B19D2B59B8B8F37 /* ProcessActions.swift */,
@@ -354,7 +360,9 @@
 				B82AA4D315B51D25C19E14D4 /* MainView.swift in Sources */,
 				FCD391AA240C1FFC8CCA3C09 /* MainWindowController.swift in Sources */,
 				D750692CD4E626100006EFC8 /* MemoryReader.swift in Sources */,
+				36AEE4FEE9D7EA1B60235024 /* MenuBarSpacing.swift in Sources */,
 				136D7549D0D7C31C06464C98 /* MenuBarViews.swift in Sources */,
+				01EA37BEA18E1A3570EDEEF6 /* MenuIcons.swift in Sources */,
 				A966696CDA4C93CF24F98FDC /* Models.swift in Sources */,
 				1855ECB99BF4B80DDAB83BEB /* ModulePanels.swift in Sources */,
 				E6E670D12546B65E83DC86FB /* Monitor.swift in Sources */,

@@ -52,6 +52,27 @@ enum Format {
         return showUnit ? "\(number) \(suffix)" : number
     }
 
+    /// A rate in the chosen unit style: "120 KB/s", "120 KB" or "120K"; just the number without a unit.
+    static func rate(_ bytesPerSecond: Double, unit: SpeedUnit, style: RateUnitStyle, showUnit: Bool) -> String {
+        guard showUnit else { return rate(bytesPerSecond, unit: unit, showUnit: false) }
+        switch style {
+        case .perSecond: return rate(bytesPerSecond, unit: unit)
+        case .bytes: return rate(bytesPerSecond, unit: unit).replacingOccurrences(of: "ps", with: "").replacingOccurrences(of: "/s", with: "")
+        case .letter: return rateCompact(bytesPerSecond, unit: unit)
+        }
+    }
+
+    /// The widest value a rate can show in that style, for fixed-width layouts.
+    static func rateTemplate(unit: SpeedUnit, style: RateUnitStyle, showUnit: Bool) -> String {
+        guard showUnit else { return "999" }
+        let bits = unit == .bits
+        switch style {
+        case .perSecond: return bits ? "999 Mbps" : "999 MB/s"
+        case .bytes: return bits ? "999 Mb" : "999 MB"
+        case .letter: return "999M"
+        }
+    }
+
     /// Menu bar shorthand → "2.4M", "120K".
     static func rateCompact(_ bytesPerSecond: Double, unit: SpeedUnit = .auto) -> String {
         let (value, suffix) = scaledRate(bytesPerSecond, unit: unit)

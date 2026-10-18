@@ -516,8 +516,6 @@ enum L10n {
         static var byPressure: String { tr("settings.byPressure") }
         static var showUnit: String { tr("settings.showUnit") }
         static var order: String { tr("settings.order") }
-        static var uploadTop: String { tr("settings.uploadTop") }
-        static var downloadTop: String { tr("settings.downloadTop") }
         static var speedUnit: String { tr("settings.speedUnit") }
         static var unitBytes: String { tr("settings.unitBytes") }
         static var unitBits: String { tr("settings.unitBits") }
@@ -623,6 +621,17 @@ enum L10n {
         static var noWidgets: String { tr("settings.noWidgets") }
         static var modulesInMenubar: String { tr("settings.modulesInMenubar") }
         static func blockedChip(_ a: String) -> String { tr("settings.blockedChip", a) }
+        static var humSpacing: String { tr("settings.humSpacing") }
+        static var systemSpacing: String { tr("settings.systemSpacing") }
+        static var spacingStandard: String { tr("settings.spacingStandard") }
+        static var spacingCompact: String { tr("settings.spacingCompact") }
+        static var spacingTightest: String { tr("settings.spacingTightest") }
+        static var barFont: String { tr("settings.barFont") }
+        static var fontSystem: String { tr("settings.fontSystem") }
+        static var fontMonospaced: String { tr("settings.fontMonospaced") }
+        static func points(_ a: Int) -> String { tr("settings.points", a) }
+        static func decrease(_ a: String) -> String { tr("settings.decrease", a) }
+        static func increase(_ a: String) -> String { tr("settings.increase", a) }
     }
 
     enum Notch {
@@ -677,7 +686,6 @@ enum L10n {
         static var alignTrailing: String { tr("widget.alignTrailing") }
         static var arrows: String { tr("widget.arrows") }
         static var dots: String { tr("widget.dots") }
-        static var glyph: String { tr("widget.glyph") }
         static var boxed: String { tr("widget.boxed") }
         static var connected: String { tr("widget.connected") }
         static var disconnected: String { tr("widget.disconnected") }
@@ -714,7 +722,11 @@ enum L10n {
             default: return tr("widget.byUsage")
             }
         }
+        /// A widget's name; the pick sheet names some per module ("每核心竖条", "温度竖条").
         static func name(_ kind: WidgetKind, _ m: HumModule) -> String {
+            let specific = "widget.name.\(m.rawValue).\(kind.rawValue)"
+            let named = tr(specific)
+            if named != specific { return named }
             switch (kind, m) {
             case (.bar, .memory), (.bar, .disk): return tr("widget.name.barPlain")
             case (.speed, .disk): return tr("widget.name.readWrite")
@@ -723,5 +735,29 @@ enum L10n {
             }
         }
         static func palette(_ p: PaletteColor) -> String { tr("widget.palette.\(p.rawValue)") }
+        static func iconName(_ m: HumModule, _ index: Int) -> String { tr("widget.icon.\(m.rawValue).\(index)") }
+        static var arrangement: String { tr("widget.arrangement") }
+        static var order: String { tr("widget.order") }
+        static var uploadFirst: String { tr("widget.uploadFirst") }
+        static var downloadFirst: String { tr("widget.downloadFirst") }
+        static var iconStyle: String { tr("widget.iconStyle") }
+        static var iconStyleA11y: String { tr("widget.iconStyleA11y") }
+        static var triangles: String { tr("widget.triangles") }
+        static var letters: String { tr("widget.letters") }
+        static var position: String { tr("widget.position") }
+        static var positionA11y: String { tr("widget.positionA11y") }
+        static var beforeNumber: String { tr("widget.beforeNumber") }
+        static var afterNumber: String { tr("widget.afterNumber") }
+        static var gap: String { tr("widget.gap") }
+        static var gapA11y: String { tr("widget.gapA11y") }
+        static var numbers: String { tr("widget.numbers") }
+        static var unitStyle: String { tr("widget.unitStyle") }
+        static var unitPerSecond: String { tr("widget.unitPerSecond") }
+        static var unitBytes: String { tr("widget.unitBytes") }
+        static var unitLetter: String { tr("widget.unitLetter") }
+        static var fixedWidth: String { tr("widget.fixedWidth") }
+        static var uploadLetter: String { tr("widget.uploadLetter") }
+        static var downloadLetter: String { tr("widget.downloadLetter") }
+        static func previewA11y(_ a: String) -> String { tr("widget.previewA11y", a) }
     }
 }

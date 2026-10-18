@@ -22,6 +22,8 @@ struct SettingsPage: View {
     @State private var languageChanged = false
     @State private var authorization: UNAuthorizationStatus = .notDetermined
     @State private var dragging: Module?
+    /// The system-wide spacing lives in the system's preferences, not in Hum's.
+    @State private var systemSpacing = MenuBarSpacing.preset
 
     var body: some View {
         let prefs = settings.prefs
@@ -94,7 +96,7 @@ struct SettingsPage: View {
                     NotchBanner(count: blocked.count).padding(.bottom, 8)
                 }
                 VStack(spacing: 0) {
-                    MenubarPreview(blocked: blocked)
+                    MenubarPreview(blocked: blocked, systemSpacing: systemSpacing)
                         .padding(EdgeInsets(top: 10, leading: 14, bottom: 10, trailing: 14))
                     Hairline().padding(.horizontal, 14)
                     ModuleChips(blocked: blocked, dragging: $dragging).padding(6)
@@ -104,6 +106,23 @@ struct SettingsPage: View {
                 SettingsGroup {
                     SettingsRow(title: L10n.Settings.displayMode) {
                         Segmented(label: L10n.Settings.displayMode, options: [(DisplayMode.separate, L10n.Settings.separate), (.combined, L10n.Settings.combined)], selection: pref(\.menubar.displayMode))
+                    }
+                    SettingsRow(title: L10n.Settings.humSpacing) {
+                        GlassStepper(label: L10n.Settings.humSpacing,
+                                     value: Binding(get: { MenuBarSpacing.hum(settings.prefs) }, set: { settings.prefs.menubar.humSpacing = $0 }),
+                                     range: MenuBarSpacing.humRange, step: MenuBarSpacing.humStep)
+                    }
+                    SettingsRow(title: L10n.Settings.systemSpacing) {
+                        Segmented(label: L10n.Settings.systemSpacing,
+                                  options: [(MenuBarSpacing.Preset.standard, L10n.Settings.spacingStandard), (.compact, L10n.Settings.spacingCompact), (.tightest, L10n.Settings.spacingTightest)],
+                                  selection: Binding(get: { systemSpacing }, set: { preset in
+                                      systemSpacing = preset
+                                      MenuBarSpacing.setPreset(preset)
+                                      StatusBarController.shared.relayout()
+                                  }))
+                    }
+                    SettingsRow(title: L10n.Settings.barFont) {
+                        Segmented(label: L10n.Settings.barFont, options: [(BarTypeface.system, L10n.Settings.fontSystem), (.monospaced, L10n.Settings.fontMonospaced)], selection: pref(\.menubar.typeface))
                     }
                     SettingsRow(title: L10n.Settings.iconColor) {
                         Segmented(label: L10n.Settings.iconColor, options: [(ColorMode.mono, L10n.Common.mono), (.color, L10n.Common.colored)], selection: pref(\.menubar.iconColor))
@@ -343,25 +362,29 @@ struct ModuleDropDelegate: DropDelegate {
 /// system's Wi-Fi glyph and clock. Modules behind the notch sit under a black notch block.
 struct MenubarPreview: View {
     var blocked: [Module] = []
+    /// The system-wide preset, passed in so the preview redraws when it changes.
+    var systemSpacing = MenuBarSpacing.preset
     var settings = SettingsStore.shared
     var monitor = Monitor.shared
 
     var body: some View {
         let prefs = settings.prefs
         let modules = prefs.menubar.order.filter { prefs.showsInMenubar($0) && MenuBarText.available($0, monitor.snapshot) }
-        HStack(spacing: 2) {
+        let system = CGFloat(systemSpacing.spacing ?? MenuBarSpacing.systemDefault)
+        HStack(spacing: system) {
             Spacer(minLength: 0)
-            if prefs.menubar.displayMode == .combined {
-                CombinedMenuBarView()
-            } else {
-                ForEach(modules.filter { !blocked.contains($0) }) { MenuBarItemView(module: $0) }
+            HStack(spacing: CGFloat(MenuBarSpacing.hum(prefs))) {
+                if prefs.menubar.displayMode == .combined {
+                    CombinedMenuBarView()
+                } else {
+                    ForEach(modules.filter { !blocked.contains($0) }) { MenuBarItemView(module: $0) }
+                }
             }
             LineIcon(d: Icons.wifi, size: 16, lineWidth: 1.6)
-                .padding(.horizontal, 5)
-            Text(Format.time(Date())).font(BarFont.value().font).padding(.horizontal, 5)
+            Text(Format.time(Date())).font(BarFont.value().font)
         }
         .foregroundStyle(Theme.barFg)
-        .padding(.horizontal, 5)
+        .padding(.horizontal, 10)
         .frame(height: 28)
         .frame(maxWidth: .infinity)
         .background(alignment: .leading) {
@@ -659,10 +682,148 @@ struct WidgetsTab: View {
                     .padding(.horizontal, 14)
                     .padding(.bottom, 8)
                     .accessibilityAddTraits(.isHeader)
-                    WidgetOptionsGroup(module: module, kind: kind)
+                    if module == .network && kind == .speed {
+                        NetworkSpeedOptions()
+                    } else if kind != .pair {
+                        WidgetOptionsGroup(module: module, kind: kind)
+                    }
                 }
             }
         }
+    }
+}
+
+/// The network speed widget's look: a large live preview, then its arrangement, icon and numbers.
+struct NetworkSpeedOptions: View {
+    var settings = SettingsStore.shared
+
+    private func bind<T>(_ keyPath: WritableKeyPath<WidgetOptions, T>) -> Binding<T> {
+        Binding(get: { settings.prefs.options(.network, .speed)[keyPath: keyPath] },
+                set: {
+                    var o = settings.prefs.options(.network, .speed)
+                    o[keyPath: keyPath] = $0
+                    settings.prefs.setOptions(o, .network, .speed)
+                })
+    }
+
+    var body: some View {
+        let o = settings.prefs.options(.network, .speed)
+        let noGlyph = o.glyph == .none
+        VStack(alignment: .leading, spacing: 12) {
+            WidgetPreview(module: .network, kind: .speed)
+            OptionsSection(title: L10n.Widget.arrangement) {
+                SettingsRow(title: L10n.Settings.displayMode) {
+                    Segmented(label: L10n.Settings.displayMode, options: [(ValueLayout.twoLine, L10n.Widget.twoLine), (.singleLine, L10n.Widget.singleLine)], selection: bind(\.layout))
+                }
+                SettingsRow(title: L10n.Widget.order) {
+                    Segmented(label: L10n.Widget.order, options: [(true, L10n.Widget.uploadFirst), (false, L10n.Widget.downloadFirst)], selection: bind(\.firstOnTop))
+                }
+            }
+            OptionsSection(title: L10n.Widget.icon) {
+                SettingsRow(title: L10n.Widget.iconStyle) {
+                    Segmented(label: L10n.Widget.iconStyleA11y,
+                              options: [(SpeedGlyph.arrows, L10n.Widget.arrows), (.triangles, L10n.Widget.triangles), (.dots, L10n.Widget.dots),
+                                        (.letters, L10n.Widget.letters), (.none, L10n.Common.none)],
+                              selection: bind(\.glyph), glyph: { AnyView(GlyphSample(glyph: $0)) }, glyphWidth: 26)
+                }
+                SettingsRow(title: L10n.Widget.position, dimmed: noGlyph) {
+                    Segmented(label: L10n.Widget.positionA11y, options: [(false, L10n.Widget.beforeNumber), (true, L10n.Widget.afterNumber)], selection: bind(\.glyphAfter))
+                }
+                SettingsRow(title: L10n.Widget.gap, dimmed: noGlyph) {
+                    GlassStepper(label: L10n.Widget.gapA11y, value: bind(\.glyphGap), range: 0...8)
+                }
+                SettingsRow(title: L10n.Settings.color, dimmed: noGlyph) {
+                    Segmented(label: L10n.Settings.color, options: [(WidgetColor.mono, L10n.Common.mono), (.colored, L10n.Common.colored)], selection: bind(\.color))
+                }
+            }
+            OptionsSection(title: L10n.Widget.numbers) {
+                SettingsRow(title: L10n.Settings.showUnit) { HumSwitch(isOn: bind(\.showUnit), label: L10n.Settings.showUnit) }
+                SettingsRow(title: L10n.Widget.unitStyle, dimmed: !o.showUnit) {
+                    Segmented(label: L10n.Widget.unitStyle,
+                              options: [(RateUnitStyle.perSecond, L10n.Widget.unitPerSecond), (.bytes, L10n.Widget.unitBytes), (.letter, L10n.Widget.unitLetter)],
+                              selection: bind(\.unitStyle))
+                }
+                SettingsRow(title: L10n.Widget.fixedWidth) { HumSwitch(isOn: bind(\.fixedWidth), label: L10n.Widget.fixedWidth) }
+                SettingsRow(title: L10n.Widget.align) {
+                    Segmented(label: L10n.Widget.align, options: [(WidgetAlign.leading, L10n.Widget.alignLeading), (.trailing, L10n.Widget.alignTrailing)], selection: bind(\.numberAlign))
+                }
+            }
+        }
+    }
+}
+
+/// A small titled group of option rows (12 pt grey title over a panel).
+private struct OptionsSection<Content: View>: View {
+    var title: String
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title).ui(12).foregroundStyle(Theme.sub)
+                .padding(.horizontal, 14).padding(.bottom, 6)
+                .accessibilityAddTraits(.isHeader)
+            VStack(spacing: 0) { DividedRows { content } }
+                .padding(.horizontal, 14)
+                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
+        }
+    }
+}
+
+/// The up / down pair of each speed mark, as drawn on the icon style segments.
+private struct GlyphSample: View {
+    var glyph: SpeedGlyph
+
+    var body: some View {
+        switch glyph {
+        case .letters:
+            Text(L10n.Widget.uploadLetter + " " + L10n.Widget.downloadLetter).ui(10, 500).kerning(0.4)
+        case .none:
+            Text(L10n.Common.none).ui(12)
+        case .dots:
+            HStack(spacing: 3) {
+                SpeedMark(glyph: .dots, up: true, size: 6, letterSize: 8)
+                SpeedMark(glyph: .dots, up: false, size: 6, letterSize: 8)
+            }
+        default:
+            HStack(spacing: 2) {
+                SpeedMark(glyph: glyph, up: true, size: 7, letterSize: 8)
+                SpeedMark(glyph: glyph, up: false, size: 7, letterSize: 8)
+            }
+        }
+    }
+}
+
+/// One widget at twice the menu bar's size beside Wi-Fi and the clock, as it looks right now.
+struct WidgetPreview: View {
+    let module: Module
+    let kind: WidgetKind
+    var settings = SettingsStore.shared
+    var monitor = Monitor.shared
+
+    var body: some View {
+        let _ = monitor.tick
+        let prefs = settings.prefs
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+            Zoomed(scale: 2) {
+                HStack(spacing: 12) {
+                    WidgetView(module: module, kind: kind, prefs: prefs)
+                        .foregroundStyle(MenuBarText.tone(module, monitor.snapshot, prefs).color ?? Theme.barInk)
+                    LineIcon(d: Icons.wifi, size: 16, lineWidth: 1.6)
+                    BarText(Format.time(Date()), font: BarFont.value())
+                }
+                .foregroundStyle(Theme.barFg)
+                .environment(\.barTypeface, prefs.menubar.typeface)
+                .frame(height: 28)
+            }
+        }
+        .padding(.horizontal, 20)
+        .frame(height: 56)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.bar))
+        .padding(EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14))
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(L10n.Widget.previewA11y(L10n.Widget.name(kind, module)))
     }
 }
 
@@ -714,20 +875,39 @@ struct WidgetOptionsGroup: View {
             case .bar:
                 if module == .memory || module == .disk {
                     toggle(L10n.Settings.showValue, \.showValue)
-                } else {
+                } else if module == .cpu {
                     toggle(L10n.Widget.label, \.showLabel)
+                    toggle(L10n.Widget.boxed, \.boxed)
+                } else {
+                    toggle(L10n.Settings.showValue, \.showValue)
                     toggle(L10n.Widget.boxed, \.boxed)
                 }
                 colorRow()
             case .pie, .tacho:
                 toggle(L10n.Widget.label, \.showLabel)
-                toggle(L10n.Widget.monochrome, \.monochrome)
-            case .icon:
+                toggle(L10n.Settings.showValue, \.showValue)
+                if !(kind == .pie && module == .cpu) { toggle(L10n.Widget.monochrome, \.monochrome) }
+            case .icon, .iconValue:
                 SettingsRow(title: L10n.Widget.icon) {
                     Segmented(label: L10n.Widget.icon,
-                              options: (0..<4).map { ($0, "") }, selection: bind(\.icon), style: .compact,
-                              glyph: { i in AnyView(LineIcon(d: WidgetView.iconPath(module, i), size: 14, lineWidth: 1.4)) })
+                              options: MenuIcons.all(module).indices.map { ($0, L10n.Widget.iconName(module, $0)) }, selection: bind(\.icon), style: .compact,
+                              glyph: { i in AnyView(MenuIconView(icon: MenuIcons.icon(module, i), module: module, size: 14).environment(\.widgetUIFont, true)) },
+                              glyphWidth: 20)
                 }
+            case .labelLine:
+                toggle(L10n.Widget.boxed, \.boxed)
+                colorRow()
+                pointsRow()
+            case .pill, .dot:
+                toggle(L10n.Settings.showValue, \.showValue)
+                colorRow()
+            case .inside:
+                toggle(L10n.Settings.colorWhenLow, \.colorWhenLow)
+            case .time:
+                toggle(L10n.Settings.showBolt, \.showBolt)
+                toggle(L10n.Settings.colorWhenLow, \.colorWhenLow)
+            case .pair:
+                EmptyView()
             case .ring:
                 toggle(L10n.Settings.showValue, \.showValue)
                 colorRow()
@@ -735,18 +915,6 @@ struct WidgetOptionsGroup: View {
                 colorRow()
                 toggle(L10n.Widget.showSymbol, \.showSymbol)
                 toggle(L10n.Widget.freeOnTop, \.freeOnTop)
-            case .speed where module == .network:
-                SettingsRow(title: L10n.Widget.glyph) {
-                    Segmented(label: L10n.Widget.glyph, options: [(SpeedGlyph.arrows, L10n.Widget.arrows), (.dots, L10n.Widget.dots), (.none, L10n.Common.none)], selection: bind(\.glyph))
-                }
-                layoutRow()
-                toggle(L10n.Settings.showUnit, \.showUnit)
-                SettingsRow(title: L10n.Settings.order) {
-                    Segmented(label: L10n.Settings.order, options: [(true, L10n.Settings.uploadTop), (false, L10n.Settings.downloadTop)], selection: bind(\.firstOnTop))
-                }
-                SettingsRow(title: L10n.Settings.color) {
-                    Segmented(label: L10n.Settings.color, options: [(WidgetColor.mono, L10n.Common.mono), (.colored, L10n.Common.colored)], selection: bind(\.color))
-                }
             case .speed:
                 layoutRow()
                 toggle(L10n.Settings.showUnit, \.showUnit)
@@ -766,6 +934,10 @@ struct WidgetOptionsGroup: View {
             case .state:
                 paletteRow(L10n.Widget.connected, \.firstColor)
                 paletteRow(L10n.Widget.disconnected, \.secondColor)
+            case .value where module == .sensors:
+                SettingsRow(title: L10n.Settings.color) {
+                    Segmented(label: L10n.Settings.color, options: [(WidgetColor.mono, L10n.Common.mono), (.byValue, L10n.Settings.byTemperature)], selection: bind(\.color))
+                }
             case .value:
                 toggle(L10n.Widget.showIcon, \.showIcon)
                 toggle(L10n.Settings.showUnit, \.showUnit)

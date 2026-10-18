@@ -102,12 +102,16 @@ final class StatusBarController: NSObject {
         items.append((module, item))
     }
 
+    /// Pads the items again after the system-wide spacing changed.
+    func relayout() { refresh() }
+
     /// Re-render every item from the latest snapshot. Unchanged pictures are not handed to
     /// AppKit again, which saves the per-display relayout of every copy of the item.
     func refresh() {
         let prefs = SettingsStore.shared.prefs
         let s = Monitor.shared.snapshot
         let height = NSStatusBar.system.thickness
+        let pad = MenuBarSpacing.itemPadding(prefs)
         for (index, entry) in items.enumerated() where entry.item.isVisible {
             guard let button = entry.item.button else { continue }
             let colored: Bool
@@ -129,9 +133,11 @@ final class StatusBarController: NSObject {
             if bytes != lastBytes[index] {
                 lastBytes[index] = bytes
                 content.show(picture, asShape: !colored)
-                content.frame = NSRect(x: 0, y: ((button.bounds.height - size.height) / 2).rounded(), width: size.width, height: size.height)
-                if abs(entry.item.length - size.width) > 0.5 { entry.item.length = size.width }
             }
+            // Hum's items have no spacing of their own; half the spacing on each side stands in.
+            let frame = NSRect(x: pad, y: ((button.bounds.height - size.height) / 2).rounded(), width: size.width, height: size.height)
+            if content.frame != frame { content.frame = frame }
+            if abs(entry.item.length - (size.width + pad * 2)) > 0.5 { entry.item.length = size.width + pad * 2 }
             if button.accessibilityLabel() != label { button.setAccessibilityLabel(label) }
         }
     }

@@ -16,6 +16,10 @@ enum HumMain {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        MenuBarSpacing.claimItemSpacing()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         Fonts.register()
         #if DEBUG

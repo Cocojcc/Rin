@@ -229,6 +229,8 @@ struct Hairline: View {
 struct SettingsRow<Control: View>: View {
     var title: String
     var height: CGFloat = 42
+    /// Faded and locked while another setting makes it moot (the rule above stays as it is).
+    var dimmed = false
     @ViewBuilder var control: Control
 
     var body: some View {
@@ -237,6 +239,9 @@ struct SettingsRow<Control: View>: View {
             Spacer(minLength: 8)
             control
         }
+        .opacity(dimmed ? 0.4 : 1)
+        .allowsHitTesting(!dimmed)
+        .animation(.easeOut(duration: 0.15), value: dimmed)
         .frame(minHeight: height)
     }
 }
@@ -284,6 +289,7 @@ struct Segmented<Value: Hashable>: View {
     var style: Style = .compact
     /// Draws a segment as an icon instead of text.
     var glyph: ((Value) -> AnyView)? = nil
+    var glyphWidth: CGFloat = 18
 
     private var fills: Bool { style == .tabs }
 
@@ -296,7 +302,7 @@ struct Segmented<Value: Hashable>: View {
                 } label: {
                     Group {
                         if let glyph {
-                            glyph(option.0).frame(width: 18)
+                            glyph(option.0).frame(width: glyphWidth)
                         } else {
                             Text(option.1).ui(fontSize, on ? 500 : 400).lineLimit(1)
                         }
@@ -309,6 +315,7 @@ struct Segmented<Value: Hashable>: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .help(glyph == nil ? "" : option.1)
                 .accessibilityLabel(option.1.isEmpty ? label : option.1)
                 .accessibilityAddTraits(on ? [.isSelected] : [])
             }
@@ -343,6 +350,85 @@ struct Segmented<Value: Hashable>: View {
 
     private var glass: Bool { style != .tab }
     private var fontSize: CGFloat { style == .tab ? 11 : 12 }
+}
+
+/// Content drawn at `scale` times its size and rendered sharp at that size rather than
+/// magnified (the large widget preview in settings).
+struct Zoomed<Content: View>: View {
+    var scale: CGFloat
+    @ViewBuilder var content: Content
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.displayScale) private var displayScale
+
+    var body: some View {
+        let renderer = ImageRenderer(content: content.environment(\.colorScheme, scheme).fixedSize())
+        renderer.scale = displayScale * scale
+        var image: CGImage?
+        // Theme colors resolve against the drawing appearance.
+        NSAppearance(named: scheme == .dark ? .darkAqua : .aqua)?.performAsCurrentDrawingAppearance {
+            image = renderer.cgImage
+        }
+        return Group {
+            if let image { Image(decorative: image, scale: displayScale) }
+        }
+    }
+}
+
+/// "− 12 pt +" on a glass track.
+struct GlassStepper: View {
+    var label: String
+    @Binding var value: Int
+    var range: ClosedRange<Int>
+    var step = 1
+
+    var body: some View {
+        HStack(spacing: 2) {
+            StepButton(d: Icons.minusSmall, label: L10n.Settings.decrease(label), enabled: value > range.lowerBound) {
+                value = max(range.lowerBound, value - step)
+            }
+            Text(L10n.Settings.points(value)).ui(12, 500).monospacedDigit().frame(minWidth: 40)
+            StepButton(d: Icons.plusSmall, label: L10n.Settings.increase(label), enabled: value < range.upperBound) {
+                value = min(range.upperBound, value + step)
+            }
+        }
+        .padding(2)
+        .background(GlassTrack())
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(label)
+        .accessibilityValue(L10n.Settings.points(value))
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: value = min(range.upperBound, value + step)
+            case .decrement: value = max(range.lowerBound, value - step)
+            @unknown default: break
+            }
+        }
+    }
+}
+
+private struct StepButton: View {
+    var d: String
+    var label: String
+    var enabled: Bool
+    var action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            LineIcon(d: d, size: 10, viewBox: 10, lineWidth: 1.4)
+                .foregroundStyle(Theme.text)
+                .frame(width: 28, height: 24)
+                .background { if hovering && enabled { Capsule().fill(Theme.lgHover) } }
+                .hoverAnimation(hovering)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .opacity(enabled ? 1 : 0.35)
+        .disabled(!enabled)
+        .onHover { hovering = $0 }
+        .help(label)
+        .accessibilityLabel(label)
+    }
 }
 
 /// Well-coloured pill that opens a menu ("5 个 ⌃⌄").
