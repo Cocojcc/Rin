@@ -98,12 +98,16 @@ struct CardGrid: Layout {
     var minWidth: CGFloat = 176
     var spacing: CGFloat = 12
     var minHeight: CGFloat = 146
+    /// Three columns that grow and shrink with the window; only when three would be narrower
+    /// than `minWidth` does it drop to two, and never fewer.
+    var columns = 3
+    var minColumns = 2
 
     private struct Item { var index: Int; var column: Int; var span: Int }
 
     private func arrange(_ width: CGFloat, _ subviews: Subviews) -> (rows: [[Item]], heights: [CGFloat], column: CGFloat) {
         let fit = (width + spacing) / (minWidth + spacing)
-        let columns = fit.isFinite ? max(1, Int(fit)) : 3
+        let columns = fit.isFinite ? min(self.columns, max(minColumns, Int(fit))) : self.columns
         let columnWidth = (width - spacing * CGFloat(columns - 1)) / CGFloat(columns)
         var rows: [[Item]] = [[]]
         var col = 0
@@ -123,8 +127,8 @@ struct CardGrid: Layout {
     }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        // Unspecified or unbounded proposals (measuring the ideal size) get three columns.
-        let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? minWidth * 3 + spacing * 2
+        // Unspecified or unbounded proposals (measuring the ideal size) get the full columns.
+        let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? minWidth * CGFloat(columns) + spacing * CGFloat(columns - 1)
         let layout = arrange(width, subviews)
         let height = layout.heights.reduce(0, +) + spacing * CGFloat(max(0, layout.heights.count - 1))
         return CGSize(width: width, height: height)
