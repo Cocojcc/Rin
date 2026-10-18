@@ -337,7 +337,7 @@ struct MenubarPreview: View {
             }
             LineIcon(d: Icons.wifi, size: 16, lineWidth: 1.6)
                 .padding(.horizontal, 5)
-            Text(Format.time(Date())).font(BarFont.value()).padding(.horizontal, 5)
+            Text(Format.time(Date())).font(BarFont.value().font).padding(.horizontal, 5)
         }
         .foregroundStyle(Theme.barFg)
         .padding(.horizontal, 5)

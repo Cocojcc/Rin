@@ -9,7 +9,7 @@ enum BarTone {
         case .normal: return nil
         case .warn: return Color(nsColor: Theme.barWarn)
         case .crit: return Color(nsColor: Theme.barCrit)
-        case .dim: return .primary.opacity(0.45)
+        case .dim: return Theme.barInk.opacity(0.45)
         }
     }
 
@@ -20,12 +20,102 @@ enum BarTone {
 struct FixedText: View {
     var text: String
     var template: String
-    var font: Font
+    var font: BarFontSpec
     var alignment: Alignment = .trailing
 
     var body: some View {
-        Text(template).font(font).hidden()
-            .overlay(alignment: alignment) { Text(text).font(font).lineLimit(1).fixedSize() }
+        BarText(template, font: font).hidden()
+            .overlay(alignment: alignment) { BarText(text, font: font) }
+    }
+}
+
+/// Text in a widget: in the menu bar it is drawn by `SmoothText`, in settings previews it is
+/// ordinary SwiftUI text in the UI font.
+struct BarText: View {
+    var text: String
+    var font: BarFontSpec
+    var kerning: CGFloat = 0
+
+    init(_ text: String, font: BarFontSpec, kerning: CGFloat = 0) {
+        self.text = text
+        self.font = font
+        self.kerning = kerning
+    }
+
+    var body: some View {
+        if font.ui {
+            Text(text).font(font.font).kerning(kerning).lineLimit(1).fixedSize()
+        } else {
+            SmoothText(text: text, font: font.nsFont, kerning: kerning)
+        }
+    }
+}
+
+/// Menu bar text drawn with CoreText and font smoothing on, the way the system and Stats draw
+/// theirs. The app turns smoothing off for its windows, and SwiftUI text follows that setting
+/// even in an image, which left the small menu bar figures thin and grey.
+struct SmoothText: View {
+    private let line: CTLine
+    private let width: CGFloat
+    private let height: CGFloat
+    private let baseline: CGFloat
+    @Environment(\.colorScheme) private var scheme
+
+    init(text: String, font: NSFont, kerning: CGFloat = 0) {
+        var attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            NSAttributedString.Key(kCTForegroundColorFromContextAttributeName as String): true,
+        ]
+        if kerning != 0 { attributes[.kern] = kerning }
+        line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: attributes))
+        var ascent: CGFloat = 0, descent: CGFloat = 0, leading: CGFloat = 0
+        width = ceil(CGFloat(CTLineGetTypographicBounds(line, &ascent, &descent, &leading)))
+        height = ceil(ascent + descent + leading)
+        baseline = descent + leading / 2
+    }
+
+    var body: some View {
+        let line = line, baseline = baseline
+        // Smoothing thickens light text on a dark bar more than dark text on a light one, so the
+        // glyphs are drawn in the bar's own text color before being painted.
+        let ink = CGColor(gray: scheme == .dark ? 1 : 0, alpha: 1)
+        Canvas { ctx, size in
+            // Draw the glyphs, then paint them with the current foreground style.
+            ctx.drawLayer { layer in
+                layer.withCGContext { cg in
+                    cg.setAllowsFontSmoothing(true)
+                    cg.setShouldSmoothFonts(true)
+                    cg.setFillColor(ink)
+                    cg.textMatrix = .identity
+                    cg.translateBy(x: 0, y: size.height)
+                    cg.scaleBy(x: 1, y: -1)
+                    cg.textPosition = CGPoint(x: 0, y: baseline)
+                    CTLineDraw(line, cg)
+                }
+                layer.blendMode = .sourceIn
+                layer.fill(Path(CGRect(origin: .zero, size: size)), with: .foreground)
+            }
+        }
+        .frame(width: width, height: height)
+    }
+}
+
+/// A widget font: the system font (tabular digits) in the menu bar, Space Grotesk in previews.
+struct BarFontSpec {
+    var size: CGFloat
+    var weight: CGFloat = 400
+    var ui = false
+    var monospaced = true
+
+    var font: Font {
+        if ui { return Fonts.ui(size, weight) }
+        let w: Font.Weight = weight >= 600 ? .semibold : weight >= 500 ? .medium : weight <= 300 ? .light : .regular
+        return monospaced ? .system(size: size, weight: w).monospacedDigit() : .system(size: size, weight: w)
+    }
+
+    var nsFont: NSFont {
+        let w: NSFont.Weight = weight >= 600 ? .semibold : weight >= 500 ? .medium : weight <= 300 ? .light : .regular
+        return monospaced ? .monospacedDigitSystemFont(ofSize: size, weight: w) : .systemFont(ofSize: size, weight: w)
     }
 }
 
@@ -41,14 +131,15 @@ extension EnvironmentValues {
 }
 
 enum BarFont {
-    static func font(_ size: CGFloat, _ weight: CGFloat = 400, ui: Bool) -> Font {
-        if ui { return Fonts.ui(size, weight) }
-        let w: Font.Weight = weight >= 600 ? .semibold : weight >= 500 ? .medium : weight <= 300 ? .light : .regular
-        return .system(size: size, weight: w).monospacedDigit()
+    static func font(_ size: CGFloat, _ weight: CGFloat = 400, ui: Bool) -> BarFontSpec {
+        BarFontSpec(size: size, weight: weight, ui: ui)
     }
 
-    static func value(_ emphasized: Bool = false, ui: Bool = false) -> Font { font(13, emphasized ? 600 : 400, ui: ui) }
-    static let stack = Font.system(size: 9, weight: .light).monospacedDigit()
+    static func value(_ emphasized: Bool = false, ui: Bool = false) -> BarFontSpec { font(13, emphasized ? 600 : 400, ui: ui) }
+    /// Two stacked rows (speeds, used / free, read / write): 9 pt light on 9 pt rows, as Stats
+    /// draws them.
+    static func twoLine(ui: Bool) -> BarFontSpec { font(9, 300, ui: ui) }
+    static let twoLineRow: CGFloat = 9
 }
 
 /// Mini graph tile (28 × 16): area + line, used by the line and chart widgets.
@@ -64,7 +155,7 @@ struct GraphTile: View {
         Sparkline(values: values, color: color, lineWidth: 1.25, fillOpacity: 0.25, secondary: secondary,
                   secondaryColor: secondaryColor, minCount: points)
             .frame(width: 28, height: 16)
-            .background(boxed ? Color.primary.opacity(0.08) : .clear)
+            .background(boxed ? Theme.barInk.opacity(0.08) : .clear)
             .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
     }
 }
@@ -103,7 +194,7 @@ struct MirrorTile: View {
             draw(second, secondColor, fromTop: true)
         }
         .frame(width: 28, height: 16)
-        .background(boxed ? Color.primary.opacity(0.08) : .clear)
+        .background(boxed ? Theme.barInk.opacity(0.08) : .clear)
         .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
         .accessibilityHidden(true)
     }
@@ -118,7 +209,7 @@ struct PillMeter: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: height / 2, style: .continuous)
-            .strokeBorder(Color.primary.opacity(0.4), lineWidth: 1)
+            .strokeBorder(Theme.barInk.opacity(0.4), lineWidth: 1)
             .frame(width: width, height: height)
             .overlay(alignment: .leading) {
                 RoundedRectangle(cornerRadius: (height - 5) / 2, style: .continuous)
@@ -139,7 +230,7 @@ struct VerticalMeter: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                .strokeBorder(boxed ? Color.primary.opacity(0.4) : .clear, lineWidth: 1)
+                .strokeBorder(boxed ? Theme.barInk.opacity(0.4) : .clear, lineWidth: 1)
             Rectangle().fill(color).frame(height: 16 * min(1, max(0, fraction)))
         }
         .frame(width: 5, height: 16)
@@ -158,7 +249,7 @@ struct BarRow: View {
         HStack(alignment: .bottom, spacing: 1) {
             ForEach(values.indices, id: \.self) { i in
                 ZStack(alignment: .bottom) {
-                    Rectangle().fill(boxed ? Color.primary.opacity(0.08) : .clear)
+                    Rectangle().fill(boxed ? Theme.barInk.opacity(0.08) : .clear)
                     Rectangle().fill(colors[min(i, colors.count - 1)]).frame(height: 16 * min(1, max(0, values[i])))
                 }
                 .frame(width: 3, height: 16)
@@ -176,7 +267,7 @@ struct RingMeter: View {
 
     var body: some View {
         ZStack {
-            Circle().stroke(Color.primary.opacity(0.4), lineWidth: 2)
+            Circle().stroke(Theme.barInk.opacity(0.4), lineWidth: 2)
             Circle().trim(from: 0, to: min(1, max(0, fraction)))
                 .stroke(color, style: StrokeStyle(lineWidth: 2))
                 .rotationEffect(.degrees(-90))
@@ -248,7 +339,7 @@ struct VerticalLabel: View {
     var body: some View {
         VStack(spacing: 0) {
             ForEach(Array(text.prefix(4).enumerated()), id: \.offset) { _, c in
-                Text(String(c)).font(BarFont.font(6.5, 500, ui: ui)).frame(height: 5.4)
+                BarText(String(c), font: BarFont.font(6.5, 500, ui: ui)).frame(height: 5.4)
             }
         }
         .fixedSize()
@@ -259,23 +350,23 @@ struct VerticalLabel: View {
 struct ArrowRows: View {
     var top: String
     var bottom: String
-    var topColor: Color = .primary
-    var bottomColor: Color = .primary
+    var topColor: Color = Theme.barInk
+    var bottomColor: Color = Theme.barInk
     var upOnTop = true
     var template: String
     var glyph: SpeedGlyph = .arrows
     @Environment(\.widgetUIFont) private var ui
 
     var body: some View {
-        let font = BarFont.font(9, 300, ui: ui)
+        let font = BarFont.twoLine(ui: ui)
         Grid(alignment: .trailing, horizontalSpacing: 3, verticalSpacing: 0) {
             GridRow {
                 marker(top: true).foregroundStyle(topColor)
-                FixedText(text: top, template: template, font: font).frame(height: 8)
+                FixedText(text: top, template: template, font: font).frame(height: BarFont.twoLineRow)
             }
             GridRow {
                 marker(top: false).foregroundStyle(bottomColor)
-                FixedText(text: bottom, template: template, font: font).frame(height: 8)
+                FixedText(text: bottom, template: template, font: font).frame(height: BarFont.twoLineRow)
             }
         }
     }
@@ -312,7 +403,7 @@ struct MenuBarItemView: View {
         }
         .padding(.horizontal, 5)
         .frame(maxHeight: .infinity)
-        .foregroundStyle(tone.color ?? .primary)
+        .foregroundStyle(tone.color ?? Theme.barInk)
         .fixedSize(horizontal: true, vertical: false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(MenuBarText.accessibility(module, s, prefs))
@@ -342,7 +433,7 @@ struct WidgetView: View {
     }
 
     private var labelText: String { o.labelText.isEmpty ? module.widgetLabel : o.labelText }
-    private var valueFont: Font { BarFont.value(tone.emphasized, ui: ui) }
+    private var valueFont: BarFontSpec { BarFont.value(tone.emphasized, ui: ui) }
 
     // MARK: Values
 
@@ -401,7 +492,7 @@ struct WidgetView: View {
         if let t = tone.color { return t }
         if globallyColored && option == .mono { return Theme.barColor(module) }
         switch option {
-        case .mono: return .primary
+        case .mono: return Theme.barInk
         case .colored: return Theme.barColor(module)
         case .byValue: return WidgetView.levelColor(module, f ?? fraction, s)
         }
@@ -430,8 +521,8 @@ struct WidgetView: View {
         case .mini: mini
         case .line: line
         case .bar: bar
-        case .pie: PieMeter(fraction: fraction, color: o.monochrome ? .primary : color(.byValue))
-        case .tacho: TachoMeter(fraction: fraction, color: o.monochrome ? .primary : color(.byValue))
+        case .pie: PieMeter(fraction: fraction, color: o.monochrome ? Theme.barInk : color(.byValue))
+        case .tacho: TachoMeter(fraction: fraction, color: o.monochrome ? Theme.barInk : color(.byValue))
         case .icon: LineIcon(d: WidgetView.iconPath(module, o.icon), size: 16, lineWidth: 1.4).foregroundStyle(color(.mono))
         case .ring:
             HStack(spacing: 3) {
@@ -454,7 +545,7 @@ struct WidgetView: View {
     private var mini: some View {
         let align: HorizontalAlignment = o.align == .leading ? .leading : o.align == .trailing ? .trailing : .center
         return VStack(alignment: align, spacing: 0) {
-            if o.showLabel { Text(labelText).font(BarFont.font(7, 300, ui: ui)).kerning(0.3).frame(height: 7) }
+            if o.showLabel { BarText(labelText, font: BarFont.font(7, 300, ui: ui), kerning: 0.3).frame(height: 7) }
             FixedText(text: valueText, template: valueTemplate, font: BarFont.font(11, tone.emphasized ? 600 : 400, ui: ui),
                       alignment: o.align == .leading ? .leading : o.align == .trailing ? .trailing : .center)
                 .frame(height: 11)
@@ -504,10 +595,10 @@ struct WidgetView: View {
         let used = MenuBarText.gigabytes(s.memory.used, binary: true)
         let free = MenuBarText.gigabytes(s.memory.total > s.memory.used ? s.memory.total - s.memory.used : 0, binary: true)
         let strip = { (v: String) in o.showSymbol ? v : String(v.dropLast()) }
-        let font = BarFont.font(8, 300, ui: ui)
+        let font = BarFont.twoLine(ui: ui)
         return VStack(alignment: .trailing, spacing: 0) {
-            FixedText(text: strip(o.freeOnTop ? free : used), template: "99.9G", font: font).frame(height: 8)
-            FixedText(text: strip(o.freeOnTop ? used : free), template: "99.9G", font: font).frame(height: 8)
+            FixedText(text: strip(o.freeOnTop ? free : used), template: "99.9G", font: font).frame(height: BarFont.twoLineRow)
+            FixedText(text: strip(o.freeOnTop ? used : free), template: "99.9G", font: font).frame(height: BarFont.twoLineRow)
         }
         .foregroundStyle(color(o.color))
     }
@@ -517,8 +608,8 @@ struct WidgetView: View {
         let unit = prefs.network.speedUnit
         let offline = !n.connected
         let colored = (o.color == .colored || globallyColored) && !offline && tone.color == nil && !preview
-        let upColor: Color = colored ? Theme.barUp : .primary
-        let downColor: Color = colored ? Theme.barDown : .primary
+        let upColor: Color = colored ? Theme.barUp : Theme.barInk
+        let downColor: Color = colored ? Theme.barDown : Theme.barInk
         let format = { (v: Double) in offline ? L10n.Common.dash : (o.showUnit ? Format.rate(v, unit: unit) : Format.rateCompact(v, unit: unit)) }
         let up = format(n.up), down = format(n.down)
         let upTop = o.firstOnTop
@@ -539,7 +630,7 @@ struct WidgetView: View {
 
     private func singleRate(_ arrow: String, _ value: String, _ arrowColor: Color) -> some View {
         HStack(spacing: 1) {
-            if o.glyph != .none { Text(arrow).font(BarFont.font(11, 400, ui: ui)).foregroundStyle(arrowColor) }
+            if o.glyph != .none { BarText(arrow, font: BarFont.font(11, 400, ui: ui)).foregroundStyle(arrowColor) }
             FixedText(text: value, template: o.showUnit ? "999 KB/s" : "999K", font: BarFont.font(12, 400, ui: ui))
         }
     }
@@ -548,29 +639,28 @@ struct WidgetView: View {
         let d = s.disk
         let colored = (o.color == .colored || globallyColored) && tone.color == nil && !preview
         let format = { (v: Double) in o.showUnit ? Format.rate(v) : Format.rateCompact(v) }
-        let rows = [(MenuBarText.readLetter, format(d.read), colored ? Theme.palette(.blue) : Color.primary),
-                    (MenuBarText.writeLetter, format(d.write), colored ? Theme.palette(.purple) : Color.primary)]
+        let rows = [(MenuBarText.readLetter, format(d.read), colored ? Theme.palette(.blue) : Theme.barInk),
+                    (MenuBarText.writeLetter, format(d.write), colored ? Theme.palette(.purple) : Theme.barInk)]
         let ordered = o.firstOnTop ? rows : rows.reversed()
-        let font = BarFont.font(8, 300, ui: ui)
+        let font = BarFont.twoLine(ui: ui)
         return Group {
             if o.layout == .twoLine {
                 Grid(alignment: .leading, horizontalSpacing: 2, verticalSpacing: 0) {
                     ForEach(ordered.indices, id: \.self) { i in
                         GridRow {
-                            Text(ordered[i].0).font(font).foregroundStyle(ordered[i].2.opacity(colored ? 1 : 0.55))
+                            BarText(ordered[i].0, font: font).foregroundStyle(ordered[i].2.opacity(colored ? 1 : 0.55))
                             FixedText(text: ordered[i].1, template: o.showUnit ? "999 MB/s" : "999M", font: font)
                         }
-                        .frame(height: 8.5)
+                        .frame(height: BarFont.twoLineRow)
                     }
                 }
             } else {
                 HStack(spacing: 4) {
                     ForEach(ordered.indices, id: \.self) { i in
                         HStack(spacing: 2) {
-                            Text(ordered[i].0).foregroundStyle(ordered[i].2.opacity(colored ? 1 : 0.55))
+                            BarText(ordered[i].0, font: BarFont.font(11, 400, ui: ui)).foregroundStyle(ordered[i].2.opacity(colored ? 1 : 0.55))
                             FixedText(text: ordered[i].1, template: o.showUnit ? "999 MB/s" : "999M", font: BarFont.font(11, 400, ui: ui))
                         }
-                        .font(BarFont.font(11, 400, ui: ui))
                     }
                 }
             }
@@ -590,8 +680,8 @@ struct WidgetView: View {
         }
         let peak = max(first.max() ?? 0, second.max() ?? 0, module == .network ? 10_000 : 1_000_000)
         return MirrorTile(first: first.map { $0 / peak }, second: second.map { $0 / peak },
-                          firstColor: colored ? Theme.palette(o.firstColor) : (tone.color ?? .primary),
-                          secondColor: colored ? Theme.palette(o.secondColor) : (tone.color ?? .primary),
+                          firstColor: colored ? Theme.palette(o.firstColor) : (tone.color ?? Theme.barInk),
+                          secondColor: colored ? Theme.palette(o.secondColor) : (tone.color ?? Theme.barInk),
                           boxed: o.boxed, points: points)
     }
 
@@ -626,7 +716,7 @@ struct WidgetView: View {
             BatteryGlyph(level: b.level, charging: o.showBolt && b.isCharging, fill: fill)
             if showPercent { FixedText(text: Format.percent(b.level), template: "100%", font: valueFont) }
             if o.showTime, let time = WidgetView.batteryTime(b, prefs) {
-                Text(time).font(BarFont.font(11, 400, ui: ui)).opacity(0.7)
+                BarText(time, font: BarFont.font(11, 400, ui: ui)).opacity(0.7)
             }
         }
     }
@@ -640,13 +730,13 @@ struct WidgetView: View {
         let b = s.battery
         let percent = Format.percent(b.level)
         let time = WidgetView.batteryTime(b, prefs) ?? L10n.Common.dash
-        let font = BarFont.font(8, 300, ui: ui)
+        let font = BarFont.twoLine(ui: ui)
         return Group {
             switch o.details {
             case .percentAndTime:
                 VStack(alignment: .trailing, spacing: 0) {
-                    FixedText(text: percent, template: "100%", font: font).frame(height: 8)
-                    FixedText(text: time, template: "10:00", font: font).frame(height: 8)
+                    FixedText(text: percent, template: "100%", font: font).frame(height: BarFont.twoLineRow)
+                    FixedText(text: time, template: "10:00", font: font).frame(height: BarFont.twoLineRow)
                 }
             case .percent: FixedText(text: percent, template: "100%", font: valueFont)
             case .time: FixedText(text: time, template: "10:00", font: valueFont)
@@ -661,7 +751,7 @@ struct WidgetView: View {
         return HStack(spacing: 2) {
             if o.showIcon { LineIcon(d: tone == .crit ? Icons.sensorsHot : Icons.sensors, size: 16, lineWidth: 1.4).foregroundStyle(c) }
             FixedText(text: text, template: "100°", font: valueFont)
-                .foregroundStyle(o.showIcon ? (tone.color ?? .primary) : c)
+                .foregroundStyle(o.showIcon ? (tone.color ?? Theme.barInk) : c)
         }
     }
 
@@ -685,27 +775,27 @@ struct WidgetView: View {
             (Module.cpu.widgetLabel, s.sensors.cpuAverage.map { Format.temperature($0, unit: unit) } ?? L10n.Common.dash),
             (Module.gpu.widgetLabel, s.sensors.value(.gpu).map { Format.temperature($0, unit: unit) } ?? L10n.Common.dash),
         ]
-        let font = o.monospaced ? BarFont.font(8, 300, ui: ui) : (ui ? Fonts.ui(8, 300) : .system(size: 8, weight: .light))
+        var font = BarFont.font(10, 300, ui: ui)
+        font.monospaced = o.monospaced
         let align: Alignment = o.align == .leading ? .leading : o.align == .trailing ? .trailing : .center
         return Group {
             if o.layout == .twoLine {
                 Grid(alignment: .leading, horizontalSpacing: 3, verticalSpacing: 0) {
                     ForEach(rows.indices, id: \.self) { i in
                         GridRow {
-                            Text(rows[i].0).font(font).opacity(0.55)
+                            BarText(rows[i].0, font: font).opacity(0.55)
                             FixedText(text: rows[i].1, template: "100°", font: font, alignment: align)
                         }
-                        .frame(height: 8)
+                        .frame(height: BarFont.twoLineRow)
                     }
                 }
             } else {
                 HStack(spacing: 4) {
                     ForEach(rows.indices, id: \.self) { i in
                         HStack(spacing: 2) {
-                            Text(rows[i].0).opacity(0.55)
-                            Text(rows[i].1)
+                            BarText(rows[i].0, font: BarFont.font(11, 400, ui: ui)).opacity(0.55)
+                            BarText(rows[i].1, font: BarFont.font(11, 400, ui: ui))
                         }
-                        .font(BarFont.font(11, 400, ui: ui))
                     }
                 }
             }
@@ -738,7 +828,7 @@ struct CombinedMenuBarView: View {
             }
             ForEach(modules) { m in
                 column(m, s, prefs)
-                    .foregroundStyle(MenuBarText.tone(m, s, prefs).color ?? .primary)
+                    .foregroundStyle(MenuBarText.tone(m, s, prefs).color ?? Theme.barInk)
             }
         }
         .padding(.horizontal, 6)
@@ -760,9 +850,9 @@ struct CombinedMenuBarView: View {
                 .opacity(offline ? 0.45 : 1)
         default:
             VStack(spacing: -1) {
-                Text(m.compactLabel).font(.system(size: 7, weight: .light)).kerning(0.3)
+                BarText(m.compactLabel, font: BarFont.font(7, 300, ui: false), kerning: 0.3)
                 FixedText(text: MenuBarText.shortValue(m, s, prefs), template: m == .sensors ? "100°" : "100%",
-                          font: .system(size: 12, weight: tone.emphasized ? .semibold : .regular).monospacedDigit(), alignment: .center)
+                          font: BarFont.font(12, tone.emphasized ? 600 : 400, ui: false), alignment: .center)
             }
             .frame(height: 18)
         }

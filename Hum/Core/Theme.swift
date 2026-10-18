@@ -68,6 +68,9 @@ enum Theme {
     static let tile = Color.dyn(RGBA(29, 29, 31, 0.08), RGBA(245, 245, 247, 0.1))
     static let bar = Color.dyn(RGBA(255, 255, 255, 0.5), RGBA(30, 30, 32, 0.5))
     static let barFg = Color.dyn(RGBA(0x1D1D1D), RGBA(0xF2F2F2))
+    /// Menu bar ink: opaque black or white like the system's own menu bar text (`.primary` is
+    /// 85% opaque, which rendered the items grey).
+    static let barInk = Color.dyn(RGBA(0x000000), RGBA(0xFFFFFF))
 
     static let ink = Color.dyn(RGBA(0x1D1D1D), RGBA(0xF2F2F2))
     static let onInk = Color.dyn(RGBA(0xFFFFFF), RGBA(0x1D1D1D))

@@ -6,8 +6,8 @@ import SwiftUI
 ///
 /// Each tick the SwiftUI item is rendered once into an image and handed to the button. With
 /// several displays AppKit keeps a copy of every item per menu bar; an image is cheap to copy,
-/// a live SwiftUI view would be laid out again for each copy. Monochrome items are template
-/// images, so each menu bar tints them for its own light or dark appearance.
+/// a live SwiftUI view would be laid out again for each copy. Monochrome items are drawn as a
+/// shape filled at draw time with each menu bar's own text color (white or black).
 final class StatusBarController: NSObject {
     static let shared = StatusBarController()
 
@@ -98,6 +98,7 @@ final class StatusBarController: NSObject {
         button.action = #selector(clicked(_:))
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         button.identifier = NSUserInterfaceItemIdentifier(module?.rawValue ?? "combined")
+        button.addSubview(StatusContentView())
         items.append((module, item))
     }
 
@@ -123,11 +124,13 @@ final class StatusBarController: NSObject {
             let key = RendererKey(index: index, module: entry.module, template: !colored, dark: dark, height: height)
             let renderer = renderers[key] ?? StatusImage(module: entry.module, template: !colored, dark: dark, height: height)
             renderers[key] = renderer
-            guard let (image, bytes) = renderer.render() else { continue }
+            guard let (picture, size, bytes) = renderer.render(),
+                  let content = button.subviews.lazy.compactMap({ $0 as? StatusContentView }).first else { continue }
             if bytes != lastBytes[index] {
                 lastBytes[index] = bytes
-                button.image = image
-                if abs(entry.item.length - image.size.width) > 0.5 { entry.item.length = image.size.width }
+                content.show(picture, asShape: !colored)
+                content.frame = NSRect(x: 0, y: ((button.bounds.height - size.height) / 2).rounded(), width: size.width, height: size.height)
+                if abs(entry.item.length - size.width) > 0.5 { entry.item.length = size.width }
             }
             if button.accessibilityLabel() != label { button.setAccessibilityLabel(label) }
         }
@@ -189,27 +192,91 @@ final class StatusImage {
 
     init(module: Module?, template: Bool, dark: Bool, height: CGFloat) {
         self.template = template
-        appearance = NSAppearance(named: template || !dark ? .aqua : .darkAqua)!
+        // Rendered in the bar's appearance even as a shape, so text gets the same smoothing as
+        // the system's (light text on a dark bar comes out heavier).
+        appearance = NSAppearance(named: dark ? .darkAqua : .aqua)!
         scale = NSScreen.screens.map(\.backingScaleFactor).max() ?? 2
         let view: AnyView = module.map { AnyView(MenuBarItemView(module: $0)) } ?? AnyView(CombinedMenuBarView())
         renderer = MainActor.assumeIsolated {
             let r = ImageRenderer(content: AnyView(view
                 .frame(height: height)
-                .environment(\.colorScheme, template || !dark ? .light : .dark)))
+                .environment(\.colorScheme, dark ? .dark : .light)))
             r.scale = NSScreen.screens.map(\.backingScaleFactor).max() ?? 2
             return r
         }
     }
 
-    /// The image plus its raw pixels, for change detection. Template images keep only alpha.
-    func render() -> (NSImage, Data)? {
+    /// The picture, its size in points and its raw pixels (for change detection). Drawn with
+    /// font smoothing on, like the system's own menu bar text.
+    func render() -> (CGImage, NSSize, Data)? {
         var cg: CGImage?
+        let scale = scale
         MainActor.assumeIsolated {
-            appearance.performAsCurrentDrawingAppearance { cg = renderer.cgImage }
+            appearance.performAsCurrentDrawingAppearance {
+                renderer.render { size, draw in
+                    let w = Int((size.width * scale).rounded(.up)), h = Int((size.height * scale).rounded(.up))
+                    guard w > 0, h > 0,
+                          let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+                                              space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                              bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return }
+                    ctx.scaleBy(x: scale, y: scale)
+                    ctx.setAllowsFontSmoothing(true)
+                    ctx.setShouldSmoothFonts(true)
+                    draw(ctx)
+                    cg = ctx.makeImage()
+                }
+            }
         }
         guard let cg, let data = cg.dataProvider?.data as Data? else { return nil }
-        let image = NSImage(cgImage: cg, size: NSSize(width: CGFloat(cg.width) / scale, height: CGFloat(cg.height) / scale))
-        image.isTemplate = template
-        return (image, data)
+        let size = NSSize(width: CGFloat(cg.width) / scale, height: CGFloat(cg.height) / scale)
+        return (cg, size, data)
+    }
+}
+
+/// Draws an item inside its status bar button, as Stats does. A monochrome item is a shape
+/// filled with the system text color, which the menu bar renders as brightly as its own text
+/// (a template image or plain white comes out dimmer); colored items are drawn as they are.
+final class StatusContentView: NSView {
+    private var picture: CGImage?
+    private var shape: CGImage?
+
+    func show(_ image: CGImage, asShape: Bool) {
+        if asShape {
+            shape = Self.coverage(of: image)
+            picture = nil
+        } else {
+            picture = image
+            shape = nil
+        }
+        needsDisplay = true
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+        if let picture {
+            ctx.draw(picture, in: bounds)
+        } else if let shape {
+            ctx.saveGState()
+            ctx.clip(to: bounds, mask: shape)
+            NSColor.textColor.setFill()
+            bounds.fill()
+            ctx.restoreGState()
+        }
+    }
+
+    /// The image's alpha as a grayscale clip mask.
+    private static func coverage(of image: CGImage) -> CGImage? {
+        let w = image.width, h = image.height
+        guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w,
+                                  space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.alphaOnly.rawValue) else { return nil }
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        guard let alpha = ctx.data else { return nil }
+        let bytes = Data(bytes: alpha, count: w * h)
+        guard let provider = CGDataProvider(data: bytes as CFData) else { return nil }
+        return CGImage(width: w, height: h, bitsPerComponent: 8, bitsPerPixel: 8, bytesPerRow: w,
+                       space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
+                       provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
     }
 }
