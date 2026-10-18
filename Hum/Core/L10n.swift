@@ -505,7 +505,6 @@ enum L10n {
         static var menubarGroup: String { tr("settings.menubarGroup") }
         static var iconStyle: String { tr("settings.iconStyle") }
         static var panelGroup: String { tr("settings.panelGroup") }
-        static var showValue: String { tr("settings.showValue") }
         static var graphContent: String { tr("settings.graphContent") }
         static var totalUsage: String { tr("settings.totalUsage") }
         static var userSystem: String { tr("settings.userSystem") }
@@ -525,7 +524,6 @@ enum L10n {
         static var readWrite: String { tr("settings.readWrite") }
         static var whichDisk: String { tr("settings.whichDisk") }
         static var startupDisk: String { tr("settings.startupDisk") }
-        static var showTimeRemaining: String { tr("settings.showTimeRemaining") }
         static var showBolt: String { tr("settings.showBolt") }
         static var colorWhenLow: String { tr("settings.colorWhenLow") }
         static var whichSensor: String { tr("settings.whichSensor") }
@@ -710,7 +708,6 @@ enum L10n {
         static var readTop: String { tr("widget.readTop") }
         static var writeTop: String { tr("widget.writeTop") }
         static var showIcon: String { tr("widget.showIcon") }
-        static var showPercent: String { tr("widget.showPercent") }
         static var showSymbol: String { tr("widget.showSymbol") }
         static var singleLine: String { tr("widget.singleLine") }
         static var twoLine: String { tr("widget.twoLine") }

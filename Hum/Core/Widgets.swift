@@ -1,17 +1,15 @@
 import Foundation
 
-/// A menu bar widget. Like Stats, a module can show several at once, each as its own status
-/// item or merged into one.
+/// A piece of a module's menu bar item. Icons, graphics and numbers are separate pieces that
+/// sit side by side in the order they were picked, so "icon + number" or "graph + number" is
+/// just two of them.
 enum WidgetKind: String, Codable, CaseIterable, Identifiable {
-    case label, mini, line, bar, pie, tacho, icon
-    case ring, memory
-    case speed, chart, state
-    case value
-    case battery, details
-    case temp, fan, stack
-    /// From the design's pick sheet: an icon with the value, a stacked label beside a graph, a
-    /// capsule meter, two readings, a status dot, the number inside a battery, battery and time.
-    case iconValue, labelLine, pill, pair, dot, inside, time
+    // Icons and graphics
+    case icon, label, line, bar, pie, tacho, ring, pill, dot, battery, chart, state
+    // Numbers
+    case value, mini, memory, speed, details, time, fan, stack, pair, inside
+    /// Earlier pieces that combined an icon or graphic with a number; split up when settings load.
+    case temp, iconValue, labelLine
 
     var id: String { rawValue }
 }
@@ -20,38 +18,35 @@ extension Module {
     /// Widgets this module offers, in the order the settings strip shows them.
     var widgetKinds: [WidgetKind] {
         switch self {
-        // The pick sheet's styles in its order, then the plain label and icon.
-        case .cpu: return [.iconValue, .line, .mini, .labelLine, .bar, .pie, .tacho, .pill, .label, .icon]
-        case .gpu: return [.iconValue, .line, .mini, .bar, .ring, .pair, .tacho, .label, .icon]
-        case .memory: return [.bar, .ring, .mini, .memory, .dot, .line, .iconValue, .label, .icon]
-        case .network: return [.label, .speed, .chart, .state, .icon]
-        case .disk: return [.value, .bar, .speed, .chart, .mini, .pie, .iconValue, .label, .icon]
-        case .battery: return [.battery, .inside, .time, .details, .iconValue, .ring, .bar, .label, .mini, .icon]
-        case .sensors: return [.temp, .value, .fan, .stack, .bar, .pair, .iconValue, .label, .mini]
+        // The icon and the number first, then the graphics, then the other readings.
+        case .cpu: return [.icon, .value, .line, .bar, .pie, .tacho, .pill, .label, .mini]
+        case .gpu: return [.icon, .value, .line, .bar, .ring, .tacho, .pair, .label, .mini]
+        case .memory: return [.icon, .value, .bar, .ring, .dot, .line, .memory, .label, .mini]
+        case .network: return [.icon, .speed, .chart, .state, .label]
+        case .disk: return [.icon, .value, .bar, .pie, .chart, .speed, .label, .mini]
+        case .battery: return [.icon, .value, .battery, .inside, .time, .details, .ring, .bar, .label, .mini]
+        case .sensors: return [.icon, .value, .fan, .bar, .stack, .label, .mini]
         }
     }
 
     var defaultWidgets: [WidgetKind] {
         switch self {
-        case .cpu: return [.line]
+        case .cpu: return [.line, .value]
         case .gpu: return []
-        case .memory: return [.bar]
+        case .memory: return [.bar, .value]
         case .network: return [.speed]
         case .disk: return []
-        case .battery: return [.battery]
-        case .sensors: return [.temp, .fan]
+        case .battery: return [.battery, .value]
+        case .sensors: return [.icon, .value, .fan]
         }
     }
 
-    /// Added when the module is switched on with nothing selected.
-    var primaryWidget: WidgetKind {
+    /// Added when the module is switched on with nothing picked.
+    var primaryWidgets: [WidgetKind] {
         switch self {
-        case .cpu, .gpu: return .line
-        case .memory: return .bar
-        case .network: return .speed
-        case .disk: return .value
-        case .battery: return .battery
-        case .sensors: return .temp
+        case .gpu: return [.line, .value]
+        case .disk: return [.icon, .value]
+        default: return defaultWidgets
         }
     }
 }
@@ -152,20 +147,18 @@ struct WidgetOptions: Codable, Equatable {
         case (.disk, .speed): o.showUnit = false
         case (.disk, .chart): o.secondColor = .purple
         case (.network, .state): o.firstColor = .green; o.secondColor = .red
-        case (.gpu, .tacho): o.showValue = false
-        // The pick sheet pairs these with a cylinder, a bolt and a flame.
-        case (.disk, .iconValue), (.battery, .iconValue), (.sensors, .iconValue): o.icon = 2
         default: break
         }
         return o
     }
 }
 
-/// A module's menu bar widgets: which are on (in order), their options, merged or not.
+/// A module's menu bar widgets: which are on, in the order they sit; their options; whether
+/// they sit tight together.
 struct ModuleWidgets: Codable, Equatable {
     var enabled: [WidgetKind]
     var options: [String: WidgetOptions] = [:]
-    var merged = false
+    var merged = true
 }
 
 extension Preferences {
@@ -176,9 +169,72 @@ extension Preferences {
     /// (disk, GPU) keep one, so they don't vanish. Runs once on saved settings.
     mutating func migrateWidgets() {
         for m in Module.allCases where widgetState[m.rawValue] == nil && isVisible(m) && m.defaultWidgets.isEmpty {
-            widgetState[m.rawValue] = ModuleWidgets(enabled: [m.primaryWidget])
+            widgetState[m.rawValue] = ModuleWidgets(enabled: m.primaryWidgets)
         }
         general.widgetsMigrated = true
+    }
+
+    /// Widgets used to pair a graphic with its number; now each is its own piece. Splits saved
+    /// picks once, keeping how they looked: "icon and value" becomes icon + value, a graph that
+    /// showed its number becomes graph + value, and so on. The pieces sit tight together.
+    mutating func splitCompoundWidgets() {
+        for m in Module.allCases {
+            guard var state = widgetState[m.rawValue] else { continue }
+            var options = state.options
+            func old(_ k: WidgetKind) -> WidgetOptions { options[k.rawValue] ?? .defaults(m, k) }
+            func edit(_ k: WidgetKind, _ change: (inout WidgetOptions) -> Void) {
+                var o = old(k)
+                change(&o)
+                options[k.rawValue] = o
+            }
+            var out: [WidgetKind] = []
+            func add(_ k: WidgetKind) { if !out.contains(k) { out.append(k) } }
+            for kind in state.enabled {
+                let o = old(kind)
+                switch kind {
+                case .iconValue:
+                    edit(.icon) { $0.icon = o.icon }
+                    add(.icon); add(.value)
+                case .labelLine:
+                    add(.label); add(.line)
+                case .temp:
+                    if o.showIcon { add(.icon) }
+                    edit(.value) { $0.color = o.color }
+                    add(.value)
+                case .pair where m == .sensors:
+                    add(.icon); add(.value); add(.fan)
+                case .value where m == .disk:
+                    if o.showIcon { add(.icon) }
+                    add(.value)
+                case .battery:
+                    add(.battery)
+                    if o.showPercent {
+                        edit(.value) { $0.hidePercentWhenFull = o.hidePercentWhenFull }
+                        add(.value)
+                    }
+                    if o.showTime { add(.time) }
+                case .time:
+                    add(.battery); add(.time)
+                case .line, .pie, .tacho:
+                    if o.showLabel { add(.label) }
+                    add(kind)
+                    if o.showValue { add(.value) }
+                case .bar where m == .cpu:
+                    if o.showLabel { add(.label) }
+                    add(.bar)
+                case .bar, .ring, .pill, .dot:
+                    add(kind)
+                    if o.showValue { add(.value) }
+                default:
+                    add(kind)
+                }
+            }
+            state.enabled = out.filter(m.widgetKinds.contains)
+            state.options = options
+            state.merged = true
+            widgetState[m.rawValue] = state
+        }
+        general.widgetsSplit = true
     }
 
     /// The "在菜单栏显示" switch. Off keeps the picked widgets for next time; on brings them
@@ -186,13 +242,23 @@ extension Preferences {
     mutating func setInMenubar(_ m: Module, _ on: Bool) {
         setVisible(m, on)
         if on && widgets(m).isEmpty {
-            for kind in m.defaultWidgets.isEmpty ? [m.primaryWidget] : m.defaultWidgets { setWidget(kind, true, for: m) }
+            for kind in m.primaryWidgets { setWidget(kind, true, for: m) }
         }
     }
 
+    /// The picked widgets in the order they sit (the order they were picked or dragged into).
     func widgets(_ m: Module) -> [WidgetKind] {
         let enabled = widgetState[m.rawValue]?.enabled ?? initialWidgets(m)
-        return m.widgetKinds.filter(enabled.contains)
+        return enabled.filter(m.widgetKinds.contains)
+    }
+
+    /// Moves a picked widget to where another one sits.
+    mutating func moveWidget(_ kind: WidgetKind, to target: WidgetKind, for m: Module) {
+        var state = widgetState[m.rawValue] ?? ModuleWidgets(enabled: initialWidgets(m))
+        guard let from = state.enabled.firstIndex(of: kind), let to = state.enabled.firstIndex(of: target), from != to else { return }
+        state.enabled.remove(at: from)
+        state.enabled.insert(kind, at: to)
+        widgetState[m.rawValue] = state
     }
 
     mutating func setWidget(_ kind: WidgetKind, _ on: Bool, for m: Module) {
@@ -212,7 +278,7 @@ extension Preferences {
         widgetState[m.rawValue] = state
     }
 
-    func widgetsMerged(_ m: Module) -> Bool { widgetState[m.rawValue]?.merged ?? false }
+    func widgetsMerged(_ m: Module) -> Bool { widgetState[m.rawValue]?.merged ?? true }
 
     mutating func setWidgetsMerged(_ on: Bool, _ m: Module) {
         var state = widgetState[m.rawValue] ?? ModuleWidgets(enabled: initialWidgets(m))

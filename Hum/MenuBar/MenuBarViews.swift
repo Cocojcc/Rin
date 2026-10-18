@@ -551,7 +551,8 @@ struct MenuBarItemView: View {
         let prefs = settings.prefs
         let s = monitor.snapshot
         let tone = MenuBarText.tone(module, s, prefs)
-        HStack(spacing: prefs.widgetsMerged(module) ? 4 : 10) {
+        // Picked pieces sit tight, the way an icon sits beside its number.
+        HStack(spacing: prefs.widgetsMerged(module) ? 3 : 8) {
             ForEach(prefs.widgets(module)) { WidgetView(module: module, kind: $0, prefs: prefs) }
         }
         // No side padding, as Stats draws its items: the menu bar adds its own spacing.
@@ -580,11 +581,7 @@ struct WidgetView: View {
 
     var body: some View {
         let _ = monitor.tick
-        HStack(spacing: 3) {
-            if o.showLabel && [.line, .bar, .pie, .tacho].contains(kind) { VerticalLabel(text: labelText) }
-            content
-        }
-        .fixedSize()
+        content.fixedSize()
     }
 
     private var labelText: String { o.labelText.isEmpty ? module.widgetLabel : o.labelText }
@@ -672,64 +669,40 @@ struct WidgetView: View {
 
     @ViewBuilder private var content: some View {
         switch kind {
+        // Icons and graphics: never with a number of their own.
+        case .icon: MenuIconView(icon: MenuIcons.icon(module, o.icon), module: module).foregroundStyle(color(.mono))
         case .label: VerticalLabel(text: labelText)
-        case .mini: mini
-        case .line: line
+        case .line, .labelLine: line
         case .bar: bar
         case .pie:
-            HStack(spacing: 3) {
-                if module == .cpu {
-                    SplitRing(segments: [(s.cpu.system, 0.55), (s.cpu.user, 1)], color: color(.mono))
-                } else {
-                    PieMeter(fraction: fraction, color: o.monochrome ? Theme.barInk : color(.byValue))
-                }
-                if o.showValue { value }
+            if module == .cpu {
+                SplitRing(segments: [(s.cpu.system, 0.55), (s.cpu.user, 1)], color: color(.mono))
+            } else {
+                PieMeter(fraction: fraction, color: o.monochrome ? Theme.barInk : color(.byValue))
             }
-        case .tacho:
-            HStack(spacing: 3) {
-                TachoMeter(fraction: fraction, color: o.monochrome ? Theme.barInk : color(.byValue))
-                if o.showValue { value }
-            }
-        case .icon: MenuIconView(icon: MenuIcons.icon(module, o.icon), module: module).foregroundStyle(color(.mono))
+        case .tacho: TachoMeter(fraction: fraction, color: o.monochrome ? Theme.barInk : color(.byValue))
         case .ring:
-            HStack(spacing: 3) {
-                if module == .memory {
-                    RingMeter(fraction: fraction, color: color(o.color))
-                } else {
-                    SplitRing(segments: [(fraction, 1)], color: color(o.color))
-                }
-                if o.showValue { value }
+            if module == .memory {
+                RingMeter(fraction: fraction, color: color(o.color))
+            } else {
+                SplitRing(segments: [(fraction, 1)], color: color(o.color))
             }
-        case .iconValue: iconValue
-        case .labelLine:
-            HStack(spacing: 3) {
-                VerticalLabel(text: labelText)
-                GraphTile(values: monitor.history.last(metric, count: max(10, o.points)).map { $0 / 100 }, color: color(o.color),
-                          boxed: o.boxed, points: max(10, o.points))
-            }
-        case .pill:
-            HStack(spacing: 3) {
-                PillMeter(fraction: fraction, color: color(o.color), width: 18, height: 9)
-                if o.showValue { value }
-            }
-        case .pair: pair
-        case .dot:
-            HStack(spacing: 3) {
-                Circle().fill(color(o.color)).frame(width: 7, height: 7)
-                if o.showValue { value }
-            }
-        case .inside: batteryNumber
-        case .time: batteryTime
-        case .memory: memoryPair
-        case .speed: module == .network ? AnyView(networkSpeed) : AnyView(diskSpeed)
+        case .pill: PillMeter(fraction: fraction, color: color(o.color), width: module == .memory ? 22 : 18, height: module == .memory ? 10 : 9)
+        case .dot: Circle().fill(color(o.color)).frame(width: 7, height: 7)
+        case .battery: battery
         case .chart: chart
         case .state: state
-        case .value: module == .sensors ? AnyView(temperatureOnly) : AnyView(diskValue)
-        case .battery: battery
+        // Numbers
+        case .value, .temp, .iconValue: number
+        case .mini: mini
+        case .memory: memoryPair
+        case .speed: module == .network ? AnyView(networkSpeed) : AnyView(diskSpeed)
         case .details: batteryDetails
-        case .temp: temperature
+        case .time: FixedText(text: WidgetView.batteryTime(s.battery, prefs) ?? L10n.Common.dash, template: "10:00", font: valueFont)
         case .fan: fan
         case .stack: sensorStack
+        case .pair: pair
+        case .inside: batteryNumber
         }
     }
 
@@ -755,7 +728,6 @@ struct WidgetView: View {
             } else {
                 GraphTile(values: monitor.history.last(metric, count: points).map { $0 / 100 }, color: graphColor, boxed: o.boxed, points: points)
             }
-            if o.showValue { FixedText(text: valueText, template: valueTemplate, font: valueFont) }
         }
     }
 
@@ -765,24 +737,32 @@ struct WidgetView: View {
             let cores = s.cpu.perCore
             BarRow(values: cores, colors: cores.map { color(o.color, $0) }, boxed: o.boxed)
         case .memory:
-            HStack(spacing: 4) {
-                PillMeter(fraction: fraction, color: color(o.color))
-                if o.showValue { FixedText(text: valueText, template: valueTemplate, font: valueFont) }
-            }
+            PillMeter(fraction: fraction, color: color(o.color))
         case .disk:
-            HStack(spacing: 4) {
-                PillMeter(fraction: fraction, color: color(o.color), width: 18, height: 9)
-                if o.showValue { FixedText(text: Format.percent(fraction), template: "100%", font: valueFont) }
-            }
+            PillMeter(fraction: fraction, color: color(o.color), width: 18, height: 9)
         default:
-            HStack(spacing: 3) {
-                VerticalMeter(fraction: fraction, color: color(o.color), boxed: o.boxed, radius: module == .sensors ? 2.5 : 1.5)
-                if o.showValue { value }
-            }
+            VerticalMeter(fraction: fraction, color: color(o.color), boxed: o.boxed, radius: module == .sensors ? 2.5 : 1.5)
         }
     }
 
-    private var value: some View { FixedText(text: valueText, template: valueTemplate, font: valueFont) }
+    /// The module's number: percent, gigabytes, free space or temperature, per its settings.
+    @ViewBuilder private var number: some View {
+        switch module {
+        case .disk: diskValue
+        case .sensors:
+            let reading = MenuBarText.sensorValue(s.sensors, prefs.sensors.sensor)
+            FixedText(text: reading.map { Format.temperature($0, unit: prefs.general.temperatureUnit) } ?? L10n.Common.dash,
+                      template: "100°", font: valueFont)
+                .foregroundStyle(color(o.color == .byValue ? .byValue : .mono))
+        case .battery:
+            let b = s.battery
+            if !(o.hidePercentWhenFull && b.onAC && (b.isCharged || b.level >= 0.99)) {
+                FixedText(text: Format.percent(b.level), template: "100%", font: valueFont)
+            }
+        default:
+            FixedText(text: valueText, template: valueTemplate, font: valueFont)
+        }
+    }
 
     /// Two figures stacked in the small two-row type.
     private func twoRows(_ rows: [String], template: String) -> some View {
@@ -794,34 +774,12 @@ struct WidgetView: View {
         }
     }
 
-    private var iconValue: some View {
-        HStack(spacing: 3) {
-            MenuIconView(icon: MenuIcons.icon(module, o.icon), module: module)
-            switch module {
-            case .memory: FixedText(text: MenuBarText.gigabytes(s.memory.used, binary: true), template: "99.9G", font: valueFont)
-            case .disk: twoRows([Format.rateCompact(s.disk.read), Format.rateCompact(s.disk.write)], template: "999M")
-            default: value
-            }
-        }
-        .foregroundStyle(color(.mono))
-    }
-
     @ViewBuilder private var pair: some View {
         switch module {
         case .gpu:
             twoRows([Format.percent(s.gpu.utilization), MenuBarText.gigabytes(s.gpu.memoryUsed)], template: "99.9G")
-        case .sensors:
-            let unit = prefs.general.temperatureUnit
-            let fan = s.sensors.fans.first
-            HStack(spacing: 2) {
-                LineIcon(d: Icons.sensors, size: 16, lineWidth: 1.4)
-                FixedText(text: MenuBarText.sensorValue(s.sensors, prefs.sensors.sensor).map { Format.temperature($0, unit: unit) } ?? L10n.Common.dash,
-                          template: "100°", font: valueFont)
-                LineIcon(d: Icons.fan, size: 14, lineWidth: 1.3).padding(.leading, 4)
-                FixedText(text: fan.map { "\(Int($0.rpm.rounded()))" } ?? L10n.Common.dash, template: "8888", font: valueFont)
-            }
         default:
-            value
+            number
         }
     }
 
@@ -833,22 +791,6 @@ struct WidgetView: View {
     private var batteryNumber: some View {
         BatteryNumber(level: s.battery.level, text: "\(Int((s.battery.level * 100).rounded()))",
                       tint: batteryLow ? Color(nsColor: Theme.barCrit) : (globallyColored && !preview ? Theme.barBat : nil))
-    }
-
-    private var batteryTime: some View {
-        let b = s.battery
-        let fill: Color? = batteryLow ? Color(nsColor: Theme.barCrit) : (globallyColored && !preview ? Theme.barBat : nil)
-        return HStack(spacing: 4) {
-            BatteryGlyph(level: b.level, charging: o.showBolt && b.isCharging, fill: fill)
-            FixedText(text: WidgetView.batteryTime(b, prefs) ?? L10n.Common.dash, template: "10:00", font: valueFont)
-        }
-    }
-
-    private var temperatureOnly: some View {
-        let reading = MenuBarText.sensorValue(s.sensors, prefs.sensors.sensor)
-        return FixedText(text: reading.map { Format.temperature($0, unit: prefs.general.temperatureUnit) } ?? L10n.Common.dash,
-                         template: "100°", font: valueFont)
-            .foregroundStyle(color(o.color == .byValue ? .byValue : .mono))
     }
 
     private var memoryPair: some View {
@@ -942,25 +884,12 @@ struct WidgetView: View {
         case .usedPercent: text = volume.map { Format.percent($0.usedFraction) } ?? L10n.Common.dash
         case .readWrite: text = Format.rateCompact(s.disk.read + s.disk.write)
         }
-        return HStack(spacing: 3) {
-            if o.showIcon { LineIcon(d: Icons.disk, size: 14, lineWidth: 1.4).foregroundStyle(color(.mono)) }
-            FixedText(text: text, template: "999G", font: valueFont)
-        }
+        return FixedText(text: text, template: "999G", font: valueFont)
     }
 
     private var battery: some View {
-        let b = s.battery
-        let low = o.colorWhenLow && b.level <= 0.2 && !b.isCharging && !b.onAC
-        let fill: Color? = low ? Color(nsColor: Theme.barCrit) : (globallyColored && !preview ? Theme.barBat : nil)
-        let full = b.onAC && (b.isCharged || b.level >= 0.99)
-        let showPercent = o.showPercent && !(o.hidePercentWhenFull && full)
-        return HStack(spacing: 4) {
-            BatteryGlyph(level: b.level, charging: o.showBolt && b.isCharging, fill: fill)
-            if showPercent { FixedText(text: Format.percent(b.level), template: "100%", font: valueFont) }
-            if o.showTime, let time = WidgetView.batteryTime(b, prefs) {
-                BarText(time, font: BarFont.font(11, 400, ui: ui)).opacity(0.7)
-            }
-        }
+        let fill: Color? = batteryLow ? Color(nsColor: Theme.barCrit) : (globallyColored && !preview ? Theme.barBat : nil)
+        return BatteryGlyph(level: s.battery.level, charging: o.showBolt && s.battery.isCharging, fill: fill)
     }
 
     static func batteryTime(_ b: BatterySample, _ prefs: Preferences) -> String? {
@@ -983,17 +912,6 @@ struct WidgetView: View {
             case .percent: FixedText(text: percent, template: "100%", font: valueFont)
             case .time: FixedText(text: time, template: "10:00", font: valueFont)
             }
-        }
-    }
-
-    private var temperature: some View {
-        let value = MenuBarText.sensorValue(s.sensors, prefs.sensors.sensor)
-        let text = value.map { Format.temperature($0, unit: prefs.general.temperatureUnit) } ?? L10n.Common.dash
-        let c = color(o.color == .byValue ? .byValue : .mono)
-        return HStack(spacing: 2) {
-            if o.showIcon { LineIcon(d: tone == .crit ? Icons.sensorsHot : Icons.sensors, size: 16, lineWidth: 1.4).foregroundStyle(c) }
-            FixedText(text: text, template: "100°", font: valueFont)
-                .foregroundStyle(o.showIcon ? (tone.color ?? Theme.barInk) : c)
         }
     }
 

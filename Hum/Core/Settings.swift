@@ -27,6 +27,8 @@ struct GeneralPrefs: Codable, Equatable {
     var onboarded = false
     /// Set once modules shown before widgets existed got their widget written down.
     var widgetsMigrated = false
+    /// Set once widgets that combined a graphic with its number were split into pieces.
+    var widgetsSplit = false
 }
 
 struct CPUPrefs: Codable, Equatable {
@@ -177,6 +179,7 @@ struct Preferences: Codable, Equatable {
     static func fresh() -> Preferences {
         var p = Preferences()
         p.general.widgetsMigrated = true
+        p.general.widgetsSplit = true
         return p
     }
 
@@ -234,6 +237,7 @@ final class SettingsStore {
             prefs = Preferences.fresh()
         }
         if !prefs.general.widgetsMigrated { prefs.migrateWidgets() }
+        if !prefs.general.widgetsSplit { prefs.splitCompoundWidgets() }
         // Keep every module in the order list, even ones added after the prefs were saved.
         let missing = Module.allCases.filter { !prefs.menubar.order.contains($0) }
         prefs.menubar.order.append(contentsOf: missing)

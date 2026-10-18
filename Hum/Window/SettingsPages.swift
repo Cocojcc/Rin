@@ -358,6 +358,45 @@ struct ModuleDropDelegate: DropDelegate {
     }
 }
 
+/// Picked widgets can be dragged into another order; they sit in the menu bar in that order.
+private struct WidgetReorder: ViewModifier {
+    let module: Module
+    let kind: WidgetKind
+    var picked: Bool
+    @Binding var dragging: WidgetKind?
+
+    func body(content: Content) -> some View {
+        if RenderContext.offscreen || !picked {
+            content
+        } else {
+            content
+                .onDrag {
+                    dragging = kind
+                    return NSItemProvider(object: kind.rawValue as NSString)
+                }
+                .onDrop(of: [UTType.text], delegate: WidgetDropDelegate(module: module, target: kind, dragging: $dragging))
+        }
+    }
+}
+
+private struct WidgetDropDelegate: DropDelegate {
+    let module: Module
+    let target: WidgetKind
+    @Binding var dragging: WidgetKind?
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging, dragging != target else { return }
+        withAnimation(Motion.slide) { SettingsStore.shared.prefs.moveWidget(dragging, to: target, for: module) }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+
+    func performDrop(info: DropInfo) -> Bool {
+        dragging = nil
+        return true
+    }
+}
+
 /// The menu bar as it will look with the current settings, at real size, ending with the
 /// system's Wi-Fi glyph and clock. Modules behind the notch sit under a black notch block.
 struct MenubarPreview: View {
@@ -516,6 +555,7 @@ struct ModuleSettingsPage: View {
 struct WidgetStrip: View {
     let module: Module
     var settings = SettingsStore.shared
+    @State private var dragging: WidgetKind?
 
     var body: some View {
         let prefs = settings.prefs
@@ -533,7 +573,10 @@ struct WidgetStrip: View {
             FlowLayout(spacing: 4) {
                 ForEach(on.map { WidgetSlot.widget($0) } + [.divider] + off.map { .widget($0) }) { item in
                     switch item {
-                    case .widget(let kind): WidgetChip(module: module, kind: kind, on: on.contains(kind), prefs: prefs)
+                    case .widget(let kind):
+                        WidgetChip(module: module, kind: kind, on: on.contains(kind), prefs: prefs)
+                            .opacity(dragging == kind ? 0.4 : 1)
+                            .modifier(WidgetReorder(module: module, kind: kind, picked: on.contains(kind), dragging: $dragging))
                     case .divider: Rectangle().fill(Theme.cross).frame(width: 1, height: 22).padding(.horizontal, 6).frame(height: 36)
                     }
                 }
@@ -684,7 +727,7 @@ struct WidgetsTab: View {
                     .accessibilityAddTraits(.isHeader)
                     if module == .network && kind == .speed {
                         NetworkSpeedOptions()
-                    } else if kind != .pair {
+                    } else if WidgetOptionsGroup.hasOptions(module, kind) {
                         WidgetOptionsGroup(module: module, kind: kind)
                     }
                 }
@@ -833,6 +876,16 @@ struct WidgetOptionsGroup: View {
     let kind: WidgetKind
     var settings = SettingsStore.shared
 
+    /// Pieces with nothing to set show only their title.
+    static func hasOptions(_ module: Module, _ kind: WidgetKind) -> Bool {
+        switch kind {
+        case .time, .pair, .iconValue, .labelLine: return false
+        case .pie: return module != .cpu
+        case .value, .temp: return [.sensors, .disk, .battery].contains(module)
+        default: return true
+        }
+    }
+
     private func bind<T>(_ keyPath: WritableKeyPath<WidgetOptions, T>) -> Binding<T> {
         Binding(get: { settings.prefs.options(module, kind)[keyPath: keyPath] },
                 set: {
@@ -861,9 +914,7 @@ struct WidgetOptionsGroup: View {
                 toggle(L10n.Widget.label, \.showLabel)
                 colorRow()
                 alignRow()
-            case .line:
-                toggle(L10n.Widget.label, \.showLabel)
-                toggle(L10n.Settings.showValue, \.showValue)
+            case .line, .labelLine:
                 if module == .cpu {
                     SettingsRow(title: L10n.Settings.graphContent) {
                         Segmented(label: L10n.Settings.graphContent, options: [(CPUGraphContent.total, L10n.Settings.totalUsage), (.userSystem, L10n.Settings.userSystem)], selection: bind(\.graphContent))
@@ -873,44 +924,23 @@ struct WidgetOptionsGroup: View {
                 colorRow()
                 pointsRow()
             case .bar:
-                if module == .memory || module == .disk {
-                    toggle(L10n.Settings.showValue, \.showValue)
-                } else if module == .cpu {
-                    toggle(L10n.Widget.label, \.showLabel)
-                    toggle(L10n.Widget.boxed, \.boxed)
-                } else {
-                    toggle(L10n.Settings.showValue, \.showValue)
-                    toggle(L10n.Widget.boxed, \.boxed)
-                }
+                if module != .memory && module != .disk { toggle(L10n.Widget.boxed, \.boxed) }
                 colorRow()
             case .pie, .tacho:
-                toggle(L10n.Widget.label, \.showLabel)
-                toggle(L10n.Settings.showValue, \.showValue)
-                if !(kind == .pie && module == .cpu) { toggle(L10n.Widget.monochrome, \.monochrome) }
-            case .icon, .iconValue:
+                toggle(L10n.Widget.monochrome, \.monochrome)
+            case .icon:
                 SettingsRow(title: L10n.Widget.icon) {
                     Segmented(label: L10n.Widget.icon,
                               options: MenuIcons.all(module).indices.map { ($0, L10n.Widget.iconName(module, $0)) }, selection: bind(\.icon), style: .compact,
                               glyph: { i in AnyView(MenuIconView(icon: MenuIcons.icon(module, i), module: module, size: 14).environment(\.widgetUIFont, true)) },
                               glyphWidth: 20)
                 }
-            case .labelLine:
-                toggle(L10n.Widget.boxed, \.boxed)
-                colorRow()
-                pointsRow()
-            case .pill, .dot:
-                toggle(L10n.Settings.showValue, \.showValue)
+            case .pill, .dot, .ring:
                 colorRow()
             case .inside:
                 toggle(L10n.Settings.colorWhenLow, \.colorWhenLow)
-            case .time:
-                toggle(L10n.Settings.showBolt, \.showBolt)
-                toggle(L10n.Settings.colorWhenLow, \.colorWhenLow)
-            case .pair:
+            case .time, .pair, .iconValue:
                 EmptyView()
-            case .ring:
-                toggle(L10n.Settings.showValue, \.showValue)
-                colorRow()
             case .memory:
                 colorRow()
                 toggle(L10n.Widget.showSymbol, \.showSymbol)
@@ -926,7 +956,6 @@ struct WidgetOptionsGroup: View {
                              dot: { $0 == .mono ? Theme.text : Theme.palette(.blue) })
                 }
             case .chart:
-                toggle(L10n.Widget.label, \.showLabel)
                 toggle(L10n.Widget.boxed, \.boxed)
                 paletteRow(module == .network ? L10n.Widget.downloadColor : L10n.Widget.readColor, \.firstColor)
                 paletteRow(module == .network ? L10n.Widget.uploadColor : L10n.Widget.writeColor, \.secondColor)
@@ -934,17 +963,17 @@ struct WidgetOptionsGroup: View {
             case .state:
                 paletteRow(L10n.Widget.connected, \.firstColor)
                 paletteRow(L10n.Widget.disconnected, \.secondColor)
-            case .value where module == .sensors:
-                SettingsRow(title: L10n.Settings.color) {
-                    Segmented(label: L10n.Settings.color, options: [(WidgetColor.mono, L10n.Common.mono), (.byValue, L10n.Settings.byTemperature)], selection: bind(\.color))
+            case .value, .temp:
+                switch module {
+                case .sensors:
+                    SettingsRow(title: L10n.Settings.color) {
+                        Segmented(label: L10n.Settings.color, options: [(WidgetColor.mono, L10n.Common.mono), (.byValue, L10n.Settings.byTemperature)], selection: bind(\.color))
+                    }
+                case .disk: toggle(L10n.Settings.showUnit, \.showUnit)
+                case .battery: toggle(L10n.Widget.hidePercentWhenFull, \.hidePercentWhenFull)
+                default: EmptyView()
                 }
-            case .value:
-                toggle(L10n.Widget.showIcon, \.showIcon)
-                toggle(L10n.Settings.showUnit, \.showUnit)
             case .battery:
-                toggle(L10n.Widget.showPercent, \.showPercent)
-                toggle(L10n.Settings.showTimeRemaining, \.showTime)
-                toggle(L10n.Widget.hidePercentWhenFull, \.hidePercentWhenFull)
                 toggle(L10n.Settings.showBolt, \.showBolt)
                 toggle(L10n.Settings.colorWhenLow, \.colorWhenLow)
             case .details:
@@ -952,11 +981,6 @@ struct WidgetOptionsGroup: View {
                     MenuPill(label: L10n.Widget.detailsContent,
                              options: [(BatteryDetails.percentAndTime, L10n.Widget.percentAndTime), (.percent, L10n.Widget.percentOnly), (.time, L10n.Widget.timeOnly)],
                              selection: bind(\.details))
-                }
-            case .temp:
-                toggle(L10n.Widget.showIcon, \.showIcon)
-                SettingsRow(title: L10n.Settings.color) {
-                    Segmented(label: L10n.Settings.color, options: [(WidgetColor.mono, L10n.Common.mono), (.byValue, L10n.Settings.byTemperature)], selection: bind(\.color))
                 }
             case .fan:
                 toggle(L10n.Widget.showIcon, \.showIcon)

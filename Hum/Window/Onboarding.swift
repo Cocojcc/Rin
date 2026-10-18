@@ -116,7 +116,7 @@ struct OnboardingView: View {
             }
             Spacer(minLength: 0)
             HStack(spacing: 4) {
-                ForEach(settings.prefs.widgets(m).isEmpty ? [m.primaryWidget] : settings.prefs.widgets(m)) {
+                ForEach(settings.prefs.widgets(m).isEmpty ? m.primaryWidgets : settings.prefs.widgets(m)) {
                     WidgetView(module: m, kind: $0, prefs: settings.prefs)
                 }
             }
