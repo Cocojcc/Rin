@@ -4,6 +4,7 @@ import SwiftUI
 struct MainView: View {
     var navigator = Navigator.shared
     var settings = SettingsStore.shared
+    @Namespace private var pageGlass
 
     var body: some View {
         HStack(spacing: 0) {
@@ -13,6 +14,7 @@ struct MainView: View {
         }
         .background(GlassBackground(radius: UIScale.of(18), material: .underWindowBackground))
         .environment(\.accent, settings.prefs.general.accent.colors)
+        .environment(\.pageGlass, pageGlass)
         .ui(13)
         .foregroundStyle(Theme.text)
         .focusEffectDisabled()
@@ -29,9 +31,14 @@ struct PageView: View {
             UIScaled { stack }.frame(maxHeight: .infinity, alignment: .top)
         } else {
             // The scroll view itself stays unscaled; only the page inside it is drawn at UI scale.
-            ScrollView { UIScaled { stack } }
-                .scrollIndicators(.automatic)
-                .id(page)
+            // Pages cross-fade, stacked so the outgoing one keeps its place.
+            ZStack {
+                ScrollView { UIScaled { stack } }
+                    .scrollIndicators(.automatic)
+                    .id(page)
+                    .transition(.opacity)
+            }
+            .animation(Motion.page, value: page)
         }
     }
 
@@ -88,7 +95,10 @@ struct Sidebar: View {
             .padding(.horizontal, 10)
             .padding(.bottom, 18)
 
-            ForEach(pages, id: \.0) { item($0) }
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(pages, id: \.0) { item($0) }
+            }
+            .slidingThumb(navigator.page.sidebarPage) { GlassThumb() }
             Spacer(minLength: 12)
             HStack {
                 footerButton(Icons.gear, lineWidth: 1.3, label: L10n.Sidebar.settings, selected: navigator.page == .settings) {
@@ -127,7 +137,7 @@ struct Sidebar: View {
             .foregroundStyle(on ? Theme.text : Theme.sub)
             .padding(.horizontal, 10)
             .frame(height: 32)
-            .background { if on { GlassThumb() } }
+            .thumbAnchor(on)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -156,6 +166,7 @@ private struct FooterButton: View {
                 .background {
                     if selected { GlassThumb() } else if hovering { Circle().fill(Theme.well) }
                 }
+                .hoverAnimation(hovering)
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -176,5 +187,18 @@ struct AppMark: View {
             .frame(width: size, height: size)
             .background(RoundedRectangle(cornerRadius: size * 0.3, style: .continuous).fill(Theme.ink))
             .accessibilityHidden(true)
+    }
+}
+
+/// Shared by every page, so the glass thumb of a module's monitor / settings toggle can slide
+/// across while one page fades into the other.
+private struct PageGlassKey: EnvironmentKey {
+    static let defaultValue: Namespace.ID? = nil
+}
+
+extension EnvironmentValues {
+    var pageGlass: Namespace.ID? {
+        get { self[PageGlassKey.self] }
+        set { self[PageGlassKey.self] = newValue }
     }
 }

@@ -464,6 +464,7 @@ private struct OverviewCard<Content: View, Footer: View>: View {
             .padding(14)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(hovering ? Theme.well : Theme.panel))
+            .hoverAnimation(hovering)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -672,6 +673,7 @@ struct CPUPage: View {
                             PeakRow(peak: peak, selected: peak.date == selected?.date) { selectedPeak = peak.date }
                         }
                     }
+                    .slidingThumb(selected?.date) { GlassThumb(cornerRadius: 14) }
                     .padding(4)
                     .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
                 }
@@ -1020,7 +1022,7 @@ struct PeakRow: View {
             }
             .padding(.horizontal, 10)
             .frame(height: 46)
-            .background { if selected { GlassThumb(cornerRadius: 14) } }
+            .thumbAnchor(selected)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

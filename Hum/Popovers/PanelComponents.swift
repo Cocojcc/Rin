@@ -29,13 +29,29 @@ struct PanelHeader: View {
     }
 
     private func headerButton(_ d: String, label: String, action: @escaping () -> Void) -> some View {
+        HeaderButton(d: d, label: label, action: action)
+    }
+}
+
+/// Icon button in a dropdown header, tinted under the pointer.
+private struct HeaderButton: View {
+    var d: String
+    var label: String
+    var action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
         Button(action: action) {
             LineIcon(d: d, size: 16, lineWidth: 1.5)
                 .foregroundStyle(Theme.sub)
                 .frame(width: 28, height: 28)
+                .background { if hovering { RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.well) } }
+                .hoverAnimation(hovering)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(label)
         .accessibilityLabel(label)
     }
 }

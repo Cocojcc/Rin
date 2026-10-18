@@ -199,7 +199,7 @@ struct AccentPicker: View {
                 } label: {
                     Circle().fill(p.swatch).frame(width: 11, height: 11)
                         .frame(width: 28, height: 24)
-                        .background { if on { GlassThumb() } }
+                        .thumbAnchor(on)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -207,6 +207,7 @@ struct AccentPicker: View {
                 .accessibilityAddTraits(on ? [.isSelected] : [])
             }
         }
+        .slidingThumb(selection) { GlassThumb() }
         .padding(2)
         .background(GlassTrack())
         .accessibilityElement(children: .contain)
@@ -245,7 +246,6 @@ struct NotchBanner: View {
     }
 }
 
-/// Visible modules as draggable chips, in menu bar order. Ones behind the notch are tinted.
 /// Every module as a chip under the preview: the ones in the menu bar (glass, in their order,
 /// a notch mark when hidden behind it) | the rest. Click shows or hides; drag reorders.
 struct ModuleChips: View {
@@ -257,12 +257,15 @@ struct ModuleChips: View {
         let prefs = settings.prefs
         let shown = prefs.menubar.order.filter { prefs.showsInMenubar($0) }
         let hidden = prefs.menubar.order.filter { !prefs.showsInMenubar($0) }
+        // One list, so a chip keeps its identity and slides across when it changes sides.
+        let items = shown.map { ChipSlot.module($0) } + (shown.isEmpty || hidden.isEmpty ? [] : [.divider]) + hidden.map { .module($0) }
         FlowLayout(spacing: 4) {
-            ForEach(shown) { chip($0, shown: true) }
-            if !shown.isEmpty && !hidden.isEmpty {
-                Rectangle().fill(Theme.cross).frame(width: 1, height: 18).padding(.horizontal, 6).frame(height: 30)
+            ForEach(items) { item in
+                switch item {
+                case .module(let m): chip(m, shown: shown.contains(m))
+                case .divider: Rectangle().fill(Theme.cross).frame(width: 1, height: 18).padding(.horizontal, 6).frame(height: 30)
+                }
             }
-            ForEach(hidden) { chip($0, shown: false) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
@@ -272,7 +275,7 @@ struct ModuleChips: View {
     private func chip(_ m: Module, shown: Bool) -> some View {
         let isBlocked = shown && blocked.contains(m)
         return Button {
-            settings.prefs.setInMenubar(m, !shown)
+            withAnimation(Motion.slide) { settings.prefs.setInMenubar(m, !shown) }
         } label: {
             HStack(spacing: 6) {
                 LineIcon(d: Icons.module(m), size: 14, lineWidth: 1.5)
@@ -425,6 +428,7 @@ private struct ViewSegment: View {
     var on: Bool
     var action: () -> Void
     @State private var hovering = false
+    @Environment(\.pageGlass) private var pageGlass
 
     var body: some View {
         Button(action: action) {
@@ -432,8 +436,13 @@ private struct ViewSegment: View {
                 .foregroundStyle(on || hovering ? Theme.text : Theme.sub)
                 .frame(width: 32, height: 24)
                 .background {
-                    if on { GlassThumb() } else if hovering { Capsule().fill(Theme.lgHover) }
+                    if on {
+                        if let pageGlass { GlassThumb().matchedGeometryEffect(id: "viewToggle", in: pageGlass) } else { GlassThumb() }
+                    } else if hovering {
+                        Capsule().fill(Theme.lgHover)
+                    }
                 }
+                .hoverAnimation(hovering)
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -497,10 +506,14 @@ struct WidgetStrip: View {
             }
             .padding(.horizontal, 14)
             Hairline().padding(.horizontal, 14)
+            // One list, so a chip keeps its identity and slides across when it changes sides.
             FlowLayout(spacing: 4) {
-                ForEach(on) { WidgetChip(module: module, kind: $0, on: true, prefs: prefs) }
-                Rectangle().fill(Theme.cross).frame(width: 1, height: 22).padding(.horizontal, 6).frame(height: 36)
-                ForEach(off) { WidgetChip(module: module, kind: $0, on: false, prefs: prefs) }
+                ForEach(on.map { WidgetSlot.widget($0) } + [.divider] + off.map { .widget($0) }) { item in
+                    switch item {
+                    case .widget(let kind): WidgetChip(module: module, kind: kind, on: on.contains(kind), prefs: prefs)
+                    case .divider: Rectangle().fill(Theme.cross).frame(width: 1, height: 22).padding(.horizontal, 6).frame(height: 36)
+                    }
+                }
             }
             .padding(6)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -523,7 +536,7 @@ private struct WidgetChip: View {
 
     var body: some View {
         Button {
-            settings.prefs.setWidget(kind, !on, for: module)
+            withAnimation(Motion.slide) { settings.prefs.setWidget(kind, !on, for: module) }
         } label: {
             WidgetView(module: module, kind: kind, prefs: prefs)
                 .environment(\.widgetUIFont, true)
@@ -535,6 +548,7 @@ private struct WidgetChip: View {
                 .background {
                     if on { GlassThumb() } else if hovering { Capsule().fill(Theme.well) }
                 }
+                .hoverAnimation(hovering)
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -994,4 +1008,16 @@ struct InlineChoice<Value: Hashable>: View {
         .fixedSize()
         .accessibilityLabel(label)
     }
+}
+
+/// A module chip or the divider between shown and hidden ones.
+private enum ChipSlot: Hashable, Identifiable {
+    case module(Module), divider
+    var id: Self { self }
+}
+
+/// A widget chip or the divider between picked and available ones.
+private enum WidgetSlot: Hashable, Identifiable {
+    case widget(WidgetKind), divider
+    var id: Self { self }
 }

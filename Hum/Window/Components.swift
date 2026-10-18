@@ -73,6 +73,46 @@ struct GlassThumb: View {
     }
 }
 
+enum Motion {
+    /// A selection moving to another item (glass thumbs, chips changing groups).
+    static let slide = Animation.spring(response: 0.3, dampingFraction: 0.82)
+    /// Hover tints, as the design's 0.12 s background transition.
+    static let hover = Animation.easeOut(duration: 0.12)
+    /// One page fading into the next in the main window.
+    static let page = Animation.easeOut(duration: 0.16)
+}
+
+extension View {
+    /// Animates hover tints within this view.
+    func hoverAnimation(_ hovering: Bool) -> some View { animation(Motion.hover, value: hovering) }
+
+    /// Marks the selected item of the enclosing `slidingThumb` group.
+    func thumbAnchor(_ selected: Bool) -> some View {
+        anchorPreference(key: ThumbAnchorKey.self, value: .bounds) { selected ? $0 : nil }
+    }
+
+    /// Draws one thumb behind the item marked `thumbAnchor(true)` and slides it to the next
+    /// one when `value` changes. A single moving piece, rather than one per item, so nothing
+    /// cross-fades on the way.
+    func slidingThumb<V: Equatable, Thumb: View>(_ value: V, @ViewBuilder thumb: @escaping () -> Thumb) -> some View {
+        backgroundPreferenceValue(ThumbAnchorKey.self) { anchor in
+            GeometryReader { geo in
+                if let anchor {
+                    let r = geo[anchor]
+                    thumb().frame(width: r.width, height: r.height).offset(x: r.minX, y: r.minY)
+                }
+            }
+            .animation(Motion.slide, value: value)
+        }
+        .transformAnchorPreference(key: ThumbAnchorKey.self, value: .bounds) { current, _ in current = nil }
+    }
+}
+
+private struct ThumbAnchorKey: PreferenceKey {
+    static var defaultValue: Anchor<CGRect>? { nil }
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) { value = value ?? nextValue() }
+}
+
 /// A capsule, or a rounded rectangle when a radius is given.
 struct GlassShape: InsettableShape {
     var cornerRadius: CGFloat?
@@ -265,20 +305,19 @@ struct Segmented<Value: Hashable>: View {
                     .padding(.horizontal, style == .range ? 12 : 7)
                     .frame(maxWidth: fills ? .infinity : nil)
                     .frame(height: height)
-                    .background {
-                        if on {
-                            if glass {
-                                GlassThumb()
-                            } else {
-                                RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.raised).raisedShadow()
-                            }
-                        }
-                    }
+                    .thumbAnchor(on)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(option.1.isEmpty ? label : option.1)
                 .accessibilityAddTraits(on ? [.isSelected] : [])
+            }
+        }
+        .slidingThumb(selection) {
+            if glass {
+                GlassThumb()
+            } else {
+                RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.raised).raisedShadow()
             }
         }
         .padding(fills ? 3 : 2)
