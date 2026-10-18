@@ -63,7 +63,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         window.isOpaque = false
         window.backgroundColor = .clear
         window.setContentSize(NSSize(width: UIScale.of(800), height: UIScale.of(700)))
-        window.contentMinSize = NSSize(width: UIScale.of(720), height: UIScale.of(560))
+        window.contentMinSize = MainView.minSize
         window.setFrameAutosaveName("HumMainWindow.v4")
         window.isReleasedWhenClosed = false
         window.delegate = self

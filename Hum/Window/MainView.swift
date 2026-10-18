@@ -2,6 +2,8 @@ import SwiftUI
 
 /// Glass window: translucent sidebar on the left, the page on the right.
 struct MainView: View {
+    static let minSize = CGSize(width: UIScale.of(720), height: UIScale.of(560))
+
     var navigator = Navigator.shared
     var settings = SettingsStore.shared
     @Namespace private var pageGlass
@@ -12,6 +14,9 @@ struct MainView: View {
             PageView(page: navigator.page)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        // The hosting controller sets the window's minimum from this, overriding contentMinSize:
+        // two overview columns and the settings rows still fit.
+        .frame(minWidth: MainView.minSize.width, minHeight: MainView.minSize.height)
         .background(GlassBackground(radius: UIScale.of(18), material: .underWindowBackground))
         .environment(\.accent, settings.prefs.general.accent.colors)
         .environment(\.pageGlass, pageGlass)
