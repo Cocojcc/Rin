@@ -25,6 +25,8 @@ struct GeneralPrefs: Codable, Equatable {
     var autoCheckUpdates = true
     /// Set once the first-launch window has been finished or closed.
     var onboarded = false
+    /// Set once modules shown before widgets existed got their widget written down.
+    var widgetsMigrated = false
 }
 
 struct CPUPrefs: Codable, Equatable {
@@ -39,7 +41,7 @@ struct CPUPrefs: Codable, Equatable {
 }
 
 struct GPUPrefs: Codable, Equatable {
-    var visible = false
+    var visible = true
     var refresh: Double = 1
     var valueType: GPUValueType = .utilization
     var showMemory = true
@@ -74,7 +76,7 @@ struct NetworkPrefs: Codable, Equatable {
 }
 
 struct DiskPrefs: Codable, Equatable {
-    var visible = false
+    var visible = true
     var refresh: Double = 1
     var content: DiskContent = .free
     var volume: String = ""      // empty = startup disk
@@ -85,7 +87,7 @@ struct DiskPrefs: Codable, Equatable {
 }
 
 struct BatteryPrefs: Codable, Equatable {
-    var visible = false
+    var visible = true
     var refresh: Double = 10
     var timeFormat: TimeFormat = .clock
     var showHealth = true
@@ -96,7 +98,7 @@ struct BatteryPrefs: Codable, Equatable {
 }
 
 struct SensorsPrefs: Codable, Equatable {
-    var visible = false
+    var visible = true
     var refresh: Double = 2
     var sensor: SensorChoice = .cpuAverage
     var showThermal = true
@@ -150,7 +152,9 @@ struct Preferences: Codable, Equatable {
     /// Menu bar widgets per module (keyed by module raw value); missing entries use the defaults.
     var widgetState: [String: ModuleWidgets] = [:]
 
-    func isVisible(_ module: Module) -> Bool {
+    /// The module's "监控" switch: off means it is not read at all and shows nowhere.
+    /// (Stored as `visible`; it used to mean "shown in the menu bar".)
+    func isMonitored(_ module: Module) -> Bool {
         switch module {
         case .cpu: return cpu.visible
         case .gpu: return gpu.visible
@@ -163,6 +167,16 @@ struct Preferences: Codable, Equatable {
     }
 
     /// Seconds between samples for a module (doubled on battery when that is switched on).
+    /// Defaults for a first launch: every module monitored, CPU, memory and network in the
+    /// menu bar (the onboarding's starting choice).
+    static func fresh() -> Preferences {
+        var p = Preferences()
+        p.widgetState[Module.battery.rawValue] = ModuleWidgets(enabled: [])
+        p.widgetState[Module.sensors.rawValue] = ModuleWidgets(enabled: [])
+        p.general.widgetsMigrated = true
+        return p
+    }
+
     func refresh(_ module: Module) -> Double {
         switch module {
         case .cpu: return cpu.refresh
@@ -175,9 +189,7 @@ struct Preferences: Codable, Equatable {
         }
     }
 
-    mutating func setVisible(_ module: Module, _ value: Bool) {
-        // Switching a module on with no widget selected brings back its main widget.
-        if value && widgets(module).isEmpty { setWidget(module.primaryWidget, true, for: module) }
+    mutating func setMonitored(_ module: Module, _ value: Bool) {
         switch module {
         case .cpu: cpu.visible = value
         case .gpu: gpu.visible = value
@@ -216,8 +228,9 @@ final class SettingsStore {
             if decoded.general.accent == .orange { decoded.general.accent = .graphite }
             prefs = decoded
         } else {
-            prefs = Preferences()
+            prefs = Preferences.fresh()
         }
+        if !prefs.general.widgetsMigrated { prefs.migrateWidgets() }
         // Keep every module in the order list, even ones added after the prefs were saved.
         let missing = Module.allCases.filter { !prefs.menubar.order.contains($0) }
         prefs.menubar.order.append(contentsOf: missing)
@@ -253,7 +266,7 @@ final class SettingsStore {
     }
 
     func resetMenubar() {
-        let defaults = Preferences()
+        let defaults = Preferences.fresh()
         let dismissed = prefs.menubar.notchAlertDismissed
         prefs.menubar = defaults.menubar
         prefs.menubar.notchAlertDismissed = dismissed
@@ -264,6 +277,6 @@ final class SettingsStore {
         prefs.disk = defaults.disk
         prefs.battery = defaults.battery
         prefs.sensors = defaults.sensors
-        prefs.widgetState = [:]
+        prefs.widgetState = defaults.widgetState
     }
 }

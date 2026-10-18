@@ -119,28 +119,44 @@ final class History {
 
     func record(_ s: Snapshot) {
         var values = [Float](repeating: .nan, count: metricCount)
-        values[Metric.cpu.rawValue] = Float(s.cpu.total * 100)
-        values[Metric.cpuUser.rawValue] = Float(s.cpu.user * 100)
-        values[Metric.cpuSystem.rawValue] = Float(s.cpu.system * 100)
-        values[Metric.gpu.rawValue] = Float(s.gpu.utilization * 100)
-        values[Metric.memory.rawValue] = Float(s.memory.usedFraction * 100)
-        values[Metric.memoryPressure.rawValue] = Float(s.memory.pressureLevel * 100)
-        values[Metric.swap.rawValue] = Float(Double(s.memory.swapUsed) / 1_073_741_824)
-        values[Metric.netDown.rawValue] = Float(s.network.down)
-        values[Metric.netUp.rawValue] = Float(s.network.up)
-        values[Metric.diskRead.rawValue] = Float(s.disk.read)
-        values[Metric.diskWrite.rawValue] = Float(s.disk.write)
-        if s.battery.hasBattery { values[Metric.battery.rawValue] = Float(s.battery.level * 100) }
-        if let t = s.sensors.cpuAverage { values[Metric.cpuTemp.rawValue] = Float(t) }
-        if let t = s.sensors.value(.gpu) { values[Metric.gpuTemp.rawValue] = Float(t) }
-        if let f = s.sensors.fans.first { values[Metric.fan.rawValue] = Float(f.rpm) }
-        if let p = s.sensors.systemPower { values[Metric.power.rawValue] = Float(p) }
-        if s.battery.hasBattery { values[Metric.charging.rawValue] = s.battery.isCharging ? 1 : 0 }
-        if let v = s.gpu.renderer { values[Metric.gpuRenderer.rawValue] = Float(v * 100) }
-        if let v = s.gpu.tiler { values[Metric.gpuTiler.rawValue] = Float(v * 100) }
-        if let v = s.gpu.decodeWatts { values[Metric.videoDecode.rawValue] = Float(v) }
-        if let v = s.gpu.encodeWatts { values[Metric.videoEncode.rawValue] = Float(v) }
-        if let v = s.gpu.fps { values[Metric.fps.rawValue] = Float(v) }
+        // Modules switched off record nothing, so their charts show a gap rather than zeros.
+        let on = s.monitored.contains
+        if on(.cpu) {
+            values[Metric.cpu.rawValue] = Float(s.cpu.total * 100)
+            values[Metric.cpuUser.rawValue] = Float(s.cpu.user * 100)
+            values[Metric.cpuSystem.rawValue] = Float(s.cpu.system * 100)
+        }
+        if on(.gpu) {
+            values[Metric.gpu.rawValue] = Float(s.gpu.utilization * 100)
+            if let v = s.gpu.renderer { values[Metric.gpuRenderer.rawValue] = Float(v * 100) }
+            if let v = s.gpu.tiler { values[Metric.gpuTiler.rawValue] = Float(v * 100) }
+            if let v = s.gpu.decodeWatts { values[Metric.videoDecode.rawValue] = Float(v) }
+            if let v = s.gpu.encodeWatts { values[Metric.videoEncode.rawValue] = Float(v) }
+            if let v = s.gpu.fps { values[Metric.fps.rawValue] = Float(v) }
+        }
+        if on(.memory) {
+            values[Metric.memory.rawValue] = Float(s.memory.usedFraction * 100)
+            values[Metric.memoryPressure.rawValue] = Float(s.memory.pressureLevel * 100)
+            values[Metric.swap.rawValue] = Float(Double(s.memory.swapUsed) / 1_073_741_824)
+        }
+        if on(.network) {
+            values[Metric.netDown.rawValue] = Float(s.network.down)
+            values[Metric.netUp.rawValue] = Float(s.network.up)
+        }
+        if on(.disk) {
+            values[Metric.diskRead.rawValue] = Float(s.disk.read)
+            values[Metric.diskWrite.rawValue] = Float(s.disk.write)
+        }
+        if on(.battery), s.battery.hasBattery {
+            values[Metric.battery.rawValue] = Float(s.battery.level * 100)
+            values[Metric.charging.rawValue] = s.battery.isCharging ? 1 : 0
+        }
+        if on(.sensors) {
+            if let t = s.sensors.cpuAverage { values[Metric.cpuTemp.rawValue] = Float(t) }
+            if let t = s.sensors.value(.gpu) { values[Metric.gpuTemp.rawValue] = Float(t) }
+            if let f = s.sensors.fans.first { values[Metric.fan.rawValue] = Float(f.rpm) }
+            if let p = s.sensors.systemPower { values[Metric.power.rawValue] = Float(p) }
+        }
 
         rawDates.append(s.date)
         for i in 0..<metricCount { raw[i].append(values[i]) }

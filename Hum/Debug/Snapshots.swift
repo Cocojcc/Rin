@@ -166,8 +166,8 @@ enum ToggleCheck {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
             let before = StatusBarController.shared.debugButtons()
             let prefs = SettingsStore.shared.prefs
-            let target = Module.allCases.first { !prefs.isVisible($0) } ?? .gpu
-            SettingsStore.shared.prefs.setVisible(target, !prefs.isVisible(target))
+            let target = Module.allCases.first { !prefs.showsInMenubar($0) } ?? .gpu
+            SettingsStore.shared.prefs.setInMenubar(target, !prefs.showsInMenubar(target))
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 let after = StatusBarController.shared.debugButtons()
                 print("toggled", target.rawValue, "before", before.map(\.0), "after", after.map(\.0))

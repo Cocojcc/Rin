@@ -3,6 +3,14 @@ import IOKit
 import IOKit.ps
 
 final class BatteryReader {
+    /// Whether the Mac is running on its battery right now (cheap; for "slow down on battery"
+    /// when the battery module itself is switched off).
+    static func onBatteryPower() -> Bool {
+        guard let blob = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let type = IOPSGetProvidingPowerSourceType(blob)?.takeUnretainedValue() as String? else { return false }
+        return type == kIOPSBatteryPowerValue
+    }
+
     func read() -> BatterySample {
         var sample = BatterySample()
         guard let blob = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),

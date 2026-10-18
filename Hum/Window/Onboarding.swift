@@ -88,7 +88,7 @@ struct OnboardingView: View {
             VStack(spacing: 0) {
                 DividedRows {
                     ForEach(modules) { m in
-                        row(m, visible: prefs.isVisible(m))
+                        row(m, visible: prefs.showsInMenubar(m))
                     }
                 }
             }
@@ -126,7 +126,7 @@ struct OnboardingView: View {
                 .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.well))
                 .opacity(visible ? 1 : 0.45)
                 .accessibilityHidden(true)
-            HumSwitch(isOn: Binding(get: { visible }, set: { settings.prefs.setVisible(m, $0) }), label: L10n.Settings.showInMenubarNamed(m.title))
+            HumSwitch(isOn: Binding(get: { visible }, set: { settings.prefs.setInMenubar(m, $0) }), label: L10n.Settings.showInMenubarNamed(m.title))
         }
         .frame(minHeight: 40)
     }

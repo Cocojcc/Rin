@@ -391,7 +391,7 @@ struct ModuleHeader<Extra: View>: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(L10n.Settings.moduleSettings(module.title))
                 .accessibilityAddTraits(settingsActive ? [.isSelected] : [])
-                HumSwitch(isOn: Binding(get: { settings.prefs.isVisible(module) }, set: { settings.prefs.setVisible(module, $0) }),
+                HumSwitch(isOn: Binding(get: { settings.prefs.isMonitored(module) }, set: { settings.prefs.setMonitored(module, $0) }),
                           label: L10n.Settings.monitorModule(module.title))
             }
         }
@@ -459,7 +459,7 @@ struct WidgetStrip: View {
     private func chip(_ kind: WidgetKind, on: Bool, _ prefs: Preferences) -> some View {
         Button {
             settings.prefs.setWidget(kind, !on, for: module)
-            if !on && !settings.prefs.isVisible(module) { settings.prefs.setVisible(module, true) }
+            if !on && !settings.prefs.isMonitored(module) { settings.prefs.setMonitored(module, true) }
         } label: {
             WidgetView(module: module, kind: kind, prefs: prefs)
                 .environment(\.widgetUIFont, true)

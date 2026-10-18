@@ -64,6 +64,25 @@ private struct Card<Content: View>: View {
     }
 }
 
+/// A monitor page: the module header, then its content, faded and inert while the module's
+/// monitoring is switched off (nothing is read for it then).
+private struct MonitorPageLayout<Content: View>: View {
+    let module: Module
+    @ViewBuilder var content: Content
+    var settings = SettingsStore.shared
+
+    var body: some View {
+        let on = settings.prefs.isMonitored(module)
+        VStack(alignment: .leading, spacing: 20) {
+            ModuleHeader(module: module)
+            VStack(alignment: .leading, spacing: 20) { content }
+                .opacity(on ? 1 : 0.35)
+                .allowsHitTesting(on)
+                .accessibilityHidden(!on)
+        }
+    }
+}
+
 /// Two (or more) sections side by side with equal heights.
 private struct SideBySide<Content: View>: View {
     @ViewBuilder var content: Content
@@ -145,15 +164,17 @@ struct OverviewPage: View {
         VStack(alignment: .leading, spacing: 20) {
             PageTitle(title: L10n.Overview.title)
             status
+            // Modules switched off are left out.
+            let on = settings.prefs.isMonitored
             CardGrid {
-                cpuCard(s, unit)
-                gpuCard(s, unit)
-                memoryCard(s)
-                networkCard(s)
-                diskCard(s)
-                batteryCard(s)
-                sensorsCard(s, unit)
-                topCard(s).layoutValue(key: SpanKey.self, value: 2)
+                if on(.cpu) { cpuCard(s, unit) }
+                if on(.gpu) { gpuCard(s, unit) }
+                if on(.memory) { memoryCard(s) }
+                if on(.network) { networkCard(s) }
+                if on(.disk) { diskCard(s) }
+                if on(.battery) { batteryCard(s) }
+                if on(.sensors) { sensorsCard(s, unit) }
+                if on(.cpu) || on(.memory) { topCard(s).layoutValue(key: SpanKey.self, value: 2) }
             }
         }
     }
@@ -501,8 +522,7 @@ struct CPUPage: View {
         let peaks = history.cpuPeaks()
         let selected = selectedPeak.flatMap { d in peaks.first { $0.date == d } } ?? peaks.first
 
-        VStack(alignment: .leading, spacing: 20) {
-            ModuleHeader(module: .cpu)
+        MonitorPageLayout(module: .cpu) {
             if !lookback { summary(s) }
             VStack(alignment: .leading, spacing: 12) {
                 RangeRow {
@@ -882,8 +902,7 @@ struct GPUPage: View {
         let g = monitor.snapshot.gpu
         let history = monitor.history
         let _ = monitor.tick
-        VStack(alignment: .leading, spacing: 20) {
-            ModuleHeader(module: .gpu)
+        MonitorPageLayout(module: .gpu) {
             rings(g)
             VStack(alignment: .leading, spacing: 12) {
                 RangeRow {
@@ -1006,8 +1025,7 @@ struct MemoryPage: View {
         let m = s.memory
         let _ = monitor.tick
         let pr = PanelText.pressure(m.pressure)
-        VStack(alignment: .leading, spacing: 20) {
-            ModuleHeader(module: .memory)
+        MonitorPageLayout(module: .memory) {
             summary(m)
             VStack(alignment: .leading, spacing: 12) {
                 RangeRow {
@@ -1103,8 +1121,7 @@ struct NetworkPage: View {
         let n = s.network
         let unit = settings.prefs.network.speedUnit
         let _ = monitor.tick
-        VStack(alignment: .leading, spacing: 20) {
-            ModuleHeader(module: .network)
+        MonitorPageLayout(module: .network) {
             HStack(alignment: .top, spacing: 12) {
                 speed(n.down, unit: unit, color: Theme.down, label: L10n.Panel.download, session: n.sessionDown, today: n.todayDown)
                 speed(n.up, unit: unit, color: Theme.up, label: L10n.Panel.upload, session: n.sessionUp, today: n.todayUp)
@@ -1258,8 +1275,7 @@ struct DiskPage: View {
         let d = s.disk
         let unit = settings.prefs.general.temperatureUnit
         let _ = monitor.tick
-        VStack(alignment: .leading, spacing: 20) {
-            ModuleHeader(module: .disk)
+        MonitorPageLayout(module: .disk) {
             VStack(spacing: 0) {
                 ForEach(Array(d.volumes.enumerated()), id: \.element.id) { i, v in
                     VolumeRow(volume: v)
@@ -1412,8 +1428,7 @@ struct BatteryPage: View {
         let s = monitor.snapshot
         let b = s.battery
         let _ = monitor.tick
-        VStack(alignment: .leading, spacing: 20) {
-            ModuleHeader(module: .battery)
+        MonitorPageLayout(module: .battery) {
             if b.hasBattery {
                 hero(b)
                 SideBySide {
@@ -1649,8 +1664,7 @@ struct SensorsPage: View {
         let s = monitor.snapshot.sensors
         let unit = settings.prefs.general.temperatureUnit
         let _ = monitor.tick
-        VStack(alignment: .leading, spacing: 20) {
-            ModuleHeader(module: .sensors)
+        MonitorPageLayout(module: .sensors) {
             hero(s, unit)
             VStack(alignment: .leading, spacing: 12) {
                 RangeRow {

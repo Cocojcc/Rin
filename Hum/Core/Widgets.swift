@@ -149,10 +149,30 @@ struct ModuleWidgets: Codable, Equatable {
 }
 
 extension Preferences {
-    /// Widgets before the user picks any. A module that is switched on but has no default
-    /// widget (shown before widgets existed) keeps one, so it doesn't vanish from the menu bar.
-    private func initialWidgets(_ m: Module) -> [WidgetKind] {
-        m.defaultWidgets.isEmpty && isVisible(m) ? [m.primaryWidget] : m.defaultWidgets
+    /// Widgets before the user picks any.
+    private func initialWidgets(_ m: Module) -> [WidgetKind] { m.defaultWidgets }
+
+    /// Modules that were in the menu bar before widgets existed but have no default widget
+    /// (disk, GPU) keep one, so they don't vanish. Runs once on saved settings.
+    mutating func migrateWidgets() {
+        for m in Module.allCases where widgetState[m.rawValue] == nil && isMonitored(m) && m.defaultWidgets.isEmpty {
+            widgetState[m.rawValue] = ModuleWidgets(enabled: [m.primaryWidget])
+        }
+        general.widgetsMigrated = true
+    }
+
+    /// Puts a module in the menu bar (monitoring it, with its usual widgets) or takes it out.
+    mutating func setInMenubar(_ m: Module, _ on: Bool) {
+        if on {
+            setMonitored(m, true)
+            if widgets(m).isEmpty {
+                for kind in m.defaultWidgets.isEmpty ? [m.primaryWidget] : m.defaultWidgets { setWidget(kind, true, for: m) }
+            }
+        } else {
+            var state = widgetState[m.rawValue] ?? ModuleWidgets(enabled: [])
+            state.enabled = []
+            widgetState[m.rawValue] = state
+        }
     }
 
     func widgets(_ m: Module) -> [WidgetKind] {
@@ -185,6 +205,6 @@ extension Preferences {
         widgetState[m.rawValue] = state
     }
 
-    /// Shown in the menu bar: switched on and at least one widget selected.
-    func showsInMenubar(_ m: Module) -> Bool { isVisible(m) && !widgets(m).isEmpty }
+    /// Shown in the menu bar: monitored and at least one widget selected.
+    func showsInMenubar(_ m: Module) -> Bool { isMonitored(m) && !widgets(m).isEmpty }
 }

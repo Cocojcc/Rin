@@ -64,6 +64,7 @@ final class Monitor {
     func applyConfiguration() {
         let prefs = SettingsStore.shared.prefs
         var config = Sampler.Config()
+        config.monitored = Set(Module.allCases.filter(prefs.isMonitored))
         for m in Module.allCases { config.intervals[m] = prefs.refresh(m) }
         config.processInterval = min(prefs.cpu.processRefresh, prefs.memory.processRefresh)
         config.latency = prefs.network.showLatency
@@ -71,10 +72,13 @@ final class Monitor {
         config.interface = prefs.network.interface
         let anyUI = !consumers.isEmpty
         config.processes.includeOtherUsers = anyUI
-        config.processes.network = consumers.contains(.popover(.network)) || consumers.contains(.window(.monitor(.network))) || consumers.contains(.combinedPanel)
-        config.processes.gpu = consumers.contains(.popover(.gpu)) || consumers.contains(.window(.monitor(.gpu))) || consumers.contains(.window(.overview))
+        config.processes.network = config.monitored.contains(.network)
+            && (consumers.contains(.popover(.network)) || consumers.contains(.window(.monitor(.network))) || consumers.contains(.combinedPanel))
+        config.processes.gpu = config.monitored.contains(.gpu)
+            && (consumers.contains(.popover(.gpu)) || consumers.contains(.window(.monitor(.gpu))) || consumers.contains(.window(.overview)))
         config.processes.limit = max(8, prefs.cpu.processCount, prefs.memory.processCount, prefs.gpu.processCount)
-        let batteryVisible = consumers.contains(.popover(.battery)) || consumers.contains(.window(.monitor(.battery)))
+        let batteryVisible = config.monitored.contains(.battery)
+            && (consumers.contains(.popover(.battery)) || consumers.contains(.window(.monitor(.battery))))
         config.bluetooth = batteryVisible && (prefs.battery.showBluetooth || consumers.contains(.window(.monitor(.battery))) || !snapshot.battery.hasBattery)
         config.headphones = consumers.contains(.window(.monitor(.battery))) || (batteryVisible && prefs.battery.showBluetooth)
         sampler.configure(config)
@@ -109,6 +113,8 @@ final class Monitor {
 /// Owns the readers and drives them from a timer on its own serial queue.
 final class Sampler {
     struct Config {
+        /// Modules switched on; the rest are not read at all.
+        var monitored: Set<Module> = Set(Module.allCases)
         /// Seconds between reads per module; the timer ticks at the shortest of them.
         var intervals: [Module: Double] = [:]
         var processInterval: Double = 3
@@ -207,7 +213,8 @@ final class Sampler {
 
     private func reschedule() {
         guard !paused else { return }
-        let interval = (Module.allCases.map(interval).min() ?? 2)
+        let active = Module.allCases.filter(config.monitored.contains)
+        let interval = (active.isEmpty ? 10 : active.map(interval).min() ?? 2)
         guard interval != currentInterval || timer == nil else { return }
         currentInterval = interval
         timer?.cancel()
@@ -218,8 +225,10 @@ final class Sampler {
         timer = t
     }
 
-    /// Whether a module's interval has elapsed (with a little slack for timer jitter).
+    /// Whether a module's interval has elapsed (with a little slack for timer jitter). Modules
+    /// switched off are never due.
     private func due(_ m: Module, _ now: Date, force: Bool) -> Bool {
+        guard config.monitored.contains(m) else { lastRead[m] = nil; return false }
         guard !force, let last = lastRead[m] else { lastRead[m] = now; return true }
         guard now.timeIntervalSince(last) >= interval(m) - 0.25 else { return false }
         lastRead[m] = now
@@ -230,6 +239,15 @@ final class Sampler {
         let now = Date()
         var s = current
         s.date = now
+        s.monitored = config.monitored
+        // A module switched off keeps no stale numbers around.
+        if !config.monitored.contains(.cpu) { s.cpu = CPUSample() }
+        if !config.monitored.contains(.memory) { s.memory = MemorySample() }
+        if !config.monitored.contains(.network) { s.network = NetworkSample() }
+        if !config.monitored.contains(.disk) { s.disk = DiskSample() }
+        if !config.monitored.contains(.battery) { s.battery = BatterySample() }
+        if !config.monitored.contains(.sensors) { s.sensors = SensorsSample() }
+        if !config.monitored.contains(.gpu) { s.gpu = GPUSample() }
         if due(.cpu, now, force: force) { s.cpu = cpu.read() }
         if due(.memory, now, force: force) { s.memory = memory.read() }
         if due(.network, now, force: force) { s.network = network.read(preferred: config.interface, probeLatency: config.latency) }
@@ -248,7 +266,11 @@ final class Sampler {
             s.cpu.performanceMHz = lastPower.performanceMHz
             s.cpu.efficiencyMHz = lastPower.efficiencyMHz
         }
-        if force || config.processes.includeOtherUsers && lastProcesses == nil
+        // Process lists feed the CPU, memory, GPU, network and disk views.
+        let wantsProcesses = !config.monitored.isDisjoint(with: [.cpu, .memory, .gpu, .network, .disk])
+        if !wantsProcesses {
+            lastProcesses = nil
+        } else if force || config.processes.includeOtherUsers && lastProcesses == nil
             || now.timeIntervalSince(lastProcessRead) >= config.processInterval * slowFactor - 0.25 {
             lastProcesses = processes.read(config.processes)
             lastProcessRead = now
@@ -263,7 +285,13 @@ final class Sampler {
         let devices = config.bluetooth ? bluetooth.read(includeHeadphones: config.headphones) : nil
 
         let wasOnBattery = onBattery
-        onBattery = s.battery.hasBattery && !s.battery.onAC
+        if config.monitored.contains(.battery) {
+            onBattery = s.battery.hasBattery && !s.battery.onAC
+        } else if config.slowOnBattery {
+            onBattery = BatteryReader.onBatteryPower()
+        } else {
+            onBattery = false
+        }
         if wasOnBattery != onBattery { reschedule() }
 
         onSnapshot?(s, devices)
