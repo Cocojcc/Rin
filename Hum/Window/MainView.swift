@@ -89,8 +89,8 @@ struct Sidebar: View {
     var navigator = Navigator.shared
     var monitor = Monitor.shared
 
+    private let overviewPage: (Page, String, String) = (.overview, Icons.overview, L10n.Sidebar.overview)
     private let pages: [(Page, String, String)] = [
-        (.overview, Icons.overview, L10n.Sidebar.overview),
         (.processes, Icons.processes, L10n.Sidebar.processes),
         (.monitor(.cpu), Icons.cpu, L10n.Module.cpu),
         (.monitor(.gpu), Icons.gpu, L10n.Module.gpu),
@@ -118,6 +118,8 @@ struct Sidebar: View {
             .padding(.bottom, 18)
 
             VStack(alignment: .leading, spacing: 2) {
+                // The overview, the pages under it and About This Mac sit in three groups.
+                item(overviewPage).padding(.bottom, 12)
                 ForEach(pages, id: \.0) { item($0) }
                 item(aboutPage).padding(.top, 12)
             }
