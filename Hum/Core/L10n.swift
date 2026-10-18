@@ -597,7 +597,6 @@ enum L10n {
         static var banner: String { tr("settings.banner") }
         static var alertStyle: String { tr("settings.alertStyle") }
         static func gigabytes(_ n: Int) -> String { tr("settings.gigabytes", n) }
-        static var mergeWidgets: String { tr("settings.mergeWidgets") }
         static func moduleSettings(_ a: String) -> String { tr("settings.moduleSettings", a) }
         static var processRefresh: String { tr("settings.processRefresh") }
         static var ruleGPU: String { tr("settings.ruleGPU") }
@@ -630,6 +629,7 @@ enum L10n {
         static func points(_ a: Int) -> String { tr("settings.points", a) }
         static func decrease(_ a: String) -> String { tr("settings.decrease", a) }
         static func increase(_ a: String) -> String { tr("settings.increase", a) }
+        static var widgetGap: String { tr("settings.widgetGap") }
     }
 
     enum Notch {

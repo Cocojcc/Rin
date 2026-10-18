@@ -549,7 +549,6 @@
 "monitor.zoneLow" = "● Below %@";
 "monitor.zoneMid" = "● %1$@–%2$@";
 "monitor.zoneHigh" = "● Above %@";
-"settings.mergeWidgets" = "Combine widgets";
 "settings.moduleSettings" = "%@ settings";
 "settings.processRefresh" = "Process refresh";
 "settings.ruleGPU" = "GPU usage above";
@@ -769,3 +768,4 @@
 "widget.icon.sensors.4" = "Snowflake";
 "widget.icon.sensors.5" = "Wordmark";
 "widget.name.battery.value" = "Percentage";
+"settings.widgetGap" = "Space between widgets";

@@ -551,8 +551,7 @@ struct MenuBarItemView: View {
         let prefs = settings.prefs
         let s = monitor.snapshot
         let tone = MenuBarText.tone(module, s, prefs)
-        // Picked pieces sit tight, the way an icon sits beside its number.
-        HStack(spacing: prefs.widgetsMerged(module) ? 3 : 8) {
+        HStack(spacing: CGFloat(prefs.widgetGap(module))) {
             ForEach(prefs.widgets(module)) { WidgetView(module: module, kind: $0, prefs: prefs) }
         }
         // No side padding, as Stats draws its items: the menu bar adds its own spacing.
@@ -698,7 +697,7 @@ struct WidgetView: View {
         case .memory: memoryPair
         case .speed: module == .network ? AnyView(networkSpeed) : AnyView(diskSpeed)
         case .details: batteryDetails
-        case .time: FixedText(text: WidgetView.batteryTime(s.battery, prefs) ?? L10n.Common.dash, template: "10:00", font: valueFont)
+        case .time: numberText(WidgetView.batteryTime(s.battery, prefs) ?? L10n.Common.dash, template: "10:00")
         case .fan: fan
         case .stack: sensorStack
         case .pair: pair
@@ -751,16 +750,25 @@ struct WidgetView: View {
         case .disk: diskValue
         case .sensors:
             let reading = MenuBarText.sensorValue(s.sensors, prefs.sensors.sensor)
-            FixedText(text: reading.map { Format.temperature($0, unit: prefs.general.temperatureUnit) } ?? L10n.Common.dash,
-                      template: "100°", font: valueFont)
+            numberText(reading.map { Format.temperature($0, unit: prefs.general.temperatureUnit) } ?? L10n.Common.dash, template: "100°")
                 .foregroundStyle(color(o.color == .byValue ? .byValue : .mono))
         case .battery:
             let b = s.battery
             if !(o.hidePercentWhenFull && b.onAC && (b.isCharged || b.level >= 0.99)) {
-                FixedText(text: Format.percent(b.level), template: "100%", font: valueFont)
+                numberText(Format.percent(b.level), template: "100%")
             }
         default:
-            FixedText(text: valueText, template: valueTemplate, font: valueFont)
+            numberText(valueText, template: valueTemplate)
+        }
+    }
+
+    /// The number just as wide as it is, so the space beside it is exactly the widget gap; or,
+    /// when fixed, in room for its widest value (aligned left or right in it).
+    @ViewBuilder private func numberText(_ text: String, template: String) -> some View {
+        if o.numberFixed {
+            FixedText(text: text, template: template, font: valueFont, alignment: o.numberAlign == .leading ? .leading : .trailing)
+        } else {
+            BarText(text, font: valueFont)
         }
     }
 
@@ -884,7 +892,7 @@ struct WidgetView: View {
         case .usedPercent: text = volume.map { Format.percent($0.usedFraction) } ?? L10n.Common.dash
         case .readWrite: text = Format.rateCompact(s.disk.read + s.disk.write)
         }
-        return FixedText(text: text, template: "999G", font: valueFont)
+        return numberText(text, template: "999G")
     }
 
     private var battery: some View {
@@ -925,7 +933,7 @@ struct WidgetView: View {
         }
         return HStack(spacing: 3) {
             if o.showIcon { LineIcon(d: Icons.fan, size: 14, lineWidth: 1.3) }
-            FixedText(text: text, template: o.fanValue == .rpm ? "8888" : "100%", font: valueFont)
+            numberText(text, template: o.fanValue == .rpm ? "8888" : "100%")
         }
     }
 

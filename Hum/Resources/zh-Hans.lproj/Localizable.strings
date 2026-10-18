@@ -549,7 +549,6 @@
 "monitor.zoneLow" = "● 低于 %@";
 "monitor.zoneMid" = "● %1$@–%2$@";
 "monitor.zoneHigh" = "● %@ 以上";
-"settings.mergeWidgets" = "合并小组件";
 "settings.moduleSettings" = "%@设置";
 "settings.processRefresh" = "进程刷新频率";
 "settings.ruleGPU" = "GPU 使用率高于";
@@ -769,3 +768,4 @@
 "widget.icon.sensors.4" = "雪花";
 "widget.icon.sensors.5" = "字标";
 "widget.name.battery.value" = "百分比";
+"settings.widgetGap" = "小组件间距";

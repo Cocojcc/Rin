@@ -699,9 +699,10 @@ struct WidgetsTab: View {
         VStack(alignment: .leading, spacing: 20) {
             if widgets.count > 1 {
                 SettingsGroup {
-                    SettingsRow(title: L10n.Settings.mergeWidgets) {
-                        HumSwitch(isOn: Binding(get: { settings.prefs.widgetsMerged(module) }, set: { settings.prefs.setWidgetsMerged($0, module) }),
-                                  label: L10n.Settings.mergeWidgets)
+                    SettingsRow(title: L10n.Settings.widgetGap) {
+                        GlassStepper(label: L10n.Settings.widgetGap,
+                                     value: Binding(get: { settings.prefs.widgetGap(module) }, set: { settings.prefs.setWidgetGap($0, module) }),
+                                     range: ModuleWidgets.gapRange)
                     }
                 }
             }
@@ -879,9 +880,9 @@ struct WidgetOptionsGroup: View {
     /// Pieces with nothing to set show only their title.
     static func hasOptions(_ module: Module, _ kind: WidgetKind) -> Bool {
         switch kind {
-        case .time, .pair, .iconValue, .labelLine: return false
+        case .pair, .iconValue, .labelLine: return false
         case .pie: return module != .cpu
-        case .value, .temp: return [.sensors, .disk, .battery].contains(module)
+        case .temp: return false
         default: return true
         }
     }
@@ -939,7 +940,9 @@ struct WidgetOptionsGroup: View {
                 colorRow()
             case .inside:
                 toggle(L10n.Settings.colorWhenLow, \.colorWhenLow)
-            case .time, .pair, .iconValue:
+            case .time:
+                numberWidthRows()
+            case .pair, .iconValue:
                 EmptyView()
             case .memory:
                 colorRow()
@@ -973,6 +976,7 @@ struct WidgetOptionsGroup: View {
                 case .battery: toggle(L10n.Widget.hidePercentWhenFull, \.hidePercentWhenFull)
                 default: EmptyView()
                 }
+                numberWidthRows()
             case .battery:
                 toggle(L10n.Settings.showBolt, \.showBolt)
                 toggle(L10n.Settings.colorWhenLow, \.colorWhenLow)
@@ -987,11 +991,20 @@ struct WidgetOptionsGroup: View {
                 SettingsRow(title: L10n.Widget.fanValue) {
                     Segmented(label: L10n.Widget.fanValue, options: [(FanValue.rpm, L10n.Widget.rpm), (.percent, L10n.Settings.percent)], selection: bind(\.fanValue))
                 }
+                numberWidthRows()
             case .stack:
                 layoutRow()
                 toggle(L10n.Widget.monospaced, \.monospaced)
                 alignRow()
             }
+        }
+    }
+
+    /// Fixed width for a single number, and where it sits in that width.
+    @ViewBuilder private func numberWidthRows() -> some View {
+        toggle(L10n.Widget.fixedWidth, \.numberFixed)
+        SettingsRow(title: L10n.Widget.align, dimmed: !settings.prefs.options(module, kind).numberFixed) {
+            Segmented(label: L10n.Widget.align, options: [(WidgetAlign.leading, L10n.Widget.alignLeading), (.trailing, L10n.Widget.alignTrailing)], selection: bind(\.numberAlign))
         }
     }
 

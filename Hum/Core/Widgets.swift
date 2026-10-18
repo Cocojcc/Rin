@@ -98,6 +98,9 @@ struct WidgetOptions: Codable, Equatable {
     /// Room for the widest value, so the item keeps its width as the numbers change.
     var fixedWidth = true
     var numberAlign: WidgetAlign = .trailing
+    /// The same for the number widget, off by default: the number is only as wide as it is,
+    /// so the space beside it is just the widget gap.
+    var numberFixed = false
 
 
     init() {}
@@ -137,6 +140,7 @@ struct WidgetOptions: Codable, Equatable {
         if let v = try c.decodeIfPresent(type(of: unitStyle), forKey: .unitStyle) { unitStyle = v }
         if let v = try c.decodeIfPresent(type(of: fixedWidth), forKey: .fixedWidth) { fixedWidth = v }
         if let v = try c.decodeIfPresent(type(of: numberAlign), forKey: .numberAlign) { numberAlign = v }
+        if let v = try c.decodeIfPresent(type(of: numberFixed), forKey: .numberFixed) { numberFixed = v }
     }
 
     static func defaults(_ module: Module, _ kind: WidgetKind) -> WidgetOptions {
@@ -153,12 +157,18 @@ struct WidgetOptions: Codable, Equatable {
     }
 }
 
-/// A module's menu bar widgets: which are on, in the order they sit; their options; whether
-/// they sit tight together.
+/// A module's menu bar widgets: which are on, in the order they sit; their options; the space
+/// between them.
 struct ModuleWidgets: Codable, Equatable {
     var enabled: [WidgetKind]
     var options: [String: WidgetOptions] = [:]
+    /// The earlier on / off spacing (3 or 8 pt); stands in until a gap is set.
     var merged = true
+    /// Points between widgets.
+    var gap: Int?
+
+    static let gapRange = 0...8
+    static let defaultGap = 3
 }
 
 extension Preferences {
@@ -278,11 +288,14 @@ extension Preferences {
         widgetState[m.rawValue] = state
     }
 
-    func widgetsMerged(_ m: Module) -> Bool { widgetState[m.rawValue]?.merged ?? true }
+    func widgetGap(_ m: Module) -> Int {
+        guard let state = widgetState[m.rawValue] else { return ModuleWidgets.defaultGap }
+        return state.gap ?? (state.merged ? ModuleWidgets.defaultGap : 8)
+    }
 
-    mutating func setWidgetsMerged(_ on: Bool, _ m: Module) {
+    mutating func setWidgetGap(_ gap: Int, _ m: Module) {
         var state = widgetState[m.rawValue] ?? ModuleWidgets(enabled: initialWidgets(m))
-        state.merged = on
+        state.gap = min(max(gap, ModuleWidgets.gapRange.lowerBound), ModuleWidgets.gapRange.upperBound)
         widgetState[m.rawValue] = state
     }
 
