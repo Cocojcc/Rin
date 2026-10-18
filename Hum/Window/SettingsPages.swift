@@ -619,6 +619,8 @@ private struct WidgetChip: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
+        // The same name titles the widget's options below.
+        .help(L10n.Widget.name(kind, module))
         .accessibilityLabel(L10n.Widget.name(kind, module))
         .accessibilityAddTraits(on ? [.isSelected] : [])
     }
