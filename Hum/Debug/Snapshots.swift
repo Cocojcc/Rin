@@ -16,6 +16,7 @@ enum Snapshots {
         Monitor.shared.start()
         for m in Module.allCases { Monitor.shared.setVisible(.popover(m), true) }
         Monitor.shared.setVisible(.window(.monitor(.battery)), true)
+        Monitor.shared.setVisible(.window(.processes), true)
         DispatchQueue.main.asyncAfter(deadline: .now() + 7) {
             render(to: dir, only: only)
             NSApp.terminate(nil)
@@ -51,11 +52,27 @@ enum Snapshots {
                 (.overview, "overview"), (.monitor(.cpu), "cpu"), (.monitor(.gpu), "gpu"), (.monitor(.memory), "memory"),
                 (.monitor(.network), "network"), (.monitor(.disk), "disk"), (.monitor(.battery), "battery"), (.monitor(.bluetooth), "bluetooth"),
                 (.monitor(.sensors), "sensors"),
-                (.settings, "settings"),
+                (.settings, "settings"), (.sleep, "sleep"), (.about, "about"),
             ] + Module.allCases.map { (.moduleSettings($0), "module-\($0.rawValue)") }
             for (page, name) in pages where want("page") || want("page-\(name)") {
                 Navigator.shared.page = page
                 save(MainView().frame(width: UIScale.of(800), height: UIScale.of(1400)).background(wall), appearance, dir.appendingPathComponent("page-\(name)-\(tag).png"))
+            }
+            if want("page") || want("page-processes") {
+                Navigator.shared.page = .processes
+                ProcessesPage.initialSelection = nil
+                save(MainView().frame(width: UIScale.of(800), height: UIScale.of(760)).background(wall), appearance, dir.appendingPathComponent("page-processes-\(tag).png"))
+                let busiest = Monitor.shared.snapshot.processes.all.filter { !$0.isSystem && $0.bundlePath != nil }.max { $0.cpu < $1.cpu }
+                ProcessesPage.initialSelection = busiest?.id
+                save(MainView().frame(width: UIScale.of(800), height: UIScale.of(760)).background(wall), appearance, dir.appendingPathComponent("page-processes-open-\(tag).png"))
+                ProcessesPage.initialSelection = nil
+            }
+            if want("page") || want("page-sleep") {
+                KeepAwake.shared.start(.minutes(30))
+                Navigator.shared.page = .sleep
+                save(MainView().frame(width: UIScale.of(800), height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-sleep-on-\(tag).png"))
+                if let out = try? Process.run(URL(fileURLWithPath: "/usr/bin/pmset"), arguments: ["-g", "assertions"]) { out.waitUntilExit() }
+                KeepAwake.shared.stop()
             }
             for m in Module.allCases where want("tabs") {
                 for tab in ModuleSettingsTab.allCases where tab != .module {
@@ -109,7 +126,8 @@ enum LiveDump {
 
     private static func dumpWindow(_ dir: URL) {
         let pages: [(Page, String)] = [(.overview, "overview"), (.monitor(.cpu), "cpu"), (.monitor(.network), "network"),
-                                       (.monitor(.battery), "battery"), (.settings, "settings"), (.moduleSettings(.network), "module-network")]
+                                       (.monitor(.battery), "battery"), (.settings, "settings"), (.moduleSettings(.network), "module-network"),
+                                       (.processes, "processes"), (.sleep, "sleep"), (.about, "about")]
         MainWindowController.shared.show(.overview)
         var queue = pages
         func next() {

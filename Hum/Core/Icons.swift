@@ -47,6 +47,19 @@ enum Icons {
     static let bolt = "M6.8 1L2.8 6.8h2.7L5 11l4.2-6H6.4z"              // 12 × 12, filled
     static let bluetooth = "M4.5 5.2L11.5 11L8 14V2l3.5 3L4.5 10.8"
     static let chargingBolt = "M4.6 0.5L0.8 6.2h2.7L2.9 10.5l4.3-6.1H4.4z"  // 8 × 11, filled
+    static let processes = "M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.01M2.5 8h.01M2.5 12h.01"
+    static let sleep = "M13.5 9.6A5.8 5.8 0 1 1 6.4 2.5a4.6 4.6 0 0 0 7.1 7.1z"
+    static let mac = "M3.5 3.5h9a1 1 0 0 1 1 1v6.5h-11V4.5a1 1 0 0 1 1-1zM1 11h14l-.5 1a1 1 0 0 1-.9.5H2.4a1 1 0 0 1-.9-.5z"
+    static let linkChevron = "M1 1l4 4-4 4"                           // 6 × 10
+    static let sortChevron = "M1.5 3l2.5 2.5L6.5 3"                   // 8 × 8
+    static let search = "M5.2 1.5a3.7 3.7 0 1 1 0 7.4a3.7 3.7 0 1 1 0-7.4zM8 8l2.6 2.6"  // 12 × 12
+    static let closeSmall = "M2 2l6 6M8 2L2 8"                         // 10 × 10
+    static let cup = "M3 6.5h8v3a4 4 0 0 1-8 0zM11 7.5h1a1.5 1.5 0 0 1 0 3h-1.3M5.5 2.5c-.5.6.5 1.2 0 1.8M8 2.5c-.5.6.5 1.2 0 1.8"
+    static let infinity = "M8 8c-1.2-1.6-2.4-2.4-3.5-2.4a2.4 2.4 0 1 0 0 4.8c1.1 0 2.3-.8 3.5-2.4zm0 0c1.2 1.6 2.4 2.4 3.5 2.4a2.4 2.4 0 1 0 0-4.8c-1.1 0-2.3.8-3.5 2.4z"
+    static let clock = "M8 2.5a5.5 5.5 0 1 1 0 11a5.5 5.5 0 1 1 0-11zM8 5v3l2 1.5"
+    static let sunset = "M2 11.5h12M4.5 11.5a3.5 3.5 0 0 1 7 0M8 3.5v2M3.2 6.2l1.2 1.2M12.8 6.2l-1.2 1.2M5 14h6"
+    static let plug = "M6 2v3M10 2v3M4.5 5h7v2.5a3.5 3.5 0 0 1-7 0zM8 11v3"
+    static let sliders = "M2.5 5h6M11.5 5h2M2.5 11h2M7.5 11h6M10 3.5a1.5 1.5 0 1 1 0 3a1.5 1.5 0 1 1 0-3zM6 9.5a1.5 1.5 0 1 1 0 3a1.5 1.5 0 1 1 0-3z"
 
     /// A Bluetooth accessory by kind (16 × 16).
     static func device(_ kind: BluetoothDevice.Kind) -> String {

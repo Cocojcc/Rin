@@ -22,6 +22,9 @@ final class Monitor {
     private(set) var isPaused = false
 
     @ObservationIgnored let history = History()
+    /// Recent CPU and memory per process group, for the Processes page's inspector sparklines.
+    @ObservationIgnored private(set) var processHistory: [String: [ProcessPoint]] = [:]
+    @ObservationIgnored private var processHistoryDate = Date.distantPast
     @ObservationIgnored private let sampler = Sampler()
     @ObservationIgnored private var consumers: Set<Consumer> = []
     @ObservationIgnored private var lastPublicIP = Date.distantPast
@@ -73,7 +76,13 @@ final class Monitor {
             default: break
             }
         }
+        let allProcesses = consumers.contains(.window(.processes))
+        let batteryPage = consumers.contains(.window(.monitor(.battery)))
+        // The battery page's "整机" figure comes from the SMC on Macs without a battery.
+        if batteryPage { read.insert(.sensors) }
         config.monitored = read
+        config.processesWanted = allProcesses || batteryPage
+        config.processes.full = allProcesses
         for m in Module.allCases { config.intervals[m] = prefs.refresh(m) }
         config.processInterval = min(prefs.cpu.processRefresh, prefs.memory.processRefresh)
         config.latency = prefs.network.showLatency
@@ -83,8 +92,8 @@ final class Monitor {
         config.processes.includeOtherUsers = anyUI
         // Per-app traffic is a difference between two nettop reads (about 10 ms each), so it is
         // kept up whenever the network is read; a list that opens shows the latest one at once.
-        config.processes.network = config.monitored.contains(.network)
-        config.processes.gpu = config.monitored.contains(.gpu)
+        config.processes.network = config.monitored.contains(.network) || allProcesses
+        config.processes.gpu = allProcesses || config.monitored.contains(.gpu)
             && (consumers.contains(.popover(.gpu)) || consumers.contains(.window(.monitor(.gpu))))
         config.processes.limit = max(8, prefs.cpu.processCount, prefs.memory.processCount, prefs.gpu.processCount)
         sampler.configure(config)
@@ -97,9 +106,28 @@ final class Monitor {
     private func apply(_ s: Snapshot) {
         snapshot = s
         history.record(s)
+        recordProcesses(s.processes)
         tick &+= 1
         onSample?(s)
         refreshPublicIPIfNeeded()
+    }
+
+    private func recordProcesses(_ p: ProcessSnapshot) {
+        guard !p.all.isEmpty else {
+            if !processHistory.isEmpty { processHistory = [:] }
+            return
+        }
+        guard p.date != processHistoryDate else { return }
+        processHistoryDate = p.date
+        var next: [String: [ProcessPoint]] = [:]
+        next.reserveCapacity(p.all.count)
+        for row in p.all {
+            var points = processHistory[row.id] ?? []
+            points.append(ProcessPoint(cpu: row.cpu, memory: Double(row.memory)))
+            if points.count > ProcessPoint.kept { points.removeFirst(points.count - ProcessPoint.kept) }
+            next[row.id] = points
+        }
+        processHistory = next
     }
 
     private func refreshPublicIPIfNeeded() {
@@ -127,6 +155,8 @@ final class Sampler {
         var slowOnBattery = true
         var interface = ""
         var processes = ProcessReader.Request()
+        /// Read processes even when no process-listing module is read (Processes and battery pages).
+        var processesWanted = false
     }
 
     var onSnapshot: ((Snapshot) -> Void)?
@@ -159,12 +189,14 @@ final class Sampler {
     func configure(_ config: Config) {
         queue.async {
             let old = self.config.processes
+            let oldWanted = self.config.processesWanted
             self.config = config
             self.reschedule()
             // Per-app traffic and GPU time are rates between two reads, and the first read after
             // they switch on only sets the baseline. Read again a second later rather than after
             // the full process interval, so a list that just opened fills in at once.
-            if (config.processes.network && !old.network) || (config.processes.gpu && !old.gpu) {
+            if (config.processes.network && !old.network) || (config.processes.gpu && !old.gpu)
+                || (config.processes.full && !old.full) || (config.processesWanted && !oldWanted) {
                 self.queue.asyncAfter(deadline: .now() + 1) {
                     guard !self.paused else { return }
                     self.processesDue = true
@@ -285,7 +317,7 @@ final class Sampler {
             s.cpu.efficiencyMHz = lastPower.efficiencyMHz
         }
         // Process lists feed the CPU, memory, GPU, network and disk views.
-        let wantsProcesses = !config.monitored.isDisjoint(with: [.cpu, .memory, .gpu, .network, .disk])
+        let wantsProcesses = config.processesWanted || !config.monitored.isDisjoint(with: [.cpu, .memory, .gpu, .network, .disk])
         if !wantsProcesses {
             lastProcesses = nil
         } else if force || processesDue || config.processes.includeOtherUsers && lastProcesses == nil

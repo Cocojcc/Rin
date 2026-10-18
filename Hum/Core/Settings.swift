@@ -118,6 +118,13 @@ struct SensorsPrefs: Codable, Equatable {
     var showPower = true
 }
 
+struct SleepPrefs: Codable, Equatable {
+    /// Keep-awake also holds the display on.
+    var keepDisplay = false
+    /// Keep-awake turns itself off when the battery runs low (on battery power).
+    var offWhenLow = true
+}
+
 struct MenubarPrefs: Codable, Equatable {
     var displayMode: DisplayMode = .separate
     var iconColor: ColorMode = .mono
@@ -167,6 +174,7 @@ struct Preferences: Codable, Equatable {
     var battery = BatteryPrefs()
     var bluetooth = BluetoothPrefs()
     var sensors = SensorsPrefs()
+    var sleep = SleepPrefs()
     var alerts = AlertPrefs()
     /// Menu bar widgets per module (keyed by module raw value); missing entries use the defaults.
     var widgetState: [String: ModuleWidgets] = [:]

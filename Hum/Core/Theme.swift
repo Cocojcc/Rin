@@ -86,6 +86,8 @@ enum Theme {
 
     static let ink = Color.dyn(RGBA(0x1D1D1D), RGBA(0xF2F2F2))
     static let onInk = Color.dyn(RGBA(0xFFFFFF), RGBA(0x1D1D1D))
+    /// The design canvas's mint wallpaper, on the About page's laptop when the desktop picture can't be read.
+    static let wall = Color.dyn(RGBA(0xCDE5CE), RGBA(0x1F3527))
 
     // Status
     static let ok = Color.dyn(RGBA(0x316A3C), RGBA(0x8FD09C))

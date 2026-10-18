@@ -8,6 +8,11 @@ enum Page: Hashable {
     /// A module's settings: widgets, dropdown, alerts (from the monitor page's settings button).
     case moduleSettings(Module)
     case settings
+    /// Every process, sortable, with an inspector for the selected one.
+    case processes
+    /// Keep-awake and the apps holding the Mac awake.
+    case sleep
+    case about
 
     /// The sidebar entry that should look selected for this page.
     var sidebarPage: Page {
@@ -19,6 +24,8 @@ enum Page: Hashable {
 @Observable
 final class Navigator {
     static let shared = Navigator()
+    /// The Processes page's sort column, set by the "全部" links on the way in.
+    var processSort: ProcessSort = .cpu
     var page: Page = .overview {
         didSet {
             guard page != oldValue else { return }
@@ -33,6 +40,12 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
 
     var isVisible: Bool { window?.isVisible ?? false }
+
+    /// Opens the Processes page sorted by the list the "全部" link sat on.
+    func showProcesses(sortedBy sort: ProcessSort) {
+        Navigator.shared.processSort = sort
+        show(.processes)
+    }
 
     func show(_ page: Page) {
         PanelController.shared.close()

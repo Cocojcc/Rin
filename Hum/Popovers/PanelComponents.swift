@@ -152,6 +152,8 @@ struct BigReadout: View {
 struct PanelSection<Content: View>: View {
     var title: String
     var right: String? = nil
+    /// A process list's "全部" link to the Processes page, sorted by this.
+    var link: ProcessSort? = nil
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -159,7 +161,10 @@ struct PanelSection<Content: View>: View {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text(title).font(Fonts.ui(12, 500)).accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 0)
-                if let right { Text(right) }
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    if let right { Text(right) }
+                    if let link { AllProcessesLink(sort: link) }
+                }
             }
             .ui(12)
             .foregroundStyle(Theme.sub)
@@ -269,9 +274,10 @@ struct PanelProcessList: View {
     var color: Color
     var nameWidth: CGFloat = 96
     var valueWidth: CGFloat = 56
+    var link: ProcessSort? = nil
 
     var body: some View {
-        PanelSection(title: title) {
+        PanelSection(title: title, link: link) {
             ProcessListPanel(processes: processes, metric: metric, color: color,
                              rowHeight: 30, nameWidth: nameWidth, valueWidth: valueWidth, rowPadding: 8,
                              fill: Theme.well, radius: 12)

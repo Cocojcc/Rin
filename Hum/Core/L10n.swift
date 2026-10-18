@@ -80,6 +80,9 @@ enum L10n {
         static var about: String { tr("sidebar.about") }
         static var pause: String { tr("sidebar.pause") }
         static var resume: String { tr("sidebar.resume") }
+        static var processes: String { tr("sidebar.processes") }
+        static var sleep: String { tr("sidebar.sleep") }
+        static var aboutMac: String { tr("sidebar.aboutMac") }
     }
 
     enum Common {
@@ -797,5 +800,104 @@ enum L10n {
         static var redWhenLow: String { tr("widget.redWhenLow") }
         static var hideWhenFine: String { tr("widget.hideWhenFine") }
         static var iconRedWhenLow: String { tr("widget.iconRedWhenLow") }
+    }
+
+    enum Processes {
+        static var viewAll: String { tr("processes.viewAll") }
+        static var viewAllA11y: String { tr("processes.viewAllA11y") }
+        static var search: String { tr("processes.search") }
+        static var filterLabel: String { tr("processes.filterLabel") }
+        static var filterAll: String { tr("processes.filterAll") }
+        static var filterApps: String { tr("processes.filterApps") }
+        static var filterMine: String { tr("processes.filterMine") }
+        static var filterSystem: String { tr("processes.filterSystem") }
+        static var name: String { tr("processes.name") }
+        static var energy: String { tr("processes.energy") }
+        static var listLabel: String { tr("processes.listLabel") }
+        static var inspector: String { tr("processes.inspector") }
+        static var closeInspector: String { tr("processes.closeInspector") }
+        static func pidUser(_ a: String, _ b: String) -> String { tr("processes.pidUser", a, b) }
+        static var systemProcess: String { tr("processes.systemProcess") }
+        static var details: String { tr("processes.details") }
+        static var cpuTime: String { tr("processes.cpuTime") }
+        static var threads: String { tr("processes.threads") }
+        static var diskReadWrite: String { tr("processes.diskReadWrite") }
+        static var networkInOut: String { tr("processes.networkInOut") }
+        static var started: String { tr("processes.started") }
+        static var relations: String { tr("processes.relations") }
+        static var parent: String { tr("processes.parent") }
+        static var children: String { tr("processes.children") }
+        static func childGroup(_ a: String, _ b: Int) -> String { tr("processes.childGroup", a, b) }
+        static func childMore(_ a: String, _ b: Int) -> String { tr("processes.childMore", a, b) }
+        static func sortedBy(_ a: String) -> String { tr("processes.sortedBy", a) }
+        static var topEnergy: String { tr("processes.topEnergy") }
+        static func wholeMac(_ a: String) -> String { tr("processes.wholeMac", a) }
+    }
+
+    enum Sleep {
+        static var keepAwake: String { tr("sleep.keepAwake") }
+        static var awake: String { tr("sleep.awake") }
+        static var remaining: String { tr("sleep.remaining") }
+        static var untilOff: String { tr("sleep.untilOff") }
+        static func endsAt(_ a: String) -> String { tr("sleep.endsAt", a) }
+        static var endsUnplugged: String { tr("sleep.endsUnplugged") }
+        static var turnOff: String { tr("sleep.turnOff") }
+        static var turnOn: String { tr("sleep.turnOn") }
+        static var offTitle: String { tr("sleep.offTitle") }
+        static var offSub: String { tr("sleep.offSub") }
+        static var modesLabel: String { tr("sleep.modesLabel") }
+        static var modeIndefinite: String { tr("sleep.modeIndefinite") }
+        static func modeMinutes(_ a: Int) -> String { tr("sleep.modeMinutes", a) }
+        static var modeHour: String { tr("sleep.modeHour") }
+        static func modeUntil(_ a: String) -> String { tr("sleep.modeUntil", a) }
+        static var modeCharging: String { tr("sleep.modeCharging") }
+        static var modeCustom: String { tr("sleep.modeCustom") }
+        static var customUntil: String { tr("sleep.customUntil") }
+        static var start: String { tr("sleep.start") }
+        static var keepDisplay: String { tr("sleep.keepDisplay") }
+        static func lowBattery(_ a: String) -> String { tr("sleep.lowBattery", a) }
+        static var blockers: String { tr("sleep.blockers") }
+        static var preventsSystem: String { tr("sleep.preventsSystem") }
+        static var preventsDisplay: String { tr("sleep.preventsDisplay") }
+        static var open: String { tr("sleep.open") }
+        static func openNamed(_ a: String) -> String { tr("sleep.openNamed", a) }
+        static var macOS: String { tr("sleep.macOS") }
+        static var playingAudio: String { tr("sleep.playingAudio") }
+        static var playingVideo: String { tr("sleep.playingVideo") }
+        static var nothing: String { tr("sleep.nothing") }
+        static func hoursMinutes(_ a: Int, _ b: Int) -> String { tr("sleep.hoursMinutes", a, b) }
+        static func minutes(_ a: Int) -> String { tr("sleep.minutes", a) }
+        static var underMinute: String { tr("sleep.underMinute") }
+        static func daysHours(_ a: Int, _ b: Int) -> String { tr("sleep.daysHours", a, b) }
+    }
+
+    enum About {
+        static var copy: String { tr("about.copy") }
+        static var copied: String { tr("about.copied") }
+        static var copyA11y: String { tr("about.copyA11y") }
+        static func inches(_ a: String) -> String { tr("about.inches", a) }
+        static func year(_ a: String) -> String { tr("about.year", a) }
+        static func macOS(_ a: String) -> String { tr("about.macOS", a) }
+        static var hardware: String { tr("about.hardware") }
+        static var software: String { tr("about.software") }
+        static var storage: String { tr("about.storage") }
+        static var chip: String { tr("about.chip") }
+        static var memory: String { tr("about.memory") }
+        static var display: String { tr("about.display") }
+        static var modelID: String { tr("about.modelID") }
+        static var system: String { tr("about.system") }
+        static var build: String { tr("about.build") }
+        static var kernel: String { tr("about.kernel") }
+        static var computerName: String { tr("about.computerName") }
+        static var booted: String { tr("about.booted") }
+        static var architecture: String { tr("about.architecture") }
+        static var appleSilicon: String { tr("about.appleSilicon") }
+        static var intel: String { tr("about.intel") }
+        static func cpuCores(_ a: Int, _ b: Int, _ c: Int) -> String { tr("about.cpuCores", a, b, c) }
+        static func cores(_ a: Int) -> String { tr("about.cores", a) }
+        static func displayValue(_ a: String, _ b: Int, _ c: Int) -> String { tr("about.displayValue", a, b, c) }
+        static func resolution(_ a: Int, _ b: Int) -> String { tr("about.resolution", a, b) }
+        static func volume(_ a: String, _ b: String) -> String { tr("about.volume", a, b) }
+        static func copyLine(_ a: String, _ b: String) -> String { tr("about.copyLine", a, b) }
     }
 }

@@ -24,6 +24,8 @@ struct Section<Content: View>: View {
     var title: String
     var right: String? = nil
     var rightColor: Color = Theme.sub
+    /// A process list's "全部" link to the Processes page, sorted by this.
+    var link: ProcessSort? = nil
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -31,7 +33,10 @@ struct Section<Content: View>: View {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text(title).ui(13, 500).foregroundStyle(Theme.sub).accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 0)
-                if let right { Text(right).ui(12).foregroundStyle(rightColor).lineLimit(1) }
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    if let right { Text(right).ui(12).foregroundStyle(rightColor).lineLimit(1) }
+                    if let link { AllProcessesLink(sort: link) }
+                }
             }
             .frame(minHeight: 18)
             .padding(.horizontal, 14)
@@ -711,7 +716,7 @@ struct CPUPage: View {
                         }
                     }
                 }
-                Section(title: L10n.Monitor.topCPU, right: L10n.Monitor.processThreads(grouped(s.processes.processCount), grouped(s.processes.threadCount))) {
+                Section(title: L10n.Monitor.topCPU, right: L10n.Monitor.processThreads(grouped(s.processes.processCount), grouped(s.processes.threadCount)), link: .cpu) {
                     let list = Array(s.processes.byCPU.prefix(4))
                     let peak = max(list.map(\.cpu).max() ?? 1, 0.0001)
                     ProcessTable(processes: list, fraction: { $0.cpu / peak }, color: Theme.cpu,
@@ -1119,7 +1124,7 @@ struct GPUPage: View {
                     }
                 }
             }
-            Section(title: L10n.Monitor.topGPU) {
+            Section(title: L10n.Monitor.topGPU, link: .gpu) {
                 let list = Array(monitor.snapshot.processes.byGPU.prefix(4))
                 let peak = max(list.map(\.gpu).max() ?? 1, 0.0001)
                 ProcessTable(processes: list, fraction: { $0.gpu / peak }, color: Theme.gpu, value: { Format.percentValue($0.gpu) })
@@ -1239,7 +1244,7 @@ struct MemoryPage: View {
                     }
                 }
             }
-            Section(title: L10n.Monitor.topMemory) {
+            Section(title: L10n.Monitor.topMemory, link: .memory) {
                 let list = Array(s.processes.byMemory.prefix(5))
                 let peak = max(Double(list.map(\.memory).max() ?? 1), 1)
                 ProcessTable(processes: list, fraction: { Double($0.memory) / peak }, color: Theme.mem, value: { Format.memory($0.memory) })
@@ -1313,7 +1318,7 @@ struct NetworkPage: View {
                 ChartPanel(height: 90) { mirrored }
             }
             Section(title: L10n.Monitor.connection) { connection(n) }
-            Section(title: L10n.Monitor.topNetwork) {
+            Section(title: L10n.Monitor.topNetwork, link: .network) {
                 let list = Array(s.processes.byNetwork.prefix(4))
                 let peak = max(list.map(\.netTotal).max() ?? 1, 0.0001)
                 ProcessTable(processes: list, fraction: { $0.netTotal / peak }, color: Theme.down,
@@ -1497,7 +1502,7 @@ struct DiskPage: View {
                     }
                 }
             }
-            Section(title: L10n.Panel.topDisk) {
+            Section(title: L10n.Panel.topDisk, link: .disk) {
                 let list = Array(s.processes.byDisk.prefix(4))
                 let peak = max(list.map(\.diskTotal).max() ?? 1, 0.0001)
                 ProcessTable(processes: list, fraction: { $0.diskTotal / peak }, color: Theme.read,
@@ -1625,6 +1630,7 @@ struct BatteryPage: View {
                             .accessibilityLabel(L10n.Monitor.batteryChartA11y(range.title))
                     }
                 }
+                energySection(s, wholeMac: b.onAC ? max(0, (b.systemPowerIn ?? 0) - max(0, b.power ?? 0)) : abs(b.power ?? 0))
             } else {
                 HStack(spacing: 14) {
                     LineIcon(d: Icons.batteryOff, size: 16, lineWidth: 1.5)
@@ -1644,6 +1650,16 @@ struct BatteryPage: View {
                         .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
                 }
             }
+            if !b.hasBattery { energySection(s, wholeMac: s.sensors.systemPower) }
+        }
+    }
+
+    /// The apps drawing the most power, with the whole Mac's draw on the right.
+    private func energySection(_ s: Snapshot, wholeMac: Double?) -> some View {
+        let list = Array(s.processes.byEnergy.prefix(5))
+        let peak = max(list.map(\.energy).max() ?? 1, 0.0001)
+        return Section(title: L10n.Processes.topEnergy, right: wholeMac.map { L10n.Processes.wholeMac(Format.watts($0)) }, link: .energy) {
+            ProcessTable(processes: list, fraction: { $0.energy / peak }, color: Theme.bat, value: { Format.appWatts($0.energy) })
         }
     }
 

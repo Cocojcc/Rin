@@ -172,7 +172,7 @@ struct CPUPanel: View {
             }
         }
         if p.showProcesses {
-            PanelProcessList(title: L10n.Panel.topUsage, processes: Array(s.processes.byCPU.prefix(p.processCount)), metric: .cpu, color: Theme.cpu)
+            PanelProcessList(title: L10n.Panel.topUsage, processes: Array(s.processes.byCPU.prefix(p.processCount)), metric: .cpu, color: Theme.cpu, link: .cpu)
         }
     }
 }
@@ -332,7 +332,7 @@ struct MemoryPanel: View {
             Well { KVRow(key: L10n.Memory.swap, value: Format.memory(m.swapUsed)) }
         }
         if p.showProcesses {
-            PanelProcessList(title: L10n.Panel.topUsage, processes: Array(monitor.snapshot.processes.byMemory.prefix(p.processCount)), metric: .memory, color: Theme.mem)
+            PanelProcessList(title: L10n.Panel.topUsage, processes: Array(monitor.snapshot.processes.byMemory.prefix(p.processCount)), metric: .memory, color: Theme.mem, link: .memory)
         }
     }
 }

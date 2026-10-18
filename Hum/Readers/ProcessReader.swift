@@ -8,7 +8,7 @@ private func responsibility_get_pid_responsible_for_pid(_ pid: pid_t) -> pid_t
 
 /// Per-process CPU, memory, disk, network and GPU usage, folded into apps.
 ///
-/// CPU and disk come from proc_pid_rusage deltas (no subprocess). Processes owned by other
+/// CPU, disk and energy come from proc_pid_rusage deltas (no subprocess). Processes owned by other
 /// users can't be read that way, so while a window or panel is open `ps` fills them in.
 /// Network (nettop) is sampled while the network is read; GPU (IORegistry) only while
 /// something shows it.
@@ -18,6 +18,8 @@ final class ProcessReader {
         var network = false
         var gpu = false
         var limit = 8
+        /// Return every group (the Processes page), not just the top few per metric.
+        var full = false
     }
 
     private struct Identity {
@@ -27,9 +29,10 @@ final class ProcessReader {
         var bundlePath: String?
         var executablePath: String?
         var isSystem: Bool
+        var uid: uid_t
     }
 
-    private struct Counters { var cpu: UInt64; var read: UInt64; var write: UInt64 }
+    private struct Counters { var cpu: UInt64; var read: UInt64; var write: UInt64; var energy: UInt64 }
 
     private var previous: [pid_t: Counters] = [:]
     private var previousDate: Date?
@@ -58,21 +61,25 @@ final class ProcessReader {
         let pids = Self.allPIDs()
 
         for pid in pids where pid > 0 {
-            var info = rusage_info_v4()
+            var info = rusage_info_v6()
             let ok = withUnsafeMutablePointer(to: &info) {
-                $0.withMemoryRebound(to: rusage_info_t?.self, capacity: 1) { proc_pid_rusage(pid, RUSAGE_INFO_V4, $0) }
+                $0.withMemoryRebound(to: rusage_info_t?.self, capacity: 1) { proc_pid_rusage(pid, RUSAGE_INFO_V6, $0) }
             } == 0
             guard ok else { unreadable.append(pid); continue }
             let cpuTime = UInt64(Double(info.ri_user_time + info.ri_system_time) * timebase)
-            let counters = Counters(cpu: cpuTime, read: info.ri_diskio_bytesread, write: info.ri_diskio_byteswritten)
+            let counters = Counters(cpu: cpuTime, read: info.ri_diskio_bytesread, write: info.ri_diskio_byteswritten,
+                                    energy: info.ri_energy_nj)
             current[pid] = counters
 
             var row = usage(for: pid)
             row.memory = info.ri_phys_footprint
+            row.cpuTime = Double(cpuTime) / 1e9
             if let p = previous[pid], dt > 0 {
                 row.cpu = Double(counters.cpu &- p.cpu) / (dt * 1e9) * 100
                 row.diskRead = Double(counters.read >= p.read ? counters.read - p.read : 0) / dt
                 row.diskWrite = Double(counters.write >= p.write ? counters.write - p.write : 0) / dt
+                // CPU energy, in nanojoules.
+                row.energy = Double(counters.energy >= p.energy ? counters.energy - p.energy : 0) / dt / 1e9
             }
             rows[pid] = row
         }
@@ -121,6 +128,7 @@ final class ProcessReader {
 
         let grouped = group(Array(rows.values))
         var snapshot = ProcessSnapshot()
+        snapshot.date = now
         let n = request.limit
         snapshot.byCPU = Array(grouped.sorted { $0.cpu > $1.cpu }.prefix(n))
         snapshot.byMemory = Array(grouped.sorted { $0.memory > $1.memory }.prefix(n))
@@ -131,6 +139,8 @@ final class ProcessReader {
         if request.gpu {
             snapshot.byGPU = Array(grouped.filter { $0.gpu > 0.05 }.sorted { $0.gpu > $1.gpu }.prefix(n))
         }
+        snapshot.byEnergy = Array(grouped.filter { $0.energy > 0.005 }.sorted { $0.energy > $1.energy }.prefix(n))
+        if request.full { snapshot.all = grouped }
         let load = Self.loadInfo()
         snapshot.processCount = load?.tasks ?? pids.count
         snapshot.threadCount = load?.threads ?? 0
@@ -141,8 +151,10 @@ final class ProcessReader {
 
     private func usage(for pid: pid_t) -> ProcessUsage {
         let id = identity(for: pid)
-        return ProcessUsage(id: id.groupID, pid: pid, pids: [pid], name: id.groupName,
-                            bundlePath: id.bundlePath, executablePath: id.executablePath, isSystem: id.isSystem)
+        var row = ProcessUsage(id: id.groupID, pid: pid, pids: [pid], name: id.groupName,
+                               bundlePath: id.bundlePath, executablePath: id.executablePath, isSystem: id.isSystem)
+        row.uid = id.uid
+        return row
     }
 
     private func identity(for pid: pid_t) -> Identity {
@@ -175,9 +187,11 @@ final class ProcessReader {
             if path.map({ ($0 as NSString).deletingLastPathComponent.hasSuffix("\(bundle)/Contents/MacOS") }) ?? false {
                 name = display
             }
-            identity = Identity(name: name, groupID: bundle, groupName: display, bundlePath: bundle, executablePath: path, isSystem: isSystem && !bundle.hasPrefix("/Applications"))
+            identity = Identity(name: name, groupID: bundle, groupName: display, bundlePath: bundle, executablePath: path,
+                                isSystem: isSystem && !bundle.hasPrefix("/Applications"), uid: uid)
         } else {
-            identity = Identity(name: name, groupID: "pid:\(pid)", groupName: name, bundlePath: nil, executablePath: path, isSystem: isSystem)
+            identity = Identity(name: name, groupID: "pid:\(pid)", groupName: name, bundlePath: nil, executablePath: path,
+                                isSystem: isSystem, uid: uid)
         }
         identities[pid] = identity
         return identity
@@ -194,12 +208,15 @@ final class ProcessReader {
                 g.netDown += row.netDown
                 g.netUp += row.netUp
                 g.gpu += row.gpu
+                g.energy += row.energy
+                g.cpuTime += row.cpuTime
                 g.pids.append(row.pid)
                 // Prefer the app's main executable as the representative pid.
                 if let bundle = row.bundlePath, let exe = row.executablePath,
                    (exe as NSString).deletingLastPathComponent.hasSuffix("\(bundle)/Contents/MacOS") {
                     g.pid = row.pid
                     g.executablePath = exe
+                    g.uid = row.uid
                 }
                 groups[row.id] = g
             } else {

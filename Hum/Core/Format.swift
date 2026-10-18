@@ -119,6 +119,17 @@ enum Format {
         w >= 100 ? "\(Int(w.rounded())) W" : String(format: "%.1f W", w)
     }
 
+    /// Per-app power, which is mostly under a watt → "2.6 W", "0.42 W".
+    static func appWatts(_ w: Double) -> String {
+        w >= 1 ? watts(w) : String(format: "%.2f W", w)
+    }
+
+    /// Seconds → "25:12:08" (CPU time, the keep-awake clock).
+    static func hms(_ seconds: Double) -> String {
+        let total = Int(seconds)
+        return String(format: "%d:%02d:%02d", total / 3600, (total / 60) % 60, total % 60)
+    }
+
     static func rpm(_ r: Double) -> String { "\(Int(r.rounded())) rpm" }
 
     static func frequency(_ mhz: Double) -> String {
@@ -148,6 +159,17 @@ enum Format {
         let f = DateFormatter()
         f.setLocalizedDateFormatFromTemplate("MMMd Hm")
         return f.string(from: date)
+    }
+
+    /// "今天 9:41", "昨天 22:14", "周一 8:40" within the week, then "10月15日 8:02".
+    static func weekdayAndTime(_ date: Date) -> String {
+        let cal = Calendar.current
+        guard !cal.isDateInToday(date), !cal.isDateInYesterday(date),
+              let days = cal.dateComponents([.day], from: cal.startOfDay(for: date), to: cal.startOfDay(for: Date())).day,
+              days < 7 else { return dayAndTime(date) }
+        let f = DateFormatter()
+        f.setLocalizedDateFormatFromTemplate("EEE")
+        return f.string(from: date) + " " + time(date)
     }
 
     /// "9:41" today, "昨天 22:14", "10月15日 8:02" (the overview's peaks).

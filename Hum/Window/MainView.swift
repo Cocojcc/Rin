@@ -38,19 +38,28 @@ struct PageView: View {
             // The scroll view itself stays unscaled; only the page inside it is drawn at UI scale.
             // Pages cross-fade, stacked so the outgoing one keeps its place.
             ZStack {
-                ScrollView { UIScaled { stack } }
-                    .scrollIndicators(.automatic)
-                    .id(page)
-                    .transition(.opacity)
+                Group {
+                    if fillsWindow {
+                        // The page scrolls its own table, so its header stays put.
+                        UIScaled { stack }
+                    } else {
+                        ScrollView { UIScaled { stack } }
+                            .scrollIndicators(.automatic)
+                    }
+                }
+                .id(page)
+                .transition(.opacity)
             }
             .animation(Motion.page, value: page)
         }
     }
 
+    private var fillsWindow: Bool { page == .processes }
+
     private var stack: some View {
         content
             .padding(EdgeInsets(top: 46, leading: 24, bottom: 24, trailing: 24))
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, maxHeight: fillsWindow ? .infinity : nil, alignment: .topLeading)
     }
 
     @ViewBuilder private var content: some View {
@@ -69,6 +78,9 @@ struct PageView: View {
             }
         case .moduleSettings(let m): ModuleSettingsPage(module: m)
         case .settings: SettingsPage()
+        case .processes: ProcessesPage()
+        case .sleep: SleepPage()
+        case .about: AboutPage()
         }
     }
 }
@@ -79,15 +91,18 @@ struct Sidebar: View {
 
     private let pages: [(Page, String, String)] = [
         (.overview, Icons.overview, L10n.Sidebar.overview),
+        (.processes, Icons.processes, L10n.Sidebar.processes),
         (.monitor(.cpu), Icons.cpu, L10n.Module.cpu),
         (.monitor(.gpu), Icons.gpu, L10n.Module.gpu),
         (.monitor(.memory), Icons.memory, L10n.Module.memory),
         (.monitor(.network), Icons.network, L10n.Module.network),
         (.monitor(.disk), Icons.disk, L10n.Module.disk),
         (.monitor(.battery), Icons.battery, L10n.Module.battery),
+        (.sleep, Icons.sleep, L10n.Sidebar.sleep),
         (.monitor(.bluetooth), Icons.bluetooth, L10n.Module.bluetooth),
         (.monitor(.sensors), Icons.sensors, L10n.Module.sensors),
     ]
+    private let aboutPage: (Page, String, String) = (.about, Icons.mac, L10n.Sidebar.aboutMac)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -104,6 +119,7 @@ struct Sidebar: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(pages, id: \.0) { item($0) }
+                item(aboutPage).padding(.top, 12)
             }
             .slidingThumb(navigator.page.sidebarPage) { GlassThumb() }
             Spacer(minLength: 12)

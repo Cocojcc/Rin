@@ -284,6 +284,12 @@ struct ProcessUsage: Identifiable, Hashable {
     var netDown: Double = 0
     var netUp: Double = 0
     var gpu: Double = 0          // percent of the GPU
+    /// Watts the process's CPU work drew over the last interval (rusage energy); 0 when unreadable.
+    var energy: Double = 0
+    /// Seconds of CPU time since launch, summed over the group.
+    var cpuTime: Double = 0
+    /// Owner of the representative process.
+    var uid: uid_t = 0
 
     var netTotal: Double { netDown + netUp }
     var diskTotal: Double { diskRead + diskWrite }
@@ -295,7 +301,12 @@ struct ProcessSnapshot {
     var byDisk: [ProcessUsage] = []
     var byNetwork: [ProcessUsage] = []
     var byGPU: [ProcessUsage] = []
+    var byEnergy: [ProcessUsage] = []
+    /// Every group, unsorted; only filled while the Processes page is open.
+    var all: [ProcessUsage] = []
     var processCount = 0
+    /// When the list was read; process reads are slower than the sample tick.
+    var date = Date.distantPast
     var threadCount = 0
 }
 
@@ -316,6 +327,13 @@ struct Snapshot {
     var selfMemory: UInt64 = 0
     /// Modules read for this snapshot; the others are switched off and left empty.
     var monitored: Set<Module> = Set(Module.allCases)
+}
+
+/// One process read for the inspector's sparklines.
+struct ProcessPoint {
+    static let kept = 30
+    var cpu: Double
+    var memory: Double
 }
 
 struct PeakProcess: Codable, Hashable {
