@@ -59,6 +59,7 @@ struct PageView: View {
             case .network: NetworkPage()
             case .disk: DiskPage()
             case .battery: BatteryPage()
+            case .bluetooth: BluetoothPage()
             case .sensors: SensorsPage()
             }
         case .moduleSettings(let m): ModuleSettingsPage(module: m)
@@ -79,6 +80,7 @@ struct Sidebar: View {
         (.monitor(.network), Icons.network, L10n.Module.network),
         (.monitor(.disk), Icons.disk, L10n.Module.disk),
         (.monitor(.battery), Icons.battery, L10n.Module.battery),
+        (.monitor(.bluetooth), Icons.bluetooth, L10n.Module.bluetooth),
         (.monitor(.sensors), Icons.sensors, L10n.Module.sensors),
     ]
 

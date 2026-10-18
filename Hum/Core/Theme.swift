@@ -131,6 +131,7 @@ enum Theme {
         case .network: return barDown
         case .disk: return barDisk
         case .battery: return barBat
+        case .bluetooth: return barDown
         case .sensors: return barTemp
         }
     }
@@ -157,6 +158,7 @@ enum Theme {
         case .network: return down
         case .disk: return disk
         case .battery: return bat
+        case .bluetooth: return down
         case .sensors: return temp
         }
     }

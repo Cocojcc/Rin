@@ -49,7 +49,8 @@ enum Snapshots {
             }
             let pages: [(Page, String)] = [
                 (.overview, "overview"), (.monitor(.cpu), "cpu"), (.monitor(.gpu), "gpu"), (.monitor(.memory), "memory"),
-                (.monitor(.network), "network"), (.monitor(.disk), "disk"), (.monitor(.battery), "battery"), (.monitor(.sensors), "sensors"),
+                (.monitor(.network), "network"), (.monitor(.disk), "disk"), (.monitor(.battery), "battery"), (.monitor(.bluetooth), "bluetooth"),
+                (.monitor(.sensors), "sensors"),
                 (.settings, "settings"),
             ] + Module.allCases.map { (.moduleSettings($0), "module-\($0.rawValue)") }
             for (page, name) in pages where want("page") || want("page-\(name)") {

@@ -45,6 +45,7 @@ enum L10n {
         static var disk: String { tr("module.disk") }
         static var battery: String { tr("module.battery") }
         static var sensors: String { tr("module.sensors") }
+        static var bluetooth: String { tr("module.bluetooth") }
     }
 
     enum Range {
@@ -60,6 +61,7 @@ enum L10n {
         static var ago24h: String { tr("range.ago24h") }
         static var ago12h: String { tr("range.ago12h") }
         static var now: String { tr("range.now") }
+        static var d30: String { tr("range.d30") }
     }
 
     enum Time {
@@ -131,9 +133,6 @@ enum L10n {
     }
 
     enum Battery {
-        static func budLeft(_ p: Int) -> String { tr("battery.bud.left", p) }
-        static func budRight(_ p: Int) -> String { tr("battery.bud.right", p) }
-        static func budCase(_ p: Int) -> String { tr("battery.bud.case", p) }
         static var charging: String { tr("battery.charging") }
         static var charged: String { tr("battery.charged") }
         static var onBattery: String { tr("battery.onBattery") }
@@ -149,17 +148,38 @@ enum L10n {
         static var adapterLabel: String { tr("battery.adapterLabel") }
         static var level: String { tr("battery.level") }
         static var levelHistory: String { tr("battery.levelHistory") }
-        static var bluetooth: String { tr("battery.bluetooth") }
         static func deviceCount(_ n: Int) -> String { tr("battery.deviceCount", n) }
         static var noBattery: String { tr("battery.noBattery") }
         static var ups: String { tr("battery.ups") }
         static func upsDetail(_ minutes: Int) -> String { tr("battery.upsDetail", minutes) }
         static var upsOnAC: String { tr("battery.upsOnAC") }
         static var low: String { tr("battery.low") }
-        static var noDevices: String { tr("battery.noDevices") }
         static var lowA11y: String { tr("battery.lowA11y") }
         static var chargingA11y: String { tr("battery.chargingA11y") }
         static func minutesShort(_ a: Int) -> String { tr("battery.minutesShort", a) }
+    }
+
+    enum Bluetooth {
+        static var noDevices: String { tr("bluetooth.noDevices") }
+        static func deviceCount(_ a: Int) -> String { tr("bluetooth.deviceCount", a) }
+        static func lowCount(_ a: Int) -> String { tr("bluetooth.lowCount", a) }
+        static var disconnected: String { tr("bluetooth.disconnected") }
+        static func lastConnected(_ a: String) -> String { tr("bluetooth.lastConnected", a) }
+        static var left: String { tr("bluetooth.left") }
+        static var right: String { tr("bluetooth.right") }
+        static var caseLabel: String { tr("bluetooth.case") }
+        static func weeks(_ a: Int) -> String { tr("bluetooth.weeks", a) }
+        static func days(_ a: Int) -> String { tr("bluetooth.days", a) }
+        static func hours(_ a: Int) -> String { tr("bluetooth.hours", a) }
+        static var underHour: String { tr("bluetooth.underHour") }
+        static func chartA11y(_ a: String, _ b: String, _ c: String) -> String { tr("bluetooth.chartA11y", a, b, c) }
+        static func deviceA11y(_ a: String, _ b: String) -> String { tr("bluetooth.deviceA11y", a, b) }
+        static var lowA11y: String { tr("bluetooth.lowA11y") }
+        static var device: String { tr("bluetooth.device") }
+        static var nameSeparator: String { tr("bluetooth.nameSeparator") }
+        static func devicesMore(_ a: String, _ b: Int) -> String { tr("bluetooth.devicesMore", a, b) }
+        static var noHistory: String { tr("bluetooth.noHistory") }
+        static func daysAgo(_ a: Int) -> String { tr("bluetooth.daysAgo", a) }
     }
 
     enum Menu {
@@ -179,6 +199,8 @@ enum L10n {
         static func disk(_ v: String) -> String { tr("a11y.disk", v) }
         static func battery(_ v: String) -> String { tr("a11y.battery", v) }
         static func temperature(_ v: String) -> String { tr("a11y.temperature", v) }
+        static func device(_ a: String, _ b: String) -> String { tr("a11y.device", a, b) }
+        static func bluetooth(_ a: String) -> String { tr("a11y.bluetooth", a) }
     }
 
     enum Alerts {
@@ -202,6 +224,10 @@ enum L10n {
         static var networkBody: String { tr("alerts.network.body") }
         static func seconds(_ n: Int) -> String { tr("alerts.seconds", n) }
         static func minutes(_ n: Int) -> String { tr("alerts.minutes", n) }
+        static func bluetoothLowTitle(_ a: String) -> String { tr("alerts.bluetooth.lowTitle", a) }
+        static func bluetoothLowBody(_ a: String) -> String { tr("alerts.bluetooth.lowBody", a) }
+        static func bluetoothDisconnectTitle(_ a: String) -> String { tr("alerts.bluetooth.disconnectTitle", a) }
+        static var bluetoothDisconnectBody: String { tr("alerts.bluetooth.disconnectBody") }
     }
 
     enum Panel {
@@ -546,7 +572,6 @@ enum L10n {
         static var showHealth: String { tr("settings.showHealth") }
         static var showCycles: String { tr("settings.showCycles") }
         static var showChargingPower: String { tr("settings.showChargingPower") }
-        static var showBluetooth: String { tr("settings.showBluetooth") }
         static var showAllTemps: String { tr("settings.showAllTemps") }
         static var showFans: String { tr("settings.showFans") }
         static var showPower: String { tr("settings.showPower") }
@@ -630,6 +655,17 @@ enum L10n {
         static func decrease(_ a: String) -> String { tr("settings.decrease", a) }
         static func increase(_ a: String) -> String { tr("settings.increase", a) }
         static var widgetGap: String { tr("settings.widgetGap") }
+        static var lowLevel: String { tr("settings.lowLevel") }
+        static func lowLevelValue(_ a: Int) -> String { tr("settings.lowLevelValue", a) }
+        static func minutes(_ a: Int) -> String { tr("settings.minutes", a) }
+        static var showBuds: String { tr("settings.showBuds") }
+        static var showDisconnected: String { tr("settings.showDisconnected") }
+        static var showHistory: String { tr("settings.showHistory") }
+        static var bluetoothLowAlert: String { tr("settings.bluetoothLowAlert") }
+        static var bluetoothLowAlertA11y: String { tr("settings.bluetoothLowAlertA11y") }
+        static var bluetoothDisconnectAlert: String { tr("settings.bluetoothDisconnectAlert") }
+        static var bluetoothDisconnectAlertA11y: String { tr("settings.bluetoothDisconnectAlertA11y") }
+        static func percentValue(_ a: Int) -> String { tr("settings.percentValue", a) }
     }
 
     enum Notch {
@@ -716,6 +752,7 @@ enum L10n {
             case .memory: return tr("widget.byPressure")
             case .battery: return tr("widget.byLevel")
             case .sensors: return tr("widget.byTemperature")
+            case .bluetooth: return tr("widget.byLevel")
             default: return tr("widget.byUsage")
             }
         }
@@ -754,5 +791,11 @@ enum L10n {
         static var fixedWidth: String { tr("widget.fixedWidth") }
         static var uploadLetter: String { tr("widget.uploadLetter") }
         static var downloadLetter: String { tr("widget.downloadLetter") }
+        static var shownDevices: String { tr("widget.shownDevices") }
+        static var autoDevices: String { tr("widget.autoDevices") }
+        static var showDeviceIcon: String { tr("widget.showDeviceIcon") }
+        static var redWhenLow: String { tr("widget.redWhenLow") }
+        static var hideWhenFine: String { tr("widget.hideWhenFine") }
+        static var iconRedWhenLow: String { tr("widget.iconRedWhenLow") }
     }
 }

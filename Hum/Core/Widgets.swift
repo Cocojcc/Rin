@@ -8,6 +8,8 @@ enum WidgetKind: String, Codable, CaseIterable, Identifiable {
     case icon, label, line, bar, pie, tacho, ring, pill, dot, battery, chart, state
     // Numbers
     case value, mini, memory, speed, details, time, fan, stack, pair, inside
+    /// Bluetooth: chosen devices' batteries, and the lowest one.
+    case devices, lowest
     /// Earlier pieces that combined an icon or graphic with a number; split up when settings load.
     case temp, iconValue, labelLine
 
@@ -25,6 +27,7 @@ extension Module {
         case .network: return [.icon, .speed, .chart, .state, .label]
         case .disk: return [.icon, .value, .bar, .pie, .chart, .speed, .label, .mini]
         case .battery: return [.icon, .value, .battery, .inside, .time, .details, .ring, .bar, .label, .mini]
+        case .bluetooth: return [.devices, .stack, .lowest, .icon, .label]
         case .sensors: return [.icon, .value, .fan, .bar, .stack, .label, .mini]
         }
     }
@@ -37,6 +40,7 @@ extension Module {
         case .network: return [.speed]
         case .disk: return []
         case .battery: return [.battery, .value]
+        case .bluetooth: return [.devices]
         case .sensors: return [.icon, .value, .fan]
         }
     }
@@ -101,6 +105,10 @@ struct WidgetOptions: Codable, Equatable {
     /// The same for the number widget, off by default: the number is only as wide as it is,
     /// so the space beside it is just the widget gap.
     var numberFixed = false
+    /// Bluetooth devices a widget shows (ids); empty means the connected ones, lowest first.
+    var deviceIDs: [String] = []
+    /// Bluetooth "lowest": nothing while every device is above the low level.
+    var hideWhenFine = false
 
 
     init() {}
@@ -141,6 +149,8 @@ struct WidgetOptions: Codable, Equatable {
         if let v = try c.decodeIfPresent(type(of: fixedWidth), forKey: .fixedWidth) { fixedWidth = v }
         if let v = try c.decodeIfPresent(type(of: numberAlign), forKey: .numberAlign) { numberAlign = v }
         if let v = try c.decodeIfPresent(type(of: numberFixed), forKey: .numberFixed) { numberFixed = v }
+        if let v = try c.decodeIfPresent(type(of: deviceIDs), forKey: .deviceIDs) { deviceIDs = v }
+        if let v = try c.decodeIfPresent(type(of: hideWhenFine), forKey: .hideWhenFine) { hideWhenFine = v }
     }
 
     static func defaults(_ module: Module, _ kind: WidgetKind) -> WidgetOptions {
@@ -315,6 +325,7 @@ extension Preferences {
         if a.batteryOn { out.insert(.battery) }
         if a.tempOn { out.insert(.sensors) }
         if a.networkOn { out.insert(.network) }
+        if a.bluetoothLowOn || a.bluetoothDisconnectOn { out.insert(.bluetooth) }
         return out
     }
 }

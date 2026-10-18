@@ -96,7 +96,16 @@ struct BatteryPrefs: Codable, Equatable {
     var showCycles = true
     var showTemperature = true
     var showPower = true
-    var showBluetooth = false
+}
+
+struct BluetoothPrefs: Codable, Equatable {
+    var visible = false
+    var refresh: Double = 60
+    /// Devices at or below this are low: red, and the low-battery alert.
+    var lowLevel: Double = 0.2
+    var showBuds = true
+    var showDisconnected = true
+    var showHistory = false
 }
 
 struct SensorsPrefs: Codable, Equatable {
@@ -140,6 +149,8 @@ struct AlertPrefs: Codable, Equatable {
     var tempOn = false
     var tempThreshold: Double = 95
     var networkOn = true
+    var bluetoothLowOn = true
+    var bluetoothDisconnectOn = false
     var style: NotificationStyle = .banner
     var sound = false
     var colorMenubar = true
@@ -154,6 +165,7 @@ struct Preferences: Codable, Equatable {
     var network = NetworkPrefs()
     var disk = DiskPrefs()
     var battery = BatteryPrefs()
+    var bluetooth = BluetoothPrefs()
     var sensors = SensorsPrefs()
     var alerts = AlertPrefs()
     /// Menu bar widgets per module (keyed by module raw value); missing entries use the defaults.
@@ -169,6 +181,7 @@ struct Preferences: Codable, Equatable {
         case .network: return network.visible
         case .disk: return disk.visible
         case .battery: return battery.visible
+        case .bluetooth: return bluetooth.visible
         case .sensors: return sensors.visible
         }
     }
@@ -191,6 +204,7 @@ struct Preferences: Codable, Equatable {
         case .network: return network.refresh
         case .disk: return disk.refresh
         case .battery: return battery.refresh
+        case .bluetooth: return bluetooth.refresh
         case .sensors: return sensors.refresh
         }
     }
@@ -203,6 +217,7 @@ struct Preferences: Codable, Equatable {
         case .network: network.visible = value
         case .disk: disk.visible = value
         case .battery: battery.visible = value
+        case .bluetooth: bluetooth.visible = value
         case .sensors: sensors.visible = value
         }
     }
@@ -239,8 +254,12 @@ final class SettingsStore {
         if !prefs.general.widgetsMigrated { prefs.migrateWidgets() }
         if !prefs.general.widgetsSplit { prefs.splitCompoundWidgets() }
         // Keep every module in the order list, even ones added after the prefs were saved.
-        let missing = Module.allCases.filter { !prefs.menubar.order.contains($0) }
-        prefs.menubar.order.append(contentsOf: missing)
+        // A module added since (Bluetooth) goes right after the one it follows in the sidebar.
+        for module in Module.allCases where !prefs.menubar.order.contains(module) {
+            let before = Module.allCases.prefix { $0 != module }.last { prefs.menubar.order.contains($0) }
+            let at = before.flatMap { prefs.menubar.order.firstIndex(of: $0) }.map { $0 + 1 } ?? 0
+            prefs.menubar.order.insert(module, at: at)
+        }
     }
 
     /// Decodes saved prefs on top of the defaults, so fields added in later versions get their

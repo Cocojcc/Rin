@@ -16,7 +16,6 @@ final class Monitor {
 
     private(set) var snapshot = Snapshot()
     private(set) var tick = 0
-    private(set) var bluetooth: [BluetoothDevice] = []
     private(set) var publicIP: String?
     private(set) var interfaces: [(name: String, kind: InterfaceKind)] = []
     /// Sampling stopped from the sidebar's pause button; everything keeps its last values.
@@ -35,8 +34,8 @@ final class Monitor {
         for name in [NSWorkspace.didMountNotification, NSWorkspace.didUnmountNotification] {
             center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in self?.sampler.volumesChanged() }
         }
-        sampler.onSnapshot = { [weak self] snapshot, devices in
-            DispatchQueue.main.async { self?.apply(snapshot, devices) }
+        sampler.onSnapshot = { [weak self] snapshot in
+            DispatchQueue.main.async { self?.apply(snapshot) }
         }
         applyConfiguration()
         sampler.start()
@@ -88,10 +87,6 @@ final class Monitor {
         config.processes.gpu = config.monitored.contains(.gpu)
             && (consumers.contains(.popover(.gpu)) || consumers.contains(.window(.monitor(.gpu))))
         config.processes.limit = max(8, prefs.cpu.processCount, prefs.memory.processCount, prefs.gpu.processCount)
-        let batteryVisible = config.monitored.contains(.battery)
-            && (consumers.contains(.popover(.battery)) || consumers.contains(.window(.monitor(.battery))))
-        config.bluetooth = batteryVisible && (prefs.battery.showBluetooth || consumers.contains(.window(.monitor(.battery))) || !snapshot.battery.hasBattery)
-        config.headphones = consumers.contains(.window(.monitor(.battery))) || (batteryVisible && prefs.battery.showBluetooth)
         sampler.configure(config)
 
         if consumers.contains(.window(.monitor(.network))) || consumers.contains(.popover(.network)) {
@@ -99,9 +94,8 @@ final class Monitor {
         }
     }
 
-    private func apply(_ s: Snapshot, _ devices: [BluetoothDevice]?) {
+    private func apply(_ s: Snapshot) {
         snapshot = s
-        if let devices { bluetooth = devices }
         history.record(s)
         tick &+= 1
         onSample?(s)
@@ -133,11 +127,9 @@ final class Sampler {
         var slowOnBattery = true
         var interface = ""
         var processes = ProcessReader.Request()
-        var bluetooth = false
-        var headphones = false
     }
 
-    var onSnapshot: ((Snapshot, [BluetoothDevice]?) -> Void)?
+    var onSnapshot: ((Snapshot) -> Void)?
 
     private let queue = DispatchQueue(label: "hum.sampler", qos: .utility)
     private var timer: DispatchSourceTimer?
@@ -271,12 +263,14 @@ final class Sampler {
         if !config.monitored.contains(.disk) { s.disk = DiskSample() }
         if !config.monitored.contains(.battery) { s.battery = BatterySample() }
         if !config.monitored.contains(.sensors) { s.sensors = SensorsSample() }
+        if !config.monitored.contains(.bluetooth) { s.bluetooth = BluetoothSample() }
         if !config.monitored.contains(.gpu) { s.gpu = GPUSample() }
         if due(.cpu, now, force: force) { s.cpu = cpu.read() }
         if due(.memory, now, force: force) { s.memory = memory.read() }
         if due(.network, now, force: force) { s.network = network.read(preferred: config.interface, probeLatency: config.latency) }
         if due(.disk, now, force: force) { s.disk = disk.read() }
         if due(.battery, now, force: force) { s.battery = battery.read() }
+        if due(.bluetooth, now, force: force) { s.bluetooth = bluetooth.read(now: now) }
         let cpuDue = lastRead[.cpu] == now
         let sensorsDue = due(.sensors, now, force: force)
         let gpuDue = due(.gpu, now, force: force)
@@ -307,7 +301,6 @@ final class Sampler {
         s.selfMemory = processes.selfUsage.memory
         current = s
 
-        let devices = config.bluetooth ? bluetooth.read(includeHeadphones: config.headphones) : nil
 
         let wasOnBattery = onBattery
         if config.monitored.contains(.battery) {
@@ -319,6 +312,6 @@ final class Sampler {
         }
         if wasOnBattery != onBattery { reschedule() }
 
-        onSnapshot?(s, devices)
+        onSnapshot?(s)
     }
 }

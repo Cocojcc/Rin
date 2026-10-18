@@ -67,6 +67,7 @@ enum MenuIcons {
             gauge,
             wordmark,
         ]
+        case .bluetooth: return [MenuIcon(stroke: Icons.bluetooth)]
         case .sensors: return [
             MenuIcon(stroke: Icons.sensors),
             MenuIcon(stroke: Icons.sensors + "M11.5 4.2h2M11.5 6.6h2M11.5 9h2"),

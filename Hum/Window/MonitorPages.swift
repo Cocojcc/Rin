@@ -20,7 +20,7 @@ private func hoverLine(_ metric: Metric, _ range: TimeRange, _ date: Date, _ tex
 }
 
 /// Section title with a panel underneath that fills the height of its row.
-private struct Section<Content: View>: View {
+struct Section<Content: View>: View {
     var title: String
     var right: String? = nil
     var rightColor: Color = Theme.sub
@@ -65,7 +65,7 @@ private struct Card<Content: View>: View {
 }
 
 /// A monitor page: the module header, then its content.
-private struct MonitorPageLayout<Content: View>: View {
+struct MonitorPageLayout<Content: View>: View {
     let module: Module
     @ViewBuilder var content: Content
 
@@ -164,8 +164,9 @@ struct OverviewPage: View {
                 diskCard(s)
                 batteryCard(s)
                 sensorsCard(s, unit)
-                peakCard().layoutValue(key: SpanKey.self, value: 2)
+                peakCard()
                 gpuCard(s, unit)
+                bluetoothCard(s)
             }
         }
     }
@@ -278,8 +279,6 @@ struct OverviewPage: View {
                     footerText("", L10n.Battery.health + " " + Format.marker, b.health.map(Format.percent) ?? L10n.Common.dash)
                     if let c = b.cycles { footerText(" · ", L10n.Overview.cycles(Format.marker), "\(c)") }
                 }
-            } else {
-                footerText(L10n.Battery.deviceCount(monitor.bluetooth.count))
             }
         }
     }
@@ -319,27 +318,33 @@ struct OverviewPage: View {
         return OverviewCard(module: .cpu, title: L10n.Overview.cpuPeaks, icon: Icons.activity, status: nil,
                             action: { CPUPage.requestedRange = .h24; Navigator.shared.page = .monitor(.cpu) }) {
             PeakSparkline(points: monitor.history.points(.cpu, range: .h24), peaks: peaks)
-                .frame(height: 30)
+                .frame(height: 24)
                 .accessibilityLabel(L10n.Monitor.cpuChartA11y(TimeRange.h24.title))
-            if peaks.isEmpty {
-                Text(L10n.Monitor.noPeaks).ui(12).foregroundStyle(Theme.sub)
-            } else {
-                HStack(alignment: .top, spacing: 12) {
-                    ForEach(peaks) { p in
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                                Text(Format.percent(p.value / 100)).ui(15, 500)
-                                Text(p.top.first?.name ?? L10n.Common.dash).ui(12).lineLimit(1)
-                            }
-                            Text(Format.dayAndTime(p.date)).ui(12).foregroundStyle(Theme.sub)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+        } footer: {
+            VStack(alignment: .leading, spacing: 3) {
+                if peaks.isEmpty {
+                    Text(L10n.Monitor.noPeaks).ui(12).foregroundStyle(Theme.sub).frame(height: 18)
+                }
+                ForEach(peaks) { p in
+                    HStack(spacing: 6) {
+                        Text(Format.percent(p.value / 100)).fontWeight(.medium)
+                        Text(p.top.first?.name ?? L10n.Common.dash).lineLimit(1).truncationMode(.tail).frame(maxWidth: .infinity, alignment: .leading)
+                        Text(Format.shortDayAndTime(p.date)).foregroundStyle(Theme.sub)
                     }
-                    ForEach(0..<max(0, 3 - peaks.count), id: \.self) { _ in Color.clear.frame(maxWidth: .infinity) }
+                    .ui(12)
+                    .frame(height: 18)
                 }
             }
-        } footer: {
+        }
+    }
+
+    /// Connected devices, lowest first; the status says how many are low.
+    private func bluetoothCard(_ s: Snapshot) -> some View {
+        let low = MenuBarText.lowDevices(s, settings.prefs).count
+        return OverviewCard(module: .bluetooth, status: low > 0 ? (L10n.Bluetooth.lowCount(low), Theme.danger) : nil) {
             EmptyView()
+        } footer: {
+            BluetoothOverviewRows(snapshot: s, prefs: settings.prefs)
         }
     }
 
@@ -1616,9 +1621,6 @@ struct BatteryPage: View {
                             .accessibilityLabel(L10n.Monitor.batteryChartA11y(range.title))
                     }
                 }
-                Section(title: L10n.Battery.bluetooth, right: monitor.bluetooth.isEmpty ? nil : L10n.Battery.deviceCount(monitor.bluetooth.count)) {
-                    devices(rowHeight: 48)
-                }
             } else {
                 HStack(spacing: 14) {
                     LineIcon(d: Icons.batteryOff, size: 16, lineWidth: 1.5)
@@ -1630,9 +1632,6 @@ struct BatteryPage: View {
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
-                Section(title: L10n.Battery.bluetooth, right: L10n.Battery.deviceCount(monitor.bluetooth.count)) {
-                    devices(rowHeight: 54)
-                }
             }
             if !b.ups.isEmpty {
                 Section(title: L10n.Battery.ups) {
@@ -1711,18 +1710,6 @@ struct BatteryPage: View {
         }
     }
 
-    private func devices(rowHeight: CGFloat) -> some View {
-        VStack(spacing: 0) {
-            if monitor.bluetooth.isEmpty {
-                Text(L10n.Battery.noDevices).ui(13).foregroundStyle(Theme.faint).frame(maxWidth: .infinity, alignment: .leading).frame(height: rowHeight)
-            }
-            DividedRows { ForEach(monitor.bluetooth) { DeviceRow(device: $0, minHeight: rowHeight) } }
-        }
-        .padding(.horizontal, 14)
-        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
-    }
-
-
     private func hover(_ date: Date) -> [String] {
         let pts = monitor.history.points(.battery, range: range)
         guard let i = nearest(pts, date) else { return [] }
@@ -1754,45 +1741,6 @@ enum BatteryTime {
     /// "0:42" or "42 分钟", per the battery module's time format.
     static func text(_ minutes: Int) -> String {
         SettingsStore.shared.prefs.battery.timeFormat == .minutes ? L10n.Battery.minutesShort(minutes) : Format.clockDuration(minutes: minutes)
-    }
-}
-
-/// Accessory row: icon tile, name (and detail), mini battery, value.
-struct DeviceRow: View {
-    var device: BluetoothDevice
-    var minHeight: CGFloat = 54
-
-    var body: some View {
-        let low = device.level <= 0.2
-        HStack(spacing: 12) {
-            LineIcon(d: Self.icon(device.kind), size: 16, lineWidth: 1.4)
-                .foregroundStyle(Theme.sub)
-                .frame(width: 30, height: 30)
-                .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.well))
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 8) {
-                    Text(device.name).lineLimit(1)
-                    if low { StatusPill(text: L10n.Battery.low, fg: Theme.danger, bg: Theme.dangerBg, fontSize: 12) }
-                }
-                if let detail = device.detail { Text(detail).ui(12).foregroundStyle(Theme.sub).lineLimit(1) }
-            }
-            Spacer(minLength: 8)
-            BatteryGlyph(level: device.level, fill: low ? Theme.danger : Theme.bat, rim: Theme.faint, rimOpacity: 1)
-            Text(Format.percent(device.level)).ui(13, 500).foregroundStyle(low ? Theme.danger : Theme.text)
-                .frame(width: 40, alignment: .trailing)
-        }
-        .frame(minHeight: minHeight)
-        .accessibilityElement(children: .combine)
-    }
-
-    static func icon(_ kind: BluetoothDevice.Kind) -> String {
-        switch kind {
-        case .keyboard: return Icons.keyboard
-        case .mouse: return Icons.mouse
-        case .trackpad: return Icons.trackpad
-        case .headphones: return Icons.headphones
-        case .other: return Icons.battery
-        }
     }
 }
 

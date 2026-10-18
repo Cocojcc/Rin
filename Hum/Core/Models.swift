@@ -1,7 +1,7 @@
 import Foundation
 
 enum Module: String, Codable, CaseIterable, Identifiable {
-    case cpu, gpu, memory, network, disk, battery, sensors
+    case cpu, gpu, memory, network, disk, battery, bluetooth, sensors
 
     var id: String { rawValue }
 
@@ -13,6 +13,7 @@ enum Module: String, Codable, CaseIterable, Identifiable {
         case .network: return L10n.Module.network
         case .disk: return L10n.Module.disk
         case .battery: return L10n.Module.battery
+        case .bluetooth: return L10n.Module.bluetooth
         case .sensors: return L10n.Module.sensors
         }
     }
@@ -34,6 +35,7 @@ enum Module: String, Codable, CaseIterable, Identifiable {
         case .network: return "NET"
         case .disk: return "SSD"
         case .battery: return "BAT"
+        case .bluetooth: return "BT"
         case .sensors: return "TMP"
         }
     }
@@ -172,13 +174,32 @@ struct BatterySample {
     var ups: [PowerSource] = []
 }
 
-struct BluetoothDevice: Identifiable {
-    enum Kind { case keyboard, mouse, trackpad, headphones, other }
+/// A paired Bluetooth accessory: connected with its battery now, or not connected with the
+/// last battery and time Hum saw.
+struct BluetoothDevice: Identifiable, Equatable {
+    enum Kind: String, Codable { case keyboard, mouse, trackpad, earbuds, headphones, gamepad, phone, tablet, other }
     var id: String
     var name: String
     var kind: Kind
-    var level: Double
-    var detail: String?
+    var level: Double?              // 0...1
+    var charging = false
+    var connected = true
+    /// AirPods-style buds and their case.
+    var left: Double?
+    var right: Double?
+    var caseLevel: Double?
+    /// When Hum last saw it connected.
+    var lastSeen: Date?
+
+    var hasBuds: Bool { left != nil || right != nil || caseLevel != nil }
+}
+
+struct BluetoothSample {
+    var connected: [BluetoothDevice] = []
+    var disconnected: [BluetoothDevice] = []
+
+    /// Connected devices that report a battery.
+    var withBattery: [BluetoothDevice] { connected.filter { $0.level != nil } }
 }
 
 enum TempGroup: String, CaseIterable {
@@ -288,6 +309,7 @@ struct Snapshot {
     var battery = BatterySample()
     var sensors = SensorsSample()
     var gpu = GPUSample()
+    var bluetooth = BluetoothSample()
     var processes = ProcessSnapshot()
     var topCPUNow: [PeakProcess] = []
     var selfCPU: Double = 0

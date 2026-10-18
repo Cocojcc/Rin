@@ -150,6 +150,11 @@ enum Format {
         return f.string(from: date)
     }
 
+    /// "9:41" today, "昨天 22:14", "10月15日 8:02" (the overview's peaks).
+    static func shortDayAndTime(_ date: Date) -> String {
+        Calendar.current.isDateInToday(date) ? time(date) : dayAndTime(date)
+    }
+
     static func uptime(since boot: Date, now: Date = Date()) -> String {
         let minutes = Int(now.timeIntervalSince(boot) / 60)
         let days = minutes / 1440

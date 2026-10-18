@@ -24,10 +24,6 @@ enum Icons {
     static let chevronRight = "M6 3.5L10.5 8L6 12.5"
     static let chevronLeft = "M10 3.5L5.5 8L10 12.5"
     static let close = "M4 4l8 8M12 4l-8 8"
-    static let keyboard = "M2 4.5h12a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1zM4 7h.01M6.5 7h.01M9 7h.01M11.5 7h.01M5 9.5h6"
-    static let mouse = "M8 1.5a4 4 0 0 1 4 4v5a4 4 0 0 1-8 0v-5a4 4 0 0 1 4-4zM8 4v2.5"
-    static let trackpad = "M2.5 3.5h11a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1z"
-    static let headphones = "M5.5 2.5a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2v6M10.5 2.5a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2v6"
     static let ups = "M3.5 2.5h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zM8.5 4.5L6.5 8h3l-2 3.5"
     static let appMark = "M7 16.5v-3M12 16.5v-9M17 16.5v-6"   // 24 × 24
     static let power = "M8 1.75v5.5M4.6 4a5.25 5.25 0 1 0 6.8 0"
@@ -49,6 +45,23 @@ enum Icons {
     static let arrowUpSmall = "M3 5.4V0.9M1.1 2.7L3 0.8L4.9 2.7"       // 6 × 6
     static let arrowDownSmall = "M3 0.6V5.1M1.1 3.3L3 5.2L4.9 3.3"     // 6 × 6
     static let bolt = "M6.8 1L2.8 6.8h2.7L5 11l4.2-6H6.4z"              // 12 × 12, filled
+    static let bluetooth = "M4.5 5.2L11.5 11L8 14V2l3.5 3L4.5 10.8"
+    static let chargingBolt = "M4.6 0.5L0.8 6.2h2.7L2.9 10.5l4.3-6.1H4.4z"  // 8 × 11, filled
+
+    /// A Bluetooth accessory by kind (16 × 16).
+    static func device(_ kind: BluetoothDevice.Kind) -> String {
+        switch kind {
+        case .keyboard: return "M2 4.5h12a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1zM4 7h.01M6.5 7h.01M9 7h.01M11.5 7h.01M5 9.5h6"
+        case .trackpad: return "M2.5 3.5h11a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1z"
+        case .mouse: return "M8 1.5a4 4 0 0 1 4 4v5a4 4 0 0 1-8 0v-5a4 4 0 0 1 4-4zM8 4v2.5"
+        case .earbuds: return "M5.5 2.5a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2v6M10.5 2.5a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2v6"
+        case .headphones: return "M2.5 10.5V8a5.5 5.5 0 0 1 11 0v2.5M2.5 10h2.2v4H3.5a1 1 0 0 1-1-1v-3zM13.5 10h-2.2v4h1.2a1 1 0 0 0 1-1v-3z"
+        case .gamepad: return "M5 5h6a3.5 3.5 0 0 1 3.4 4.3l-.6 2.5a1.5 1.5 0 0 1-2.6.6L10 11H6l-1.2 1.4a1.5 1.5 0 0 1-2.6-.6l-.6-2.5A3.5 3.5 0 0 1 5 5zM5.5 7v2.5M4.25 8.25h2.5M10.5 7.5h.01M11.75 9h.01"
+        case .phone: return "M5 1.5h6a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1zM7 12h2"
+        case .tablet: return "M3.5 1.5h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1zM7 12h2"
+        case .other: return bluetooth
+        }
+    }
 
     static func module(_ m: Module) -> String {
         switch m {
@@ -58,6 +71,7 @@ enum Icons {
         case .network: return network
         case .disk: return disk
         case .battery: return battery
+        case .bluetooth: return bluetooth
         case .sensors: return sensors
         }
     }

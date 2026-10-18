@@ -17,6 +17,7 @@
 		1855ECB99BF4B80DDAB83BEB /* ModulePanels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88465B116A8456467F4CC604 /* ModulePanels.swift */; };
 		1D28E811DF284738D59BE365 /* SpaceGrotesk-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 0C8A9134B4881703AD004FEF /* SpaceGrotesk-OFL.txt */; };
 		269EE57790B363E2A8385D5B /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04179CCD06CACCC54DDBFCF9 /* Theme.swift */; };
+		28F530677FD8C1DF29A19F69 /* BluetoothReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63575017DB02E89CE764539F /* BluetoothReader.swift */; };
 		2B35672B9AA27D3B21146D88 /* PanelComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AE794FA598A873FE1A32F18 /* PanelComponents.swift */; };
 		34442FCA38E0901A0553A4DD /* PowerReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 274FFFC5492A70A9E9F5EFB3 /* PowerReport.swift */; };
 		35AAE23E7483314C4BBC5846 /* Alerts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23DC4DC7CF701F24F2479C5E /* Alerts.swift */; };
@@ -44,6 +45,7 @@
 		B5A3F2EB5E437A7CCA731D7A /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1487EDB70AC3323FF568D160 /* Localizable.strings */; };
 		B82AA4D315B51D25C19E14D4 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C9713C2EDF382EB3C03F61F /* MainView.swift */; };
 		BB9B06360E9C7897A825B96E /* HumApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0E8451C99E7C665060C2E22 /* HumApp.swift */; };
+		BE5BACBBEF2E8B5584926C24 /* BluetoothViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE404F90AE04E2A714129CCB /* BluetoothViews.swift */; };
 		BE75915B05FDB3E4DA022065 /* SVGPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBB0B2FEF9D0DF8929297856 /* SVGPath.swift */; };
 		BF2F619F7B64A5303F0556F9 /* MonitorComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04C6D3B6A80860ABA8C8F919 /* MonitorComponents.swift */; };
 		C87C4175620C13756B67ED14 /* SMC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83AE685353EE9DBDB292DABA /* SMC.swift */; };
@@ -83,6 +85,7 @@
 		532A9AC06A5C0806EFB21775 /* MemoryReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryReader.swift; sourceTree = "<group>"; };
 		588127709E64847CDE384FC6 /* Icons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Icons.swift; sourceTree = "<group>"; };
 		6024D11DC2725FE0A455CB85 /* Format.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Format.swift; sourceTree = "<group>"; };
+		63575017DB02E89CE764539F /* BluetoothReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothReader.swift; sourceTree = "<group>"; };
 		685F75579EAB4FDB21290FC1 /* SettingsPages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsPages.swift; sourceTree = "<group>"; };
 		6A95AED474684F4B4D527739 /* MenuIcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuIcons.swift; sourceTree = "<group>"; };
 		6D558D58F1C173D8F69BD725 /* DiskReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiskReader.swift; sourceTree = "<group>"; };
@@ -110,6 +113,7 @@
 		DA3A71829E860A80EC988D38 /* CPUReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CPUReader.swift; sourceTree = "<group>"; };
 		DA660A20219F7020AC152FEE /* Notch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notch.swift; sourceTree = "<group>"; };
 		E42E13CA56CC27F955D2E372 /* CombinedPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CombinedPanel.swift; sourceTree = "<group>"; };
+		EE404F90AE04E2A714129CCB /* BluetoothViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothViews.swift; sourceTree = "<group>"; };
 		F368566357389AEB3FB8AE06 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		FDE7C33F710D6678B442295C /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -189,6 +193,7 @@
 		B266EFD7420AFD11322A2C37 /* Window */ = {
 			isa = PBXGroup;
 			children = (
+				EE404F90AE04E2A714129CCB /* BluetoothViews.swift */,
 				0F1DACE43B76D40CDAF8EB0F /* Charts.swift */,
 				20CB645470209ABE1CBEC44B /* Components.swift */,
 				7C9713C2EDF382EB3C03F61F /* MainView.swift */,
@@ -240,6 +245,7 @@
 			isa = PBXGroup;
 			children = (
 				BDCE63CCCB1EA89CCFD17215 /* BatteryReader.swift */,
+				63575017DB02E89CE764539F /* BluetoothReader.swift */,
 				DA3A71829E860A80EC988D38 /* CPUReader.swift */,
 				6D558D58F1C173D8F69BD725 /* DiskReader.swift */,
 				49E212393C664A081B5F6CCE /* GPUReader.swift */,
@@ -346,6 +352,8 @@
 			files = (
 				35AAE23E7483314C4BBC5846 /* Alerts.swift in Sources */,
 				DA01DE74CD6F6B699510289F /* BatteryReader.swift in Sources */,
+				28F530677FD8C1DF29A19F69 /* BluetoothReader.swift in Sources */,
+				BE5BACBBEF2E8B5584926C24 /* BluetoothViews.swift in Sources */,
 				907903AC9BAD966A7C770058 /* CPUReader.swift in Sources */,
 				711433AC1CBCD93195BE8CDE /* Charts.swift in Sources */,
 				7E6219CCA3DD06D73EC51EA9 /* CombinedPanel.swift in Sources */,

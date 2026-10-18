@@ -675,6 +675,16 @@ struct ModuleTab: View {
                               options: [(TimeFormat.clock, Format.clockDuration(minutes: 42)), (.minutes, L10n.Battery.minutesShort(42))],
                               selection: pref(\.battery.timeFormat))
                 }
+            case .bluetooth:
+                SettingsRow(title: L10n.Settings.refreshInterval) {
+                    MenuPill(label: L10n.Settings.refreshInterval,
+                             options: [(30.0, L10n.Settings.seconds(30))] + [1, 2, 5].map { (Double($0 * 60), L10n.Settings.minutes($0)) },
+                             selection: pref(\.bluetooth.refresh))
+                }
+                SettingsRow(title: L10n.Settings.lowLevel) {
+                    MenuPill(label: L10n.Settings.lowLevel, options: [10, 15, 20, 25, 30].map { (Double($0) / 100, L10n.Settings.lowLevelValue($0)) },
+                             selection: pref(\.bluetooth.lowLevel))
+                }
             case .sensors:
                 refreshRow(\.sensors.refresh)
                 SettingsRow(title: L10n.Settings.whichSensor) {
@@ -832,6 +842,67 @@ private struct GlyphSample: View {
     }
 }
 
+/// Which Bluetooth devices a widget shows: automatic (the connected ones, up to `limit`) or
+/// the ones ticked in the menu.
+private struct DevicePicker: View {
+    let module: Module
+    let kind: WidgetKind
+    var limit: Int
+    var settings = SettingsStore.shared
+    var monitor = Monitor.shared
+
+    var body: some View {
+        let bt = monitor.snapshot.bluetooth
+        let picked = settings.prefs.options(module, kind).deviceIDs
+        let known = (bt.connected + bt.disconnected).sorted { $0.name < $1.name }
+        let shown = picked.isEmpty ? Array(bt.withBattery.sorted { $0.name < $1.name }.prefix(limit)).map(\.name)
+                                   : picked.compactMap { id in known.first { $0.id == id }?.name }
+        Menu {
+            Button {
+                set([])
+            } label: {
+                if picked.isEmpty { Label(L10n.Widget.autoDevices, systemImage: "checkmark") } else { Text(L10n.Widget.autoDevices) }
+            }
+            Divider()
+            ForEach(known) { d in
+                Button {
+                    set(picked.contains(d.id) ? picked.filter { $0 != d.id } : picked + [d.id])
+                } label: {
+                    if picked.contains(d.id) { Label(d.name, systemImage: "checkmark") } else { Text(d.name) }
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Text(Self.summary(shown)).ui(13).lineLimit(1)
+                LineIcon(d: Icons.upDown, width: 8, height: 12, viewBox: CGSize(width: 8, height: 12), lineWidth: 1.4)
+            }
+            .foregroundStyle(Theme.text)
+            .padding(.leading, 10)
+            .padding(.trailing, 8)
+            .frame(height: 26)
+            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.well))
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
+        .fixedSize()
+        .accessibilityLabel(L10n.Widget.shownDevices)
+    }
+
+    private func set(_ ids: [String]) {
+        var o = settings.prefs.options(module, kind)
+        o.deviceIDs = ids
+        settings.prefs.setOptions(o, module, kind)
+    }
+
+    /// "妙控键盘、妙控板", or "妙控键盘等 3 台" for more.
+    static func summary(_ names: [String]) -> String {
+        if names.isEmpty { return L10n.Common.dash }
+        if names.count <= 2 { return names.joined(separator: L10n.Bluetooth.nameSeparator) }
+        return L10n.Bluetooth.devicesMore(names[0], names.count)
+    }
+}
+
 /// The options of one widget, bound to its stored `WidgetOptions`.
 struct WidgetOptionsGroup: View {
     let module: Module
@@ -890,6 +961,18 @@ struct WidgetOptionsGroup: View {
                 colorRow()
             case .pie, .tacho:
                 toggle(L10n.Widget.monochrome, \.monochrome)
+            case .icon where module == .bluetooth:
+                toggle(L10n.Widget.iconRedWhenLow, \.colorWhenLow)
+            case .devices:
+                SettingsRow(title: L10n.Widget.shownDevices) { DevicePicker(module: module, kind: kind, limit: 3) }
+                toggle(L10n.Widget.showDeviceIcon, \.showIcon)
+                toggle(L10n.Widget.redWhenLow, \.colorWhenLow)
+            case .stack where module == .bluetooth:
+                SettingsRow(title: L10n.Widget.shownDevices) { DevicePicker(module: module, kind: kind, limit: 2) }
+                toggle(L10n.Widget.redWhenLow, \.colorWhenLow)
+            case .lowest:
+                toggle(L10n.Widget.showDeviceIcon, \.showIcon)
+                toggle(L10n.Widget.hideWhenFine, \.hideWhenFine)
             case .icon:
                 SettingsRow(title: L10n.Widget.icon) {
                     Segmented(label: L10n.Widget.icon,
@@ -1062,7 +1145,10 @@ struct PanelTab: View {
                 toggleRow(L10n.Settings.showCycles, \.battery.showCycles)
                 toggleRow(L10n.Settings.showBatteryTemperature, \.battery.showTemperature)
                 toggleRow(L10n.Settings.showChargingPower, \.battery.showPower)
-                toggleRow(L10n.Settings.showBluetooth, \.battery.showBluetooth)
+            case .bluetooth:
+                toggleRow(L10n.Settings.showBuds, \.bluetooth.showBuds)
+                toggleRow(L10n.Settings.showDisconnected, \.bluetooth.showDisconnected)
+                toggleRow(L10n.Settings.showHistory, \.bluetooth.showHistory)
             case .sensors:
                 toggleRow(L10n.Settings.showThermal, \.sensors.showThermal)
                 toggleRow(L10n.Settings.showAllTemps, \.sensors.showAllTemps)
@@ -1121,6 +1207,13 @@ struct AlertsTab: View {
                     Text(L10n.Settings.ruleBattery)
                     InlineChoice(label: L10n.Settings.ruleBattery, options: [10, 15, 20, 30].map { (Double($0), Format.percent(Double($0) / 100)) }, selection: pref(\.alerts.batteryPercent))
                 }
+            case .bluetooth:
+                rule(\.alerts.bluetoothLowOn, label: L10n.Settings.bluetoothLowAlertA11y) {
+                    Text(L10n.Settings.bluetoothLowAlert)
+                    InlineChoice(label: L10n.Settings.bluetoothLowAlert, options: [10, 15, 20, 25, 30].map { (Double($0) / 100, L10n.Settings.percentValue($0)) },
+                                 selection: pref(\.bluetooth.lowLevel))
+                }
+                rule(\.alerts.bluetoothDisconnectOn, label: L10n.Settings.bluetoothDisconnectAlertA11y) { Text(L10n.Settings.bluetoothDisconnectAlert) }
             case .sensors:
                 rule(\.alerts.tempOn, label: L10n.Settings.ruleTempSwitch) {
                     Text(L10n.Settings.ruleTemp)

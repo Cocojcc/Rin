@@ -597,6 +597,7 @@ struct WidgetView: View {
         case .network: return s.network.connected ? 1 : 0
         case .disk: return MenuBarText.volume(s.disk, prefs.disk.volume)?.usedFraction ?? 0
         case .battery: return s.battery.level
+        case .bluetooth: return MenuBarText.lowestDevice(s)?.level ?? 0
         case .sensors: return (MenuBarText.sensorValue(s.sensors, prefs.sensors.sensor) ?? 0) / 100
         }
     }
@@ -629,7 +630,7 @@ struct WidgetView: View {
         case .memory: return .memory
         case .network: return .netDown
         case .disk: return .diskRead
-        case .battery: return .battery
+        case .battery, .bluetooth: return .battery
         case .sensors: return .cpuTemp
         }
     }
@@ -669,7 +670,9 @@ struct WidgetView: View {
     @ViewBuilder private var content: some View {
         switch kind {
         // Icons and graphics: never with a number of their own.
-        case .icon: MenuIconView(icon: MenuIcons.icon(module, o.icon), module: module).foregroundStyle(color(.mono))
+        case .icon:
+            let lowTint = module == .bluetooth && o.colorWhenLow && !MenuBarText.lowDevices(s, prefs).isEmpty
+            MenuIconView(icon: MenuIcons.icon(module, o.icon), module: module).foregroundStyle(lowTint ? Color(nsColor: Theme.barCrit) : color(.mono))
         case .label: VerticalLabel(text: labelText)
         case .line, .labelLine: line
         case .bar: bar
@@ -699,7 +702,9 @@ struct WidgetView: View {
         case .details: batteryDetails
         case .time: numberText(WidgetView.batteryTime(s.battery, prefs) ?? L10n.Common.dash, template: "10:00")
         case .fan: fan
-        case .stack: sensorStack
+        case .stack: module == .bluetooth ? AnyView(deviceRows) : AnyView(sensorStack)
+        case .devices: deviceList
+        case .lowest: lowestDevice
         case .pair: pair
         case .inside: batteryNumber
         }
@@ -741,6 +746,66 @@ struct WidgetView: View {
             PillMeter(fraction: fraction, color: color(o.color), width: 18, height: 9)
         default:
             VerticalMeter(fraction: fraction, color: color(o.color), boxed: o.boxed, radius: module == .sensors ? 2.5 : 1.5)
+        }
+    }
+
+    // MARK: Bluetooth
+
+    /// The devices a widget shows: the ones picked, or the connected ones (up to `limit`).
+    private func shownDevices(limit: Int) -> [BluetoothDevice] {
+        let all = s.bluetooth.withBattery.sorted { $0.name < $1.name }
+        if o.deviceIDs.isEmpty { return Array(all.prefix(limit)) }
+        return o.deviceIDs.compactMap { id in all.first { $0.id == id } }
+    }
+
+    private func isLow(_ d: BluetoothDevice) -> Bool { (d.level ?? 1) <= prefs.bluetooth.lowLevel }
+
+    /// Red for a low device when the widget asks for it.
+    private func deviceTint(_ d: BluetoothDevice) -> AnyShapeStyle {
+        o.colorWhenLow && isLow(d) ? AnyShapeStyle(Color(nsColor: Theme.barCrit)) : AnyShapeStyle(.foreground)
+    }
+
+    /// Each device's icon and battery, side by side.
+    @ViewBuilder private var deviceList: some View {
+        let devices = shownDevices(limit: 3)
+        if devices.isEmpty {
+            BarText(L10n.Common.dash, font: valueFont)
+        } else {
+            HStack(spacing: 7) {
+                ForEach(devices) { d in
+                    HStack(spacing: 3) {
+                        if o.showIcon { LineIcon(d: Icons.device(d.kind), size: 14, lineWidth: 1.3) }
+                        BarText(Format.percent(d.level ?? 0), font: valueFont)
+                    }
+                    .foregroundStyle(deviceTint(d))
+                }
+            }
+        }
+    }
+
+    /// Two devices on two small rows.
+    private var deviceRows: some View {
+        let font = BarFont.twoLine(ui: ui)
+        return VStack(alignment: .trailing, spacing: 0) {
+            ForEach(shownDevices(limit: 2).prefix(2)) { d in
+                HStack(spacing: 2) {
+                    LineIcon(d: Icons.device(d.kind), size: 7, lineWidth: 1.6)
+                    FixedText(text: Format.percent(d.level ?? 0), template: "100%", font: font)
+                }
+                .frame(height: BarFont.twoLineRow)
+                .foregroundStyle(deviceTint(d))
+            }
+        }
+    }
+
+    /// The device with the least battery, or nothing while all are fine (when asked).
+    @ViewBuilder private var lowestDevice: some View {
+        if let d = MenuBarText.lowestDevice(s), !(o.hideWhenFine && !isLow(d)) {
+            HStack(spacing: 2) {
+                if o.showIcon { LineIcon(d: Icons.device(d.kind), size: 14, lineWidth: 1.3) }
+                BarText(Format.percent(d.level ?? 0), font: valueFont)
+            }
+            .foregroundStyle(deviceTint(d))
         }
     }
 
@@ -1053,6 +1118,15 @@ enum MenuBarText {
     }
 
     /// Whether this Mac has the hardware a module reports on.
+    /// The connected device with the least battery.
+    static func lowestDevice(_ s: Snapshot) -> BluetoothDevice? {
+        s.bluetooth.withBattery.min { ($0.level ?? 1) < ($1.level ?? 1) }
+    }
+
+    static func lowDevices(_ s: Snapshot, _ prefs: Preferences) -> [BluetoothDevice] {
+        s.bluetooth.withBattery.filter { ($0.level ?? 1) <= prefs.bluetooth.lowLevel }
+    }
+
     static func available(_ m: Module, _ s: Snapshot) -> Bool {
         switch m {
         case .battery: return s.battery.hasBattery
@@ -1069,6 +1143,7 @@ enum MenuBarText {
         case .network: return Format.rateCompact(s.network.down)
         case .disk: return volume(s.disk, prefs.disk.volume).map { Format.percent($0.usedFraction) } ?? L10n.Common.dash
         case .battery: return Format.percent(s.battery.level)
+        case .bluetooth: return lowestDevice(s).map { Format.percent($0.level ?? 0) } ?? L10n.Common.dash
         case .sensors: return sensorValue(s.sensors, prefs.sensors.sensor).map { Format.temperature($0, unit: prefs.general.temperatureUnit) } ?? L10n.Common.dash
         }
     }
@@ -1107,6 +1182,8 @@ enum MenuBarText {
             case .battery:
                 let b = s.battery
                 if o.colorWhenLow && b.level <= 0.2 && !b.isCharging && !b.onAC { return true }
+            case .devices, .lowest, .stack, .icon where m == .bluetooth:
+                if o.colorWhenLow && !lowDevices(s, prefs).isEmpty { return true }
             case .label, .icon, .chart, .value, .details, .fan, .stack: continue
             default: if o.color != .mono { return true }
             }
@@ -1129,6 +1206,9 @@ enum MenuBarText {
             if s.battery.isCharging { return base + L10n.Battery.chargingA11y }
             if s.battery.level <= 0.2 && !s.battery.onAC { return base + L10n.Battery.lowA11y }
             return base
+        case .bluetooth:
+            let devices = s.bluetooth.withBattery.map { L10n.A11y.device($0.name, Format.percent($0.level ?? 0)) }
+            return L10n.A11y.bluetooth(devices.isEmpty ? L10n.Bluetooth.noDevices : devices.joined(separator: L10n.A11y.separator))
         case .sensors:
             return L10n.A11y.temperature(sensorValue(s.sensors, prefs.sensors.sensor).map { Format.temperatureNumber($0, unit: unit) } ?? L10n.Common.dash)
         }

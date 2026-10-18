@@ -15,6 +15,7 @@ struct ModulePanel: View {
             case .network: NetworkPanel()
             case .disk: DiskPanel()
             case .battery: BatteryPanel()
+            case .bluetooth: BluetoothPanel()
             case .sensors: SensorsPanel()
             }
             if let toast = quitCenter.toast { QuitToast(toast: toast) }
@@ -552,16 +553,11 @@ struct BatteryPanel: View {
                 }
             }
         }
-        if p.showBluetooth || !b.hasBattery {
-            PanelSection(title: L10n.Battery.bluetooth) {
+        // Bluetooth accessories have their own module; a UPS stays with the battery.
+        if !b.ups.isEmpty {
+            PanelSection(title: L10n.Battery.ups) {
                 Well(padding: EdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12)) {
-                    if monitor.bluetooth.isEmpty && b.ups.isEmpty {
-                        Text(L10n.Battery.noDevices).foregroundStyle(Theme.faint).frame(height: 36)
-                    }
                     DividedRows {
-                        ForEach(monitor.bluetooth) { device in
-                            PanelDeviceRow(icon: DeviceRow.icon(device.kind), name: device.name, detail: device.detail, level: device.level)
-                        }
                         ForEach(b.ups) { source in
                             PanelDeviceRow(icon: Icons.ups, name: source.name,
                                            detail: source.onAC ? (source.minutesLeft.map { L10n.Battery.upsDetail($0) } ?? L10n.Battery.upsOnAC) : L10n.Battery.onBattery,

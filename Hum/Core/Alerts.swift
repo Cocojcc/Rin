@@ -10,7 +10,7 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
     static let shared = Alerts()
 
     enum Rule: String, CaseIterable {
-        case cpu, gpu, memory, disk, battery, temperature, network
+        case cpu, gpu, memory, disk, battery, temperature, network, bluetoothLow, bluetoothDisconnect
 
         var module: Module {
             switch self {
@@ -21,6 +21,7 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
             case .battery: return .battery
             case .temperature: return .sensors
             case .network: return .network
+            case .bluetoothLow, .bluetoothDisconnect: return .bluetooth
             }
         }
     }
@@ -33,6 +34,10 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
     @ObservationIgnored private var authorized = false
     @ObservationIgnored private var askedAuthorization = false
     @ObservationIgnored private var everConnected = false
+    /// Bluetooth devices already reported low (until they charge back up), and the ones
+    /// connected at the last reading.
+    @ObservationIgnored private var lowReported: Set<String> = []
+    @ObservationIgnored private var lastConnected: [String: String]?
 
     private static let cooldown: TimeInterval = 600
     private static let quitAction = "quit"
@@ -129,7 +134,29 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
             (L10n.Alerts.networkTitle, L10n.Alerts.networkBody, nil)
         }
 
+        checkBluetooth(s, a, prefs)
+
         if next != active { active = next }
+    }
+
+    /// Per device, so these keep their own memory instead of the module-wide rule state.
+    private func checkBluetooth(_ s: Snapshot, _ a: AlertPrefs, _ prefs: Preferences) {
+        guard s.monitored.contains(.bluetooth) else { lastConnected = nil; return }
+        let low = prefs.bluetooth.lowLevel
+        for d in s.bluetooth.withBattery {
+            let level = d.level ?? 1
+            if level > low + 0.05 { lowReported.remove(d.id) }
+            guard a.bluetoothLowOn, level <= low, !d.charging, !lowReported.contains(d.id) else { continue }
+            lowReported.insert(d.id)
+            post(.bluetoothLow, title: L10n.Alerts.bluetoothLowTitle(d.name), body: L10n.Alerts.bluetoothLowBody(Format.percent(level)), process: nil, sound: a.sound)
+        }
+        let now = Dictionary(s.bluetooth.connected.map { ($0.id, $0.name) }, uniquingKeysWith: { a, _ in a })
+        if a.bluetoothDisconnectOn, let before = lastConnected {
+            for (id, name) in before where now[id] == nil {
+                post(.bluetoothDisconnect, title: L10n.Alerts.bluetoothDisconnectTitle(name), body: L10n.Alerts.bluetoothDisconnectBody, process: nil, sound: a.sound)
+            }
+        }
+        lastConnected = now
     }
 
     private static func minutes(_ m: Double) -> String {
