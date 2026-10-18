@@ -353,7 +353,7 @@ struct OverviewPage: View {
                     HStack(spacing: 6) {
                         Text(Format.percent(p.value / 100)).fontWeight(.medium)
                         Text(p.top.first?.name ?? L10n.Common.dash).lineLimit(1).truncationMode(.tail).frame(maxWidth: .infinity, alignment: .leading)
-                        Text(Format.shortDayAndTime(p.date)).foregroundStyle(Theme.sub)
+                        Text(Format.shortDayAndTime(p.date)).foregroundStyle(Theme.sub).fixedSize()
                     }
                     .ui(12)
                     .frame(height: 18)
@@ -375,7 +375,7 @@ struct OverviewPage: View {
     // MARK: Pieces
 
     private func ringRow<Lines: View>(_ ring: PageRing, @ViewBuilder lines: () -> Lines) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             ring
             VStack(alignment: .leading, spacing: 3) { lines() }
         }
@@ -386,7 +386,8 @@ struct OverviewPage: View {
         HStack(spacing: 6) {
             if let swatch { swatch.swatch }
             Text(label).foregroundStyle(Theme.sub)
-            if let value { Text(value).fontWeight(.medium).foregroundStyle(Theme.text) }
+            // The number stays whole; a long label gives way first.
+            if let value { Text(value).fontWeight(.medium).foregroundStyle(Theme.text).layoutPriority(1) }
         }
         .ui(12)
         .lineLimit(1)

@@ -229,7 +229,18 @@ enum Fonts {
         registered = CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
     }
 
-    /// Space Grotesk at an exact weight (variable font, 300...700), tabular figures.
+    /// The main window draws its text this much larger than the design's sizes. Its layout stays
+    /// at the design's numbers (scaled by `UIScale`); only the type grows, so pages read
+    /// comfortably at 85% without getting bigger. Dropdowns keep the design's sizes.
+    static let windowTextScale: CGFloat = 1.08
+
+    /// Interface text at a design size, enlarged by the surface's text scale (half points).
+    static func text(_ size: CGFloat, _ weight: CGFloat = 400, scale: CGFloat = 1) -> Font {
+        scale == 1 ? ui(size, weight) : ui((size * scale * 2).rounded() / 2, weight)
+    }
+
+    /// Space Grotesk at an exact weight (variable font, 300...700), tabular figures. Menu bar
+    /// previews use this directly so they keep the menu bar's own sizes.
     static func ui(_ size: CGFloat, _ weight: CGFloat = 400) -> Font {
         let key = "\(size)-\(weight)"
         lock.lock(); defer { lock.unlock() }

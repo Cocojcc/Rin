@@ -4,8 +4,27 @@ import SwiftUI
 // MARK: - Typography
 
 extension View {
-    /// Space Grotesk at a size and weight (the design's type ramp: 11 / 12 / 13 / 15 / 18 / 24 / 44).
-    func ui(_ size: CGFloat, _ weight: CGFloat = 400) -> some View { font(Fonts.ui(size, weight)) }
+    /// Space Grotesk at a design size and weight (the type ramp: 11 / 12 / 13 / 15 / 18 / 24 / 44),
+    /// enlarged by the surface's `textScale`.
+    func ui(_ size: CGFloat, _ weight: CGFloat = 400) -> some View { modifier(UIFont(size: size, weight: weight)) }
+}
+
+private struct UIFont: ViewModifier {
+    var size: CGFloat
+    var weight: CGFloat
+    @Environment(\.textScale) private var scale
+
+    func body(content: Content) -> some View { content.font(Fonts.text(size, weight, scale: scale)) }
+}
+
+private struct TextScaleKey: EnvironmentKey { static let defaultValue: CGFloat = 1 }
+
+extension EnvironmentValues {
+    /// How much larger than the design's sizes text is drawn (the main window's `Fonts.windowTextScale`).
+    var textScale: CGFloat {
+        get { self[TextScaleKey.self] }
+        set { self[TextScaleKey.self] = newValue }
+    }
 }
 
 // MARK: - Scale
@@ -22,10 +41,15 @@ enum UIScale {
 struct UIScaled<Content: View>: View {
     var scale: CGFloat = UIScale.factor
     @ViewBuilder var content: Content
+    @Environment(\.textScale) private var textScale
 
     var body: some View {
         ScaleLayout(scale: scale) {
-            content.scaleEffect(scale, anchor: .topLeading)
+            content
+                // Enlarged text that no longer fits (fixed columns, narrow cards) settles back to
+                // the design's size before it truncates.
+                .minimumScaleFactor(1 / textScale)
+                .scaleEffect(scale, anchor: .topLeading)
         }
     }
 }
@@ -548,6 +572,7 @@ struct CellStrip: View {
     var fill: Color = Theme.panel
     var radius: CGFloat = 16
     var compact = false
+    @Environment(\.textScale) private var textScale
 
     var body: some View {
         HStack(spacing: 0) {
@@ -571,7 +596,7 @@ struct CellStrip: View {
     private func value(_ s: String) -> Text {
         let parts = s.components(separatedBy: Format.marker)
         guard parts.count > 1 else { return Text(s) }
-        return Text(parts[0]) + Text(parts[1...].joined()).font(Fonts.ui(12)).foregroundColor(Theme.sub)
+        return Text(parts[0]) + Text(parts[1...].joined()).font(Fonts.text(12, scale: textScale)).foregroundColor(Theme.sub)
     }
 }
 

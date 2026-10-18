@@ -22,6 +22,7 @@ struct SettingsPage: View {
     @State private var dragging: Module?
     /// The system-wide spacing lives in the system's preferences, not in Hum's.
     @State private var systemSpacing = MenuBarSpacing.preset
+    @Environment(\.textScale) private var textScale
 
     var body: some View {
         let prefs = settings.prefs
@@ -141,7 +142,7 @@ struct SettingsPage: View {
                 HStack(spacing: 12) {
                     (Text(L10n.App.name).foregroundColor(Theme.sub)
                         + Text(verbatim: " ")
-                        + Text(SystemInfo.appVersion).font(Fonts.ui(13, 500)).foregroundColor(Theme.text))
+                        + Text(SystemInfo.appVersion).font(Fonts.text(13, 500, scale: textScale)).foregroundColor(Theme.text))
                         .ui(13)
                     Spacer(minLength: 8)
                     WellButton(title: updater.buttonTitle) { updater.check() }

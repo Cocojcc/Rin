@@ -19,6 +19,7 @@ struct MainView: View {
         .frame(minWidth: MainView.minSize.width, minHeight: MainView.minSize.height)
         .background(GlassBackground(radius: UIScale.of(18), material: .underWindowBackground))
         .environment(\.accent, settings.prefs.general.accent.colors)
+        .environment(\.textScale, Fonts.windowTextScale)
         .environment(\.pageGlass, pageGlass)
         .ui(13)
         .foregroundStyle(Theme.text)
