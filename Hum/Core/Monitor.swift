@@ -64,7 +64,10 @@ final class Monitor {
     func applyConfiguration() {
         let prefs = SettingsStore.shared.prefs
         var config = Sampler.Config()
-        config.monitored = Set(Module.allCases.filter(prefs.isMonitored))
+        // The overview and the combined panel show the whole machine, so while either is open
+        // modules that are switched off are read too; otherwise they are not read at all.
+        let wholeMachine = consumers.contains(.window(.overview)) || consumers.contains(.combinedPanel)
+        config.monitored = wholeMachine ? Set(Module.allCases) : Set(Module.allCases.filter(prefs.isMonitored))
         for m in Module.allCases { config.intervals[m] = prefs.refresh(m) }
         config.processInterval = min(prefs.cpu.processRefresh, prefs.memory.processRefresh)
         config.latency = prefs.network.showLatency
@@ -113,7 +116,7 @@ final class Monitor {
 /// Owns the readers and drives them from a timer on its own serial queue.
 final class Sampler {
     struct Config {
-        /// Modules switched on; the rest are not read at all.
+        /// Modules read: those switched on, plus all of them while an overview is open.
         var monitored: Set<Module> = Set(Module.allCases)
         /// Seconds between reads per module; the timer ticks at the shortest of them.
         var intervals: [Module: Double] = [:]

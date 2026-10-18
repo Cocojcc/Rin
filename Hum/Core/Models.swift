@@ -292,7 +292,7 @@ struct Snapshot {
     var topCPUNow: [PeakProcess] = []
     var selfCPU: Double = 0
     var selfMemory: UInt64 = 0
-    /// Modules that were read for this snapshot; the others are switched off and left empty.
+    /// Modules read for this snapshot; the others are switched off and left empty.
     var monitored: Set<Module> = Set(Module.allCases)
 }
 

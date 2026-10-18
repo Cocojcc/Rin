@@ -164,17 +164,17 @@ struct OverviewPage: View {
         VStack(alignment: .leading, spacing: 20) {
             PageTitle(title: L10n.Overview.title)
             status
-            // Modules switched off are left out.
-            let on = settings.prefs.isMonitored
+            // Every module, switched off or not: modules not monitored are read only while
+            // this page is open.
             CardGrid {
-                if on(.cpu) { cpuCard(s, unit) }
-                if on(.gpu) { gpuCard(s, unit) }
-                if on(.memory) { memoryCard(s) }
-                if on(.network) { networkCard(s) }
-                if on(.disk) { diskCard(s) }
-                if on(.battery) { batteryCard(s) }
-                if on(.sensors) { sensorsCard(s, unit) }
-                if on(.cpu) || on(.memory) { topCard(s).layoutValue(key: SpanKey.self, value: 2) }
+                cpuCard(s, unit)
+                gpuCard(s, unit)
+                memoryCard(s)
+                networkCard(s)
+                diskCard(s)
+                batteryCard(s)
+                sensorsCard(s, unit)
+                topCard(s).layoutValue(key: SpanKey.self, value: 2)
             }
         }
     }

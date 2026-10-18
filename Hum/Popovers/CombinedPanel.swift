@@ -183,7 +183,6 @@ struct CombinedPanel: View {
             MainWindowController.shared.show(.monitor(m))
         } label: {
             VStack(alignment: .leading, spacing: 0) { content() }
-                .opacity(settings.prefs.isMonitored(m) ? 1 : 0.35)   // switched off: nothing is read
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .frame(height: height)
