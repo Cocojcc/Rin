@@ -667,7 +667,6 @@
 "settings.points" = "%d pt";
 "settings.decrease" = "减小%@";
 "settings.increase" = "增大%@";
-"widget.arrangement" = "排列";
 "widget.order" = "顺序";
 "widget.uploadFirst" = "上传在前";
 "widget.downloadFirst" = "下载在前";
@@ -689,7 +688,6 @@
 "widget.fixedWidth" = "固定宽度";
 "widget.uploadLetter" = "U";
 "widget.downloadLetter" = "D";
-"widget.previewA11y" = "%@小组件预览";
 "widget.name.pill" = "胶囊进度";
 "widget.name.pair" = "两项读数";
 "widget.name.dot" = "圆点";

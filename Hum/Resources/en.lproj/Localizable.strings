@@ -667,7 +667,6 @@
 "settings.points" = "%d pt";
 "settings.decrease" = "Decrease %@";
 "settings.increase" = "Increase %@";
-"widget.arrangement" = "Arrangement";
 "widget.order" = "Order";
 "widget.uploadFirst" = "Upload first";
 "widget.downloadFirst" = "Download first";
@@ -689,7 +688,6 @@
 "widget.fixedWidth" = "Fixed width";
 "widget.uploadLetter" = "U";
 "widget.downloadLetter" = "D";
-"widget.previewA11y" = "%@ widget preview";
 "widget.name.pill" = "Capsule";
 "widget.name.pair" = "Two readings";
 "widget.name.dot" = "Dot";

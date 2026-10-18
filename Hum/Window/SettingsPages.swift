@@ -714,18 +714,10 @@ struct WidgetsTab: View {
             }
             ForEach(widgets) { kind in
                 VStack(alignment: .leading, spacing: 0) {
-                    HStack(spacing: 8) {
-                        WidgetView(module: module, kind: kind, prefs: prefs)
-                            .environment(\.widgetUIFont, true)
-                            .foregroundStyle(Theme.text)
-                            .padding(.horizontal, 7)
-                            .frame(height: 24)
-                            .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.raised).raisedShadow())
-                        Text(L10n.Widget.name(kind, module)).ui(13, 500).foregroundStyle(Theme.sub)
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.bottom, 8)
-                    .accessibilityAddTraits(.isHeader)
+                    Text(L10n.Widget.name(kind, module)).ui(13, 500).foregroundStyle(Theme.sub)
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 8)
+                        .accessibilityAddTraits(.isHeader)
                     if module == .network && kind == .speed {
                         NetworkSpeedOptions()
                     } else if WidgetOptionsGroup.hasOptions(module, kind) {
@@ -737,7 +729,7 @@ struct WidgetsTab: View {
     }
 }
 
-/// The network speed widget's look: a large live preview, then its arrangement, icon and numbers.
+/// The network speed widget's look: its arrangement, icon and numbers.
 struct NetworkSpeedOptions: View {
     var settings = SettingsStore.shared
 
@@ -754,8 +746,7 @@ struct NetworkSpeedOptions: View {
         let o = settings.prefs.options(.network, .speed)
         let noGlyph = o.glyph == .none
         VStack(alignment: .leading, spacing: 12) {
-            WidgetPreview(module: .network, kind: .speed)
-            OptionsSection(title: L10n.Widget.arrangement) {
+            OptionsSection {
                 SettingsRow(title: L10n.Settings.displayMode) {
                     Segmented(label: L10n.Settings.displayMode, options: [(ValueLayout.twoLine, L10n.Widget.twoLine), (.singleLine, L10n.Widget.singleLine)], selection: bind(\.layout))
                 }
@@ -796,16 +787,18 @@ struct NetworkSpeedOptions: View {
     }
 }
 
-/// A small titled group of option rows (12 pt grey title over a panel).
+/// A group of option rows in a panel, under an optional small grey title (12 pt).
 private struct OptionsSection<Content: View>: View {
-    var title: String
+    var title: String? = nil
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(title).ui(12).foregroundStyle(Theme.sub)
-                .padding(.horizontal, 14).padding(.bottom, 6)
-                .accessibilityAddTraits(.isHeader)
+            if let title {
+                Text(title).ui(12).foregroundStyle(Theme.sub)
+                    .padding(.horizontal, 14).padding(.bottom, 6)
+                    .accessibilityAddTraits(.isHeader)
+            }
             VStack(spacing: 0) { DividedRows { content } }
                 .padding(.horizontal, 14)
                 .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
@@ -834,40 +827,6 @@ private struct GlyphSample: View {
                 SpeedMark(glyph: glyph, up: false, size: 7, letterSize: 8)
             }
         }
-    }
-}
-
-/// One widget at twice the menu bar's size beside Wi-Fi and the clock, as it looks right now.
-struct WidgetPreview: View {
-    let module: Module
-    let kind: WidgetKind
-    var settings = SettingsStore.shared
-    var monitor = Monitor.shared
-
-    var body: some View {
-        let _ = monitor.tick
-        let prefs = settings.prefs
-        HStack(spacing: 0) {
-            Spacer(minLength: 0)
-            Zoomed(scale: 2) {
-                HStack(spacing: 12) {
-                    WidgetView(module: module, kind: kind, prefs: prefs)
-                        .foregroundStyle(MenuBarText.tone(module, monitor.snapshot, prefs).color ?? Theme.barInk)
-                    LineIcon(d: Icons.wifi, size: 16, lineWidth: 1.6)
-                    BarText(Format.time(Date()), font: BarFont.value())
-                }
-                .foregroundStyle(Theme.barFg)
-                .environment(\.barTypeface, prefs.menubar.typeface)
-                .frame(height: 28)
-            }
-        }
-        .padding(.horizontal, 20)
-        .frame(height: 56)
-        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.bar))
-        .padding(EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14))
-        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(L10n.Widget.previewA11y(L10n.Widget.name(kind, module)))
     }
 }
 

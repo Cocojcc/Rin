@@ -352,28 +352,6 @@ struct Segmented<Value: Hashable>: View {
     private var fontSize: CGFloat { style == .tab ? 11 : 12 }
 }
 
-/// Content drawn at `scale` times its size and rendered sharp at that size rather than
-/// magnified (the large widget preview in settings).
-struct Zoomed<Content: View>: View {
-    var scale: CGFloat
-    @ViewBuilder var content: Content
-    @Environment(\.colorScheme) private var scheme
-    @Environment(\.displayScale) private var displayScale
-
-    var body: some View {
-        let renderer = ImageRenderer(content: content.environment(\.colorScheme, scheme).fixedSize())
-        renderer.scale = displayScale * scale
-        var image: CGImage?
-        // Theme colors resolve against the drawing appearance.
-        NSAppearance(named: scheme == .dark ? .darkAqua : .aqua)?.performAsCurrentDrawingAppearance {
-            image = renderer.cgImage
-        }
-        return Group {
-            if let image { Image(decorative: image, scale: displayScale) }
-        }
-    }
-}
-
 /// "− 12 pt +" on a glass track.
 struct GlassStepper: View {
     var label: String

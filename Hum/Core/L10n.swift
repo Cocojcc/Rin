@@ -733,7 +733,6 @@ enum L10n {
         }
         static func palette(_ p: PaletteColor) -> String { tr("widget.palette.\(p.rawValue)") }
         static func iconName(_ m: HumModule, _ index: Int) -> String { tr("widget.icon.\(m.rawValue).\(index)") }
-        static var arrangement: String { tr("widget.arrangement") }
         static var order: String { tr("widget.order") }
         static var uploadFirst: String { tr("widget.uploadFirst") }
         static var downloadFirst: String { tr("widget.downloadFirst") }
@@ -755,6 +754,5 @@ enum L10n {
         static var fixedWidth: String { tr("widget.fixedWidth") }
         static var uploadLetter: String { tr("widget.uploadLetter") }
         static var downloadLetter: String { tr("widget.downloadLetter") }
-        static func previewA11y(_ a: String) -> String { tr("widget.previewA11y", a) }
     }
 }
