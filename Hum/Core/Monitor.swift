@@ -68,14 +68,15 @@ final class Monitor {
         var config = Sampler.Config()
         // A module is read only while something uses it: its menu bar item, an alert rule, or a
         // view showing it. The overview and the combined panel show the whole machine.
-        var read = Set(Module.allCases.filter(prefs.showsInMenubar)).union(prefs.alertedModules)
+        var shown = Set(Module.allCases.filter(prefs.showsInMenubar))
         for consumer in consumers {
             switch consumer {
-            case .popover(let m), .window(.monitor(let m)), .window(.moduleSettings(let m)): read.insert(m)
-            case .combinedPanel, .window(.overview): read = Set(Module.allCases)
+            case .popover(let m), .window(.monitor(let m)), .window(.moduleSettings(let m)): shown.insert(m)
+            case .combinedPanel, .window(.overview): shown = Set(Module.allCases)
             default: break
             }
         }
+        var read = shown.union(prefs.alertedModules)
         let allProcesses = consumers.contains(.window(.processes))
         let batteryPage = consumers.contains(.window(.monitor(.battery)))
         // The battery page's "整机" figure comes from the SMC on Macs without a battery.
@@ -83,16 +84,26 @@ final class Monitor {
         config.monitored = read
         config.processesWanted = allProcesses || batteryPage
         config.processes.full = allProcesses
-        for m in Module.allCases { config.intervals[m] = prefs.refresh(m) }
-        config.processInterval = min(prefs.cpu.processRefresh, prefs.memory.processRefresh)
+        // A module read only for an alert rule needs no more than a reading every few seconds;
+        // the rules wait 30 s or more before firing anyway.
+        for m in Module.allCases {
+            config.intervals[m] = shown.contains(m) ? prefs.refresh(m) : max(prefs.refresh(m), Self.alertOnlyInterval)
+        }
+        let anyUI = !consumers.isEmpty
+        // With nothing open, processes are only needed for the CPU peaks' names and alert
+        // culprits, which a slower scan serves as well.
+        config.processInterval = anyUI ? min(prefs.cpu.processRefresh, prefs.memory.processRefresh) : Self.backgroundProcessInterval
+        config.cpuFrequency = consumers.contains(.window(.monitor(.cpu)))
         config.latency = prefs.network.showLatency
         config.slowOnBattery = prefs.general.slowOnBattery
         config.interface = prefs.network.interface
-        let anyUI = !consumers.isEmpty
         config.processes.includeOtherUsers = anyUI
-        // Per-app traffic is a difference between two nettop reads (about 10 ms each), so it is
-        // kept up whenever the network is read; a list that opens shows the latest one at once.
+        // Per-app traffic is a difference between two nettop reads (a subprocess, about 15 ms of
+        // CPU each). While the network is read a slow baseline is kept, so a list that opens has
+        // rates from its first read; nettop runs every process read only while one is on screen.
         config.processes.network = config.monitored.contains(.network) || allProcesses
+        config.processes.networkLive = allProcesses || consumers.contains(.popover(.network)) || consumers.contains(.window(.monitor(.network)))
+            || consumers.contains(.window(.overview)) || consumers.contains(.combinedPanel)
         config.processes.gpu = allProcesses || config.monitored.contains(.gpu)
             && (consumers.contains(.popover(.gpu)) || consumers.contains(.window(.monitor(.gpu))))
         config.processes.limit = max(8, prefs.cpu.processCount, prefs.memory.processCount, prefs.gpu.processCount)
@@ -102,6 +113,11 @@ final class Monitor {
             interfaces = sampler.interfaces()
         }
     }
+
+    /// Seconds between reads of a module that only an alert rule needs.
+    private static let alertOnlyInterval: Double = 5
+    /// Seconds between process scans while no window or dropdown is open.
+    private static let backgroundProcessInterval: Double = 10
 
     private func apply(_ s: Snapshot) {
         snapshot = s
@@ -157,6 +173,8 @@ final class Sampler {
         var processes = ProcessReader.Request()
         /// Read processes even when no process-listing module is read (Processes and battery pages).
         var processesWanted = false
+        /// CPU cluster frequencies (IOReport), only shown on the CPU page.
+        var cpuFrequency = false
     }
 
     var onSnapshot: ((Snapshot) -> Void)?
@@ -196,6 +214,7 @@ final class Sampler {
             // they switch on only sets the baseline. Read again a second later rather than after
             // the full process interval, so a list that just opened fills in at once.
             if (config.processes.network && !old.network) || (config.processes.gpu && !old.gpu)
+                || (config.processes.networkLive && !old.networkLive)
                 || (config.processes.full && !old.full) || (config.processesWanted && !oldWanted) {
                 self.queue.asyncAfter(deadline: .now() + 1) {
                     guard !self.paused else { return }
@@ -303,7 +322,7 @@ final class Sampler {
         if due(.disk, now, force: force) { s.disk = disk.read() }
         if due(.battery, now, force: force) { s.battery = battery.read() }
         if due(.bluetooth, now, force: force) { s.bluetooth = bluetooth.read(now: now) }
-        let cpuDue = lastRead[.cpu] == now
+        let cpuDue = lastRead[.cpu] == now && config.cpuFrequency
         let sensorsDue = due(.sensors, now, force: force)
         let gpuDue = due(.gpu, now, force: force)
         if sensorsDue || gpuDue || cpuDue {

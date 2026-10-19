@@ -10,12 +10,15 @@ private func responsibility_get_pid_responsible_for_pid(_ pid: pid_t) -> pid_t
 ///
 /// CPU, disk and energy come from proc_pid_rusage deltas (no subprocess). Processes owned by other
 /// users can't be read that way, so while a window or panel is open `ps` fills them in.
-/// Network (nettop) is sampled while the network is read; GPU (IORegistry) only while
-/// something shows it.
+/// Network (nettop) is read every few seconds while a list of it is on screen and every 30 s
+/// otherwise; GPU (IORegistry) only while something shows it.
 final class ProcessReader {
     struct Request {
         var includeOtherUsers = false
+        /// Track per-app traffic: a baseline nettop read every `networkBaseline` seconds...
         var network = false
+        /// ...or one every read, while a list of it is on screen.
+        var networkLive = false
         var gpu = false
         var limit = 8
         /// Return every group (the Processes page), not just the top few per metric.
@@ -42,6 +45,8 @@ final class ProcessReader {
     private var gpuPrevious: [pid_t: UInt64] = [:]
     private var gpuDate: Date?
     private let myUID = getuid()
+    /// Seconds between background nettop reads that keep per-app traffic ready to show.
+    private static let networkBaseline: TimeInterval = 30
     private let timebase: Double = {
         var info = mach_timebase_info_data_t()
         mach_timebase_info(&info)
@@ -97,10 +102,16 @@ final class ProcessReader {
         }
 
         if request.network {
-            for (pid, down, up) in networkRates(now: now) {
-                if rows[pid] == nil { rows[pid] = usage(for: pid) }
-                rows[pid]?.netDown = down
-                rows[pid]?.netUp = up
+            let due = request.networkLive || netDate.map { now.timeIntervalSince($0) >= Self.networkBaseline } ?? true
+            if due {
+                let rates = networkRates(now: now)
+                if request.networkLive {
+                    for (pid, down, up) in rates {
+                        if rows[pid] == nil { rows[pid] = usage(for: pid) }
+                        rows[pid]?.netDown = down
+                        rows[pid]?.netUp = up
+                    }
+                }
             }
         } else {
             netPrevious = [:]
@@ -133,7 +144,7 @@ final class ProcessReader {
         snapshot.byCPU = Array(grouped.sorted { $0.cpu > $1.cpu }.prefix(n))
         snapshot.byMemory = Array(grouped.sorted { $0.memory > $1.memory }.prefix(n))
         snapshot.byDisk = Array(grouped.filter { $0.diskTotal > 0 }.sorted { $0.diskTotal > $1.diskTotal }.prefix(n))
-        if request.network {
+        if request.networkLive {
             snapshot.byNetwork = Array(grouped.filter { $0.netTotal > 0 }.sorted { $0.netTotal > $1.netTotal }.prefix(n))
         }
         if request.gpu {

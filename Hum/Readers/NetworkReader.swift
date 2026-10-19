@@ -129,9 +129,9 @@ final class NetworkReader {
                 guard header.ifm_msglen > 0 else { break }
                 if Int32(header.ifm_type) == RTM_IFINFO2, offset + MemoryLayout<if_msghdr2>.size <= length {
                     let msg = raw.loadUnaligned(fromByteOffset: offset, as: if_msghdr2.self)
-                    var nameBuffer = [CChar](repeating: 0, count: Int(IF_NAMESIZE))
-                    if if_indextoname(UInt32(msg.ifm_index), &nameBuffer) != nil {
-                        let name = String(cString: nameBuffer)
+                    let end = offset + Int(header.ifm_msglen)
+                    if let name = linkName(raw, at: offset + MemoryLayout<if_msghdr2>.size, end: end, addrs: msg.ifm_addrs)
+                        ?? interfaceName(msg.ifm_index) {
                         result[name] = (msg.ifm_data.ifi_ibytes, msg.ifm_data.ifi_obytes)
                     }
                 }
@@ -139,6 +139,25 @@ final class NetworkReader {
             }
         }
         return result
+    }
+
+    /// The interface name from the link-level address that follows an RTM_IFINFO2 header.
+    /// `if_indextoname` would list every interface again for each one, and there are dozens
+    /// (utun, awdl, bridges).
+    private static func linkName(_ raw: UnsafeRawBufferPointer, at start: Int, end: Int, addrs: Int32) -> String? {
+        guard addrs & RTA_IFP != 0, start + MemoryLayout<sockaddr_dl>.size <= min(end, raw.count) else { return nil }
+        let dl = raw.loadUnaligned(fromByteOffset: start, as: sockaddr_dl.self)
+        guard Int32(dl.sdl_family) == AF_LINK, dl.sdl_nlen > 0, let dataOffset = MemoryLayout<sockaddr_dl>.offset(of: \.sdl_data) else { return nil }
+        let nameStart = start + dataOffset
+        let nameEnd = nameStart + Int(dl.sdl_nlen)
+        guard nameEnd <= min(end, raw.count) else { return nil }
+        return String(decoding: raw[nameStart..<nameEnd], as: UTF8.self)
+    }
+
+    private static func interfaceName(_ index: UInt16) -> String? {
+        var buffer = [CChar](repeating: 0, count: Int(IF_NAMESIZE))
+        guard if_indextoname(UInt32(index), &buffer) != nil else { return nil }
+        return String(cString: buffer)
     }
 
     private static func ipv4(of name: String) -> String? {
