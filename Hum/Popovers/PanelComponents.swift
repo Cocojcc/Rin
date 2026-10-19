@@ -3,40 +3,31 @@ import SwiftUI
 
 // MARK: - Chrome
 
-/// Dropdown header: open-in-window button, centered title and subtitle, settings button.
+/// Dropdown header: a module's open-in-window button, centered title and subtitle, its
+/// settings button. The combined panel's has the title alone.
 struct PanelHeader: View {
     var title: String
     var subtitle: String?
     /// A status line instead of a plain subtitle: a dot and the words in this color.
     var status: Color?
-    var openLabel: String
-    var open: () -> Void
-    var settingsLabel: String
-    var settings: () -> Void
+    var buttons: (openLabel: String, open: () -> Void, settingsLabel: String, settings: () -> Void)?
 
     init(module: Module, subtitle: String? = nil) {
         title = module.title
         self.subtitle = subtitle
-        openLabel = L10n.Panel.openMonitor(module.title)
-        open = { MainWindowController.shared.show(.monitor(module)) }
-        settingsLabel = L10n.Panel.moduleSettings(module.title)
-        settings = { MainWindowController.shared.show(.moduleSettings(module)) }
+        buttons = (L10n.Panel.openMonitor(module.title), { MainWindowController.shared.show(.monitor(module)) },
+                   L10n.Panel.moduleSettings(module.title), { MainWindowController.shared.show(.moduleSettings(module)) })
     }
 
-    init(title: String, subtitle: String?, status: Color? = nil, openLabel: String, open: @escaping () -> Void,
-         settingsLabel: String, settings: @escaping () -> Void) {
+    init(title: String, subtitle: String?, status: Color? = nil) {
         self.title = title
         self.subtitle = subtitle
         self.status = status
-        self.openLabel = openLabel
-        self.open = open
-        self.settingsLabel = settingsLabel
-        self.settings = settings
     }
 
     var body: some View {
         HStack(spacing: 0) {
-            HeaderButton(d: Icons.monitorWindow, label: openLabel, action: open)
+            if let buttons { HeaderButton(d: Icons.monitorWindow, label: buttons.openLabel, action: buttons.open) }
             VStack(spacing: 0) {
                 Text(title).ui(15, 500).frame(height: 20).accessibilityAddTraits(.isHeader)
                 if let subtitle {
@@ -49,23 +40,38 @@ struct PanelHeader: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            HeaderButton(d: Icons.general, label: settingsLabel, action: settings)
+            if let buttons { HeaderButton(d: Icons.general, label: buttons.settingsLabel, action: buttons.settings) }
         }
         .padding(.horizontal, 6)
         .padding(.top, -4)
     }
 }
 
-/// Icon button in a dropdown header, tinted under the pointer.
+/// Every dropdown's last row: other places to go and quitting, as icons on the right.
+struct PanelFooter: View {
+    var body: some View {
+        HStack(spacing: 2) {
+            Spacer(minLength: 0)
+            HeaderButton(d: Icons.overview, label: L10n.Sidebar.overview) { MainWindowController.shared.show(.overview) }
+            HeaderButton(d: Icons.processes, label: L10n.Sidebar.processes) { MainWindowController.shared.show(.processes) }
+            HeaderButton(d: Icons.gear, lineWidth: 1.3, label: L10n.Sidebar.settings) { MainWindowController.shared.show(.settings) }
+            HeaderButton(d: Icons.power, label: L10n.Menu.quit) { NSApp.terminate(nil) }
+        }
+        .padding(.horizontal, 6)
+    }
+}
+
+/// Icon button in a dropdown header or footer, tinted under the pointer.
 struct HeaderButton: View {
     var d: String
+    var lineWidth: CGFloat = 1.5
     var label: String
     var action: () -> Void
     @State private var hovering = false
 
     var body: some View {
         Button(action: action) {
-            LineIcon(d: d, size: 16, lineWidth: 1.5)
+            LineIcon(d: d, size: 16, lineWidth: lineWidth)
                 .foregroundStyle(Theme.sub)
                 .frame(width: 28, height: 28)
                 .background { if hovering { RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.well) } }

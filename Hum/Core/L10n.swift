@@ -362,7 +362,6 @@ enum L10n {
         static func volumeUsedPurgeable(_ a: String, _ b: String, _ c: String) -> String { tr("panel.volumeUsedPurgeable", a, b, c) }
         static var passiveCooling: String { tr("panel.passiveCooling") }
         static func fanCount(_ n: Int) -> String { tr("panel.fanCount", n) }
-        static var openOverview: String { tr("panel.openOverview") }
     }
 
     enum Sensors {

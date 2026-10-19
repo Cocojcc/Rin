@@ -19,9 +19,8 @@ struct CombinedPanel: View {
         let _ = monitor.tick
         let status = self.status
         VStack(alignment: .leading, spacing: 16) {
-            PanelHeader(title: L10n.Overview.title, subtitle: status.0, status: status.1,
-                        openLabel: L10n.Panel.openOverview, open: { MainWindowController.shared.show(.overview) },
-                        settingsLabel: L10n.Menu.settings, settings: { MainWindowController.shared.show(.settings) })
+            // The footer opens the overview and settings.
+            PanelHeader(title: L10n.Overview.title, subtitle: status.0, status: status.1)
 
             let gauges = self.gauges(s, prefs)
             // Bluetooth only shows while a device with a battery is connected.

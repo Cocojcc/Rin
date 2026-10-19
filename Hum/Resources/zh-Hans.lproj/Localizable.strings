@@ -942,7 +942,6 @@
 "settings.modulesGroup" = "模块";
 "settings.modulesOn" = "已开启的模块";
 "alerts.moduleOff" = "模块已关闭";
-"panel.openOverview" = "打开概览";
 "network.ipVia" = "%1$@（%2$@）";
 "monitor.publicIP" = "公网 IP %@";
 "overview.localShort" = "本机";

@@ -155,13 +155,14 @@ struct PanelRoot: View {
 
     var body: some View {
         UIScaled {
-            Group {
+            VStack(spacing: 8) {
                 switch kind {
                 case .module(let m): ModulePanel(module: m)
                 case .combined: CombinedPanel()
                 }
+                PanelFooter()
             }
-            .padding(16)
+            .padding(EdgeInsets(top: 16, leading: 16, bottom: 10, trailing: 16))
             .frame(width: PanelController.width)
             .ui(13)
             .foregroundStyle(Theme.text)
