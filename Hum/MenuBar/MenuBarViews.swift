@@ -417,36 +417,6 @@ struct VerticalLabel: View {
     }
 }
 
-/// One small arrow per row beside each rate (9 pt light, 8 pt rows): the network speed layout.
-struct ArrowRows: View {
-    var top: String
-    var bottom: String
-    var topColor: Color = Theme.barInk
-    var bottomColor: Color = Theme.barInk
-    var upOnTop = true
-    var template: String
-    var glyph: SpeedGlyph = .arrows
-    @Environment(\.widgetUIFont) private var ui
-
-    var body: some View {
-        let font = BarFont.twoLine(ui: ui)
-        Grid(alignment: .trailing, horizontalSpacing: 3, verticalSpacing: 0) {
-            GridRow {
-                marker(top: true).foregroundStyle(topColor)
-                FixedText(text: top, template: template, font: font).frame(height: BarFont.twoLineRow)
-            }
-            GridRow {
-                marker(top: false).foregroundStyle(bottomColor)
-                FixedText(text: bottom, template: template, font: font).frame(height: BarFont.twoLineRow)
-            }
-        }
-    }
-
-    private func marker(top: Bool) -> some View {
-        SpeedMark(glyph: glyph, up: top == upOnTop, size: 6, letterSize: 8)
-    }
-}
-
 /// The mark beside a rate: an arrow, a triangle, a ring (up) or dot (down), or U / D.
 struct SpeedMark: View {
     var glyph: SpeedGlyph
@@ -550,18 +520,29 @@ struct MenuBarItemView: View {
     var body: some View {
         let prefs = settings.prefs
         let s = monitor.snapshot
-        let tone = MenuBarText.tone(module, s, prefs)
-        HStack(spacing: CGFloat(prefs.widgetGap(module))) {
-            ForEach(prefs.widgets(module)) { WidgetView(module: module, kind: $0, prefs: prefs) }
-        }
-        // No side padding, as Stats draws its items: the menu bar adds its own spacing.
-        .padding(.horizontal, 0)
-        .frame(maxHeight: .infinity)
-        .foregroundStyle(tone.color ?? Theme.barInk)
-        .environment(\.barTypeface, prefs.menubar.typeface)
+        ModuleWidgetRow(module: module, prefs: prefs, snapshot: s)
+            // No side padding, as Stats draws its items: the menu bar adds its own spacing.
+            .padding(.horizontal, 0)
+            .frame(maxHeight: .infinity)
+            .environment(\.barTypeface, prefs.menubar.typeface)
         .fixedSize(horizontal: true, vertical: false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(MenuBarText.accessibility(module, s, prefs))
+    }
+}
+
+/// A module's picked widgets side by side, in its tone: its own menu bar item, or its part of
+/// the combined one.
+struct ModuleWidgetRow: View {
+    let module: Module
+    var prefs: Preferences
+    var snapshot: Snapshot
+
+    var body: some View {
+        HStack(spacing: CGFloat(prefs.widgetGap(module))) {
+            ForEach(prefs.widgets(module)) { WidgetView(module: module, kind: $0, prefs: prefs) }
+        }
+        .foregroundStyle(MenuBarText.tone(module, snapshot, prefs).color ?? Theme.barInk)
     }
 }
 
@@ -1040,46 +1021,26 @@ struct WidgetView: View {
 struct CombinedMenuBarView: View {
     var monitor = Monitor.shared
     var settings = SettingsStore.shared
+    /// Settings to draw with instead of the saved ones (debug snapshots).
+    var preview: Preferences? = nil
 
+    /// Each module as its own item would draw it, with the widgets and options picked on its
+    /// settings page, Hum's spacing between them; one item, one dropdown.
     var body: some View {
-        let prefs = settings.prefs
+        let prefs = preview ?? settings.prefs
         let s = monitor.snapshot
         let modules = prefs.menubar.order.filter { prefs.showsInMenubar($0) && MenuBarText.available($0, s) }
-        HStack(spacing: 11) {
+        HStack(spacing: CGFloat(MenuBarSpacing.hum(prefs))) {
             if modules.isEmpty {
                 LineIcon(d: Icons.appMark, size: 16, viewBox: 24, lineWidth: 2.4)
             }
-            ForEach(modules) { m in
-                column(m, s, prefs)
-                    .foregroundStyle(MenuBarText.tone(m, s, prefs).color ?? Theme.barInk)
-            }
+            ForEach(modules) { ModuleWidgetRow(module: $0, prefs: prefs, snapshot: s) }
         }
-        .padding(.horizontal, 2)
         .frame(maxHeight: .infinity)
         .environment(\.barTypeface, prefs.menubar.typeface)
         .fixedSize(horizontal: true, vertical: false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(MenuBarText.combinedAccessibility(modules, s, prefs))
-    }
-
-    @ViewBuilder private func column(_ m: Module, _ s: Snapshot, _ prefs: Preferences) -> some View {
-        let tone = MenuBarText.tone(m, s, prefs)
-        switch m {
-        case .network:
-            let offline = !s.network.connected
-            let up = offline ? L10n.Common.dash : Format.rateCompact(s.network.up, unit: prefs.network.speedUnit)
-            let down = offline ? L10n.Common.dash : Format.rateCompact(s.network.down, unit: prefs.network.speedUnit)
-            let upTop = prefs.options(.network, .speed).firstOnTop
-            ArrowRows(top: upTop ? up : down, bottom: upTop ? down : up, upOnTop: upTop, template: "999K")
-                .opacity(offline ? 0.45 : 1)
-        default:
-            VStack(spacing: -1) {
-                BarText(m.compactLabel, font: BarFont.font(7, 300, ui: false), kerning: 0.3)
-                FixedText(text: MenuBarText.shortValue(m, s, prefs), template: m == .sensors ? "100°" : "100%",
-                          font: BarFont.font(12, tone.emphasized ? 600 : 400, ui: false), alignment: .center)
-            }
-            .frame(height: 18)
-        }
     }
 }
 

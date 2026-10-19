@@ -257,10 +257,21 @@ private struct MenubarSheet: View {
                 Text("combined").font(.system(size: 11)).frame(width: 60, alignment: .leading)
                 bar(CombinedMenuBarView())
             }
+            HStack(spacing: 14) {
+                Text("comb. 4").font(.system(size: 11)).frame(width: 60, alignment: .leading)
+                bar(CombinedMenuBarView(preview: fourModules(base)))
+            }
         }
         .padding(16)
         .background(dark ? Color(white: 0.1) : Color(white: 0.96))
         .foregroundStyle(dark ? Color.white : Color.black)
+    }
+
+    /// CPU, memory, network and sensors in the bar, whatever the saved settings say.
+    private func fourModules(_ base: Preferences) -> Preferences {
+        var p = base
+        for m in Module.allCases { p.setVisible(m, [.cpu, .memory, .network, .sensors].contains(m)) }
+        return p
     }
 
     private func bar<V: View>(_ v: V) -> some View {
