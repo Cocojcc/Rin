@@ -488,6 +488,8 @@ struct ProcessListPanel: View {
 struct TrafficList: View {
     var processes: [ProcessUsage]
     var unit: SpeedUnit
+    /// Always this many rows tall, so the dropdown doesn't change height as apps come and go.
+    var rows = 5
 
     var body: some View {
         VStack(spacing: 0) {
@@ -512,6 +514,9 @@ struct TrafficList: View {
                 .contentShape(Rectangle())
                 .contextMenu { ProcessContextMenu(process: p) }
                 .accessibilityElement(children: .combine)
+            }
+            ForEach(0..<max(0, rows - max(processes.count, 1)), id: \.self) { _ in
+                Color.clear.frame(height: 30).accessibilityHidden(true)
             }
         }
         .padding(4)

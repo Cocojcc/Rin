@@ -272,6 +272,8 @@ struct ProcessTable: View {
     var secondary: ((ProcessUsage) -> String)? = nil
     var secondaryWidth: CGFloat = 72
     var rowHeight: CGFloat = 34
+    /// Pads with empty rows up to this many, so a list that comes and goes keeps its height.
+    var minRows = 0
     var quitCenter = QuitCenter.shared
     @State private var hovered: String?
 
@@ -289,6 +291,9 @@ struct ProcessTable: View {
                     }
                     DividedRows {
                         ForEach(rest) { row($0) }
+                    }
+                    ForEach(0..<max(0, minRows - max(processes.count, 1)), id: \.self) { _ in
+                        Color.clear.frame(height: rowHeight).accessibilityHidden(true)
                     }
                 }
                 .padding(.horizontal, 14)

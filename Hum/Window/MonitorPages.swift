@@ -434,6 +434,7 @@ struct OverviewPage: View {
 
     private func footerText(_ line: String) -> some View { footerText("", line, "") }
 
+    /// Two rows tall whatever the list holds, so the cards keep their size.
     private func processes(_ list: [ProcessUsage], value: @escaping (ProcessUsage) -> String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             if list.isEmpty {
@@ -447,6 +448,9 @@ struct OverviewPage: View {
                 }
                 .ui(12)
                 .frame(height: 18)
+            }
+            ForEach(0..<max(0, 2 - max(list.count, 1)), id: \.self) { _ in
+                Color.clear.frame(height: 18).accessibilityHidden(true)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1416,7 +1420,7 @@ struct NetworkPage: View {
                 let peak = max(list.map(\.netTotal).max() ?? 1, 0.0001)
                 ProcessTable(processes: list, fraction: { $0.netTotal / peak }, color: Theme.down,
                              value: { MenuBarText.downArrow + " " + Format.rate($0.netDown, unit: unit) }, valueWidth: 80,
-                             secondary: { MenuBarText.upArrow + " " + Format.rate($0.netUp, unit: unit) }, secondaryWidth: 72)
+                             secondary: { MenuBarText.upArrow + " " + Format.rate($0.netUp, unit: unit) }, secondaryWidth: 72, minRows: 4)
             }
         }
     }

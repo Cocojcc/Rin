@@ -42,6 +42,10 @@ final class ProcessReader {
     private var identities: [pid_t: Identity] = [:]
     private var netPrevious: [pid_t: (UInt64, UInt64)] = [:]
     private var netDate: Date?
+    /// When each app last moved data, so a list keeps apps that just paused instead of
+    /// shrinking every time one goes quiet for a few seconds.
+    private var netLastActive: [String: Date] = [:]
+    private static let netRecent: TimeInterval = 60
     private var gpuPrevious: [pid_t: UInt64] = [:]
     private var gpuDate: Date?
     private let myUID = getuid()
@@ -116,6 +120,7 @@ final class ProcessReader {
         } else {
             netPrevious = [:]
             netDate = nil
+            netLastActive = [:]
         }
 
         if request.gpu {
@@ -145,7 +150,13 @@ final class ProcessReader {
         snapshot.byMemory = Array(grouped.sorted { $0.memory > $1.memory }.prefix(n))
         snapshot.byDisk = Array(grouped.filter { $0.diskTotal > 0 }.sorted { $0.diskTotal > $1.diskTotal }.prefix(n))
         if request.networkLive {
-            snapshot.byNetwork = Array(grouped.filter { $0.netTotal > 0 }.sorted { $0.netTotal > $1.netTotal }.prefix(n))
+            for g in grouped where g.netTotal > 0 { netLastActive[g.id] = now }
+            netLastActive = netLastActive.filter { now.timeIntervalSince($0.value) < Self.netRecent }
+            // Busiest first; apps that moved data within the last minute follow, most recent first.
+            snapshot.byNetwork = Array(grouped.filter { netLastActive[$0.id] != nil }.sorted {
+                if $0.netTotal != $1.netTotal { return $0.netTotal > $1.netTotal }
+                return (netLastActive[$0.id] ?? .distantPast) > (netLastActive[$1.id] ?? .distantPast)
+            }.prefix(n))
         }
         if request.gpu {
             snapshot.byGPU = Array(grouped.filter { $0.gpu > 0.05 }.sorted { $0.gpu > $1.gpu }.prefix(n))
