@@ -199,7 +199,6 @@
 "panel.volumeAvailable" = "%@可用";
 "panel.updatedEvery" = "刚刚更新 · 每%d秒";
 "panel.ofTotal" = "/ %@";
-"panel.memoryBreakdown" = "App %1$@ · 联动 %2$@ · 压缩 %3$@";
 "panel.unitAvailable" = "%@可用";
 "panel.readWriteShort" = "读 %1$@ · 写 %2$@";
 "panel.healthShort" = "健康 %@";
@@ -956,3 +955,7 @@
 "settings.modulesGroup" = "模块";
 "settings.modulesOn" = "已开启的模块";
 "alerts.moduleOff" = "模块已关闭";
+"panel.openOverview" = "打开概览";
+"panel.userSystemShort" = "用户 %1$@ · 系统 %2$@";
+"panel.memoryAppWired" = "App %1$@ · 联动 %2$@";
+"panel.memoryApp" = "App %@";

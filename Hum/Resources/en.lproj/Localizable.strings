@@ -199,7 +199,6 @@
 "panel.volumeAvailable" = "%@ available";
 "panel.updatedEvery" = "Updated just now · every %d s";
 "panel.ofTotal" = "/ %@";
-"panel.memoryBreakdown" = "App %1$@ · Wired %2$@ · Compressed %3$@";
 "panel.unitAvailable" = "%@ free";
 "panel.readWriteShort" = "Read %1$@ · Write %2$@";
 "panel.healthShort" = "Health %@";
@@ -956,3 +955,7 @@
 "settings.modulesGroup" = "Modules";
 "settings.modulesOn" = "Modules turned on";
 "alerts.moduleOff" = "Module is off";
+"panel.openOverview" = "Open Overview";
+"panel.userSystemShort" = "User %1$@ · System %2$@";
+"panel.memoryAppWired" = "App %1$@ · Wired %2$@";
+"panel.memoryApp" = "App %@";

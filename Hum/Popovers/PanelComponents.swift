@@ -3,38 +3,53 @@ import SwiftUI
 
 // MARK: - Chrome
 
-/// Dropdown header: open-monitor button, centered title and subtitle, settings button.
+/// Dropdown header: open-in-window button, centered title and subtitle, settings button.
 struct PanelHeader: View {
-    var module: Module
-    var subtitle: String? = nil
+    var title: String
+    var subtitle: String?
+    var openLabel: String
+    var open: () -> Void
+    var settingsLabel: String
+    var settings: () -> Void
+
+    init(module: Module, subtitle: String? = nil) {
+        title = module.title
+        self.subtitle = subtitle
+        openLabel = L10n.Panel.openMonitor(module.title)
+        open = { MainWindowController.shared.show(.monitor(module)) }
+        settingsLabel = L10n.Panel.moduleSettings(module.title)
+        settings = { MainWindowController.shared.show(.moduleSettings(module)) }
+    }
+
+    init(title: String, subtitle: String?, openLabel: String, open: @escaping () -> Void,
+         settingsLabel: String, settings: @escaping () -> Void) {
+        self.title = title
+        self.subtitle = subtitle
+        self.openLabel = openLabel
+        self.open = open
+        self.settingsLabel = settingsLabel
+        self.settings = settings
+    }
 
     var body: some View {
         HStack(spacing: 0) {
-            headerButton(Icons.monitorWindow, label: L10n.Panel.openMonitor(module.title)) {
-                MainWindowController.shared.show(.monitor(module))
-            }
+            HeaderButton(d: Icons.monitorWindow, label: openLabel, action: open)
             VStack(spacing: 0) {
-                Text(module.title).ui(15, 500).frame(height: 20).accessibilityAddTraits(.isHeader)
+                Text(title).ui(15, 500).frame(height: 20).accessibilityAddTraits(.isHeader)
                 if let subtitle {
                     Text(subtitle).ui(12).foregroundStyle(Theme.sub).lineLimit(1).frame(height: 14)
                 }
             }
             .frame(maxWidth: .infinity)
-            headerButton(Icons.general, label: L10n.Panel.moduleSettings(module.title)) {
-                MainWindowController.shared.show(.moduleSettings(module))
-            }
+            HeaderButton(d: Icons.general, label: settingsLabel, action: settings)
         }
         .padding(.horizontal, 6)
         .padding(.top, -4)
     }
-
-    private func headerButton(_ d: String, label: String, action: @escaping () -> Void) -> some View {
-        HeaderButton(d: d, label: label, action: action)
-    }
 }
 
 /// Icon button in a dropdown header, tinted under the pointer.
-private struct HeaderButton: View {
+struct HeaderButton: View {
     var d: String
     var label: String
     var action: () -> Void

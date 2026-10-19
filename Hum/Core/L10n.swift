@@ -356,7 +356,6 @@ enum L10n {
         static func volumeAvailable(_ v: String) -> String { tr("panel.volumeAvailable", v) }
         static func updatedEvery(_ s: Int) -> String { tr("panel.updatedEvery", s) }
         static func ofTotal(_ v: String) -> String { tr("panel.ofTotal", v) }
-        static func memoryBreakdown(_ a: String, _ w: String, _ c: String) -> String { tr("panel.memoryBreakdown", a, w, c) }
         static func unitAvailable(_ u: String) -> String { tr("panel.unitAvailable", u) }
         static func readWriteShort(_ r: String, _ w: String) -> String { tr("panel.readWriteShort", r, w) }
         static func healthShort(_ v: String) -> String { tr("panel.healthShort", v) }
@@ -367,6 +366,10 @@ enum L10n {
         static func volumeUsedPurgeable(_ a: String, _ b: String, _ c: String) -> String { tr("panel.volumeUsedPurgeable", a, b, c) }
         static var passiveCooling: String { tr("panel.passiveCooling") }
         static func fanCount(_ n: Int) -> String { tr("panel.fanCount", n) }
+        static var openOverview: String { tr("panel.openOverview") }
+        static func userSystemShort(_ a: String, _ b: String) -> String { tr("panel.userSystemShort", a, b) }
+        static func memoryAppWired(_ a: String, _ b: String) -> String { tr("panel.memoryAppWired", a, b) }
+        static func memoryApp(_ a: String) -> String { tr("panel.memoryApp", a) }
     }
 
     enum Sensors {

@@ -2042,6 +2042,7 @@ enum TempZone {
 struct MemoryComposition: View {
     var m: MemorySample
     var height: CGFloat = 4
+    var gap: CGFloat = 3
 
     var body: some View {
         GeometryReader { geo in
@@ -2050,8 +2051,8 @@ struct MemoryComposition: View {
                 (Double(m.app), Theme.mem), (Double(m.wired), Theme.mem.opacity(0.6)), (Double(m.compressed), Theme.mem.opacity(0.35)),
                 (Double(m.cached), Theme.cache), (Double(m.free), Theme.track),
             ].filter { $0.0 > 0 }
-            let gaps = CGFloat(max(parts.count - 1, 0)) * 3
-            HStack(spacing: 3) {
+            let gaps = CGFloat(max(parts.count - 1, 0)) * gap
+            HStack(spacing: gap) {
                 ForEach(Array(parts.enumerated()), id: \.offset) { _, p in
                     Capsule().fill(p.1).frame(width: max(height, (geo.size.width - gaps) * p.0 / total))
                 }
