@@ -720,6 +720,14 @@ enum L10n {
         static func percentValue(_ a: Int) -> String { tr("settings.percentValue", a) }
         static var modulesGroup: String { tr("settings.modulesGroup") }
         static var modulesOn: String { tr("settings.modulesOn") }
+        static var combinedIconOnly: String { tr("settings.combinedIconOnly") }
+        static var combinedIcon: String { tr("settings.combinedIcon") }
+        static var iconMark: String { tr("settings.icon.mark") }
+        static var iconAvatar: String { tr("settings.icon.avatar") }
+        static var iconGauge: String { tr("settings.icon.gauge") }
+        static var iconPulse: String { tr("settings.icon.pulse") }
+        static var iconChart: String { tr("settings.icon.chart") }
+        static var iconChip: String { tr("settings.icon.chip") }
     }
 
     enum Notch {

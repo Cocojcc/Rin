@@ -641,8 +641,8 @@
 "monitor.eCoreTip" = "能效核 %1$d · %2$@（系统 %3$@）";
 "monitor.coreTip" = "核心 %1$d · %2$@（系统 %3$@）";
 "monitor.cyclesLimit" = " / %d";
-"settings.humSpacing" = "Hum 项目间距";
-"settings.systemSpacing" = "所有菜单栏图标间距";
+"settings.humSpacing" = "模块间距";
+"settings.systemSpacing" = "所有 App 的菜单栏间距";
 "settings.spacingStandard" = "默认";
 "settings.spacingCompact" = "紧凑";
 "settings.spacingTightest" = "最紧凑";
@@ -954,3 +954,11 @@
 "monitor.publicIP" = "公网 IP %@";
 "overview.localShort" = "本机";
 "overview.publicShort" = "公网";
+"settings.combinedIconOnly" = "显示图标而非小组件";
+"settings.combinedIcon" = "图标";
+"settings.icon.mark" = "标志";
+"settings.icon.avatar" = "头像";
+"settings.icon.gauge" = "仪表";
+"settings.icon.pulse" = "脉搏";
+"settings.icon.chart" = "图表";
+"settings.icon.chip" = "芯片";

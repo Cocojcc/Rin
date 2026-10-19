@@ -125,7 +125,12 @@ final class StatusBarController: NSObject {
                 label = MenuBarText.accessibility(m, s, prefs)
             } else {
                 let modules = prefs.menubar.order.filter { prefs.showsInMenubar($0) && MenuBarText.available($0, s) }
-                colored = modules.contains { MenuBarText.tone($0, s, prefs).emphasized }
+                if prefs.menubar.combinedIconOnly || modules.isEmpty {
+                    // The avatar is a picture; the glyphs are shapes in the bar's text color.
+                    colored = prefs.menubar.combinedIcon == .avatar
+                } else {
+                    colored = modules.contains { MenuBarText.needsColor($0, s, prefs) }
+                }
                 label = MenuBarText.combinedAccessibility(modules, s, prefs)
             }
             let dark = button.effectiveAppearance.isDark

@@ -70,6 +70,15 @@ enum Snapshots {
                 save(MainView().frame(width: pageWidth, height: UIScale.of(760)).background(wall), appearance, dir.appendingPathComponent("page-processes-open-\(tag).png"))
                 ProcessesPage.initialSelection = nil
             }
+            if want("page-settings-icon") {
+                let saved = SettingsStore.shared.prefs
+                SettingsStore.shared.prefs.menubar.displayMode = .combined
+                SettingsStore.shared.prefs.menubar.combinedIconOnly = true
+                SettingsStore.shared.prefs.menubar.combinedIcon = .avatar
+                Navigator.shared.page = .settings
+                save(MainView().frame(width: pageWidth, height: UIScale.of(1400)).background(wall), appearance, dir.appendingPathComponent("page-settings-icon-\(tag).png"))
+                SettingsStore.shared.prefs = saved
+            }
             if want("page") || want("page-sleep") {
                 KeepAwake.shared.start(.minutes(30))
                 Navigator.shared.page = .sleep
@@ -260,6 +269,14 @@ private struct MenubarSheet: View {
             HStack(spacing: 14) {
                 Text("comb. 4").font(.system(size: 11)).frame(width: 60, alignment: .leading)
                 bar(CombinedMenuBarView(preview: fourModules(base)))
+            }
+            HStack(spacing: 14) {
+                Text("icons").font(.system(size: 11)).frame(width: 60, alignment: .leading)
+                ForEach(CombinedIcon.allCases) { icon in
+                    var p = base
+                    let _ = (p.menubar.displayMode = .combined, p.menubar.combinedIconOnly = true, p.menubar.combinedIcon = icon)
+                    bar(CombinedMenuBarView(preview: p).padding(.horizontal, 5))
+                }
             }
         }
         .padding(16)

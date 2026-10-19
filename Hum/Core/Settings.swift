@@ -138,6 +138,16 @@ struct MenubarPrefs: Codable, Equatable {
     /// Space between Hum's own items in points; nil keeps the system's spacing.
     var humSpacing: Int? = nil
     var typeface: BarTypeface = .system
+    /// Combined mode: one icon in the bar instead of the modules' widgets.
+    var combinedIconOnly = false
+    var combinedIcon: CombinedIcon = .mark
+}
+
+/// What the combined item shows when it shows an icon.
+enum CombinedIcon: String, Codable, CaseIterable, Identifiable {
+    case mark, avatar, gauge, pulse, chart, chip
+
+    var id: String { rawValue }
 }
 
 enum BarTypeface: String, Codable, CaseIterable { case system, monospaced }

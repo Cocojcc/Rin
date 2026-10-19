@@ -313,6 +313,9 @@ extension Preferences {
     /// widget also takes it out).
     func showsInMenubar(_ m: Module) -> Bool { isEnabled(m) && isVisible(m) && !widgets(m).isEmpty }
 
+    /// False while the combined item shows a single icon: no module's widgets are in the bar.
+    var barShowsWidgets: Bool { !(menubar.displayMode == .combined && menubar.combinedIconOnly) }
+
     /// Modules an alert rule watches; they are read even when not in the menu bar.
     var alertedModules: Set<Module> {
         let a = alerts

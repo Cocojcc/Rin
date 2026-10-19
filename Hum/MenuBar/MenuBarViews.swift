@@ -1025,22 +1025,62 @@ struct CombinedMenuBarView: View {
     var preview: Preferences? = nil
 
     /// Each module as its own item would draw it, with the widgets and options picked on its
-    /// settings page, Hum's spacing between them; one item, one dropdown.
+    /// settings page, Hum's spacing between them; one item, one dropdown. Or just the icon
+    /// picked in settings, which is also what shows when no module is in the bar.
     var body: some View {
         let prefs = preview ?? settings.prefs
         let s = monitor.snapshot
         let modules = prefs.menubar.order.filter { prefs.showsInMenubar($0) && MenuBarText.available($0, s) }
         HStack(spacing: CGFloat(MenuBarSpacing.hum(prefs))) {
-            if modules.isEmpty {
-                LineIcon(d: Icons.appMark, size: 16, viewBox: 24, lineWidth: 2.4)
+            if prefs.menubar.combinedIconOnly || modules.isEmpty {
+                CombinedIconView(icon: prefs.menubar.combinedIcon)
+            } else {
+                ForEach(modules) { ModuleWidgetRow(module: $0, prefs: prefs, snapshot: s) }
             }
-            ForEach(modules) { ModuleWidgetRow(module: $0, prefs: prefs, snapshot: s) }
         }
         .frame(maxHeight: .infinity)
         .environment(\.barTypeface, prefs.menubar.typeface)
         .fixedSize(horizontal: true, vertical: false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(MenuBarText.combinedAccessibility(modules, s, prefs))
+    }
+}
+
+/// The combined item's icon: a line glyph in the bar's ink, or her avatar on a small tile.
+struct CombinedIconView: View {
+    var icon: CombinedIcon
+    var size: CGFloat = 16
+
+    var body: some View {
+        switch icon {
+        case .avatar:
+            let side = size + 2
+            Image("Avatar").resizable().interpolation(.high)
+                .frame(width: side, height: side)
+                .clipShape(RoundedRectangle(cornerRadius: side * 0.28, style: .continuous))
+        case .mark:
+            // Its bars fill less of their box than the other glyphs do.
+            LineIcon(d: Icons.appMark, size: size * 1.25, viewBox: 24, lineWidth: 2.4)
+        case .gauge:
+            LineIcon(d: Icons.gauge, size: size, lineWidth: 1.5)
+        case .pulse:
+            LineIcon(d: Icons.activity, size: size, lineWidth: 1.5)
+        case .chart:
+            LineIcon(d: Icons.monitorWindow, size: size, lineWidth: 1.5)
+        case .chip:
+            LineIcon(d: Icons.cpuMenubar, size: size, lineWidth: 1.5)
+        }
+    }
+
+    static func name(_ icon: CombinedIcon) -> String {
+        switch icon {
+        case .mark: return L10n.Settings.iconMark
+        case .avatar: return L10n.Settings.iconAvatar
+        case .gauge: return L10n.Settings.iconGauge
+        case .pulse: return L10n.Settings.iconPulse
+        case .chart: return L10n.Settings.iconChart
+        case .chip: return L10n.Settings.iconChip
+        }
     }
 }
 

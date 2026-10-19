@@ -22,7 +22,6 @@ struct SettingsPage: View {
     @State private var dragging: Module?
     /// The system-wide spacing lives in the system's preferences, not in Hum's.
     @State private var systemSpacing = MenuBarSpacing.preset
-    @Environment(\.textScale) private var textScale
 
     var body: some View {
         let prefs = settings.prefs
@@ -98,13 +97,26 @@ struct SettingsPage: View {
                     MenubarPreview(blocked: blocked, systemSpacing: systemSpacing)
                         .padding(EdgeInsets(top: 10, leading: 14, bottom: 10, trailing: 14))
                     Hairline().padding(.horizontal, 14)
+                    // Moot while the combined item shows an icon.
                     ModuleChips(blocked: blocked, dragging: $dragging).padding(6)
+                        .opacity(prefs.barShowsWidgets ? 1 : 0.4)
+                        .allowsHitTesting(prefs.barShowsWidgets)
                 }
                 .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
                 Color.clear.frame(height: 8)
                 SettingsGroup {
                     SettingsRow(title: L10n.Settings.displayMode) {
                         Segmented(label: L10n.Settings.displayMode, options: [(DisplayMode.separate, L10n.Settings.separate), (.combined, L10n.Settings.combined)], selection: pref(\.menubar.displayMode))
+                    }
+                    if prefs.menubar.displayMode == .combined {
+                        SettingsRow(title: L10n.Settings.combinedIconOnly) {
+                            HumSwitch(isOn: pref(\.menubar.combinedIconOnly), label: L10n.Settings.combinedIconOnly)
+                        }
+                        if prefs.menubar.combinedIconOnly {
+                            SettingsRow(title: L10n.Settings.combinedIcon) {
+                                CombinedIconPicker(selection: pref(\.menubar.combinedIcon))
+                            }
+                        }
                     }
                     SettingsRow(title: L10n.Settings.humSpacing) {
                         GlassStepper(label: L10n.Settings.humSpacing,
@@ -147,17 +159,14 @@ struct SettingsPage: View {
             }
 
             SettingsGroup(title: L10n.Sidebar.about) {
-                HStack(spacing: 12) {
-                    (Text(L10n.App.name).foregroundColor(Theme.sub)
-                        + Text(verbatim: " ")
-                        + Text(SystemInfo.appVersion).font(Fonts.text(13, 500, scale: textScale)).foregroundColor(Theme.text))
-                        .ui(13)
-                    Spacer(minLength: 8)
-                    WellButton(title: updater.buttonTitle) { updater.check() }
-                        .disabled(!updater.isConfigured || updater.state == .checking)
-                        .opacity(updater.isConfigured ? 1 : 0.5)
+                SettingsRow(title: L10n.Settings.currentVersion) {
+                    HStack(spacing: 12) {
+                        Text(SystemInfo.appVersion).ui(13, 500)
+                        WellButton(title: updater.buttonTitle) { updater.check() }
+                            .disabled(!updater.isConfigured || updater.state == .checking)
+                            .opacity(updater.isConfigured ? 1 : 0.5)
+                    }
                 }
-                .frame(minHeight: 42)
                 SettingsRow(title: L10n.Settings.autoCheckUpdates) {
                     HumSwitch(isOn: pref(\.general.autoCheckUpdates), label: L10n.Settings.autoCheckUpdates)
                 }
@@ -203,6 +212,38 @@ struct AccentPicker: View {
         .background(GlassTrack())
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Settings.accent)
+    }
+}
+
+/// The combined item's icon, picked on a glass track like the accent colors.
+struct CombinedIconPicker: View {
+    @Binding var selection: CombinedIcon
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(CombinedIcon.allCases) { icon in
+                let on = icon == selection
+                let name = CombinedIconView.name(icon)
+                Button {
+                    selection = icon
+                } label: {
+                    CombinedIconView(icon: icon, size: 14)
+                        .foregroundStyle(on ? Theme.text : Theme.sub)
+                        .frame(width: 32, height: 24)
+                        .thumbAnchor(on)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(name)
+                .accessibilityLabel(name)
+                .accessibilityAddTraits(on ? [.isSelected] : [])
+            }
+        }
+        .slidingThumb(selection) { GlassThumb() }
+        .padding(2)
+        .background(GlassTrack())
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L10n.Settings.combinedIcon)
     }
 }
 

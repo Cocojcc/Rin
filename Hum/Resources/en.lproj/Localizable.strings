@@ -641,8 +641,8 @@
 "monitor.eCoreTip" = "Efficiency core %1$d · %2$@ (system %3$@)";
 "monitor.coreTip" = "Core %1$d · %2$@ (system %3$@)";
 "monitor.cyclesLimit" = " / %d";
-"settings.humSpacing" = "Space between Hum items";
-"settings.systemSpacing" = "Space between all menu bar icons";
+"settings.humSpacing" = "Space between modules";
+"settings.systemSpacing" = "Menu bar spacing for all apps";
 "settings.spacingStandard" = "Default";
 "settings.spacingCompact" = "Compact";
 "settings.spacingTightest" = "Tightest";
@@ -954,3 +954,11 @@
 "monitor.publicIP" = "Public IP %@";
 "overview.localShort" = "Local";
 "overview.publicShort" = "Public";
+"settings.combinedIconOnly" = "Show an icon instead of widgets";
+"settings.combinedIcon" = "Icon";
+"settings.icon.mark" = "Logo";
+"settings.icon.avatar" = "Avatar";
+"settings.icon.gauge" = "Gauge";
+"settings.icon.pulse" = "Pulse";
+"settings.icon.chart" = "Chart";
+"settings.icon.chip" = "Chip";
