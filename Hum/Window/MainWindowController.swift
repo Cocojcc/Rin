@@ -26,6 +26,16 @@ enum Page: Hashable {
 @Observable
 final class Navigator {
     static let shared = Navigator()
+
+    /// Leaves a module's pages once the module is switched off.
+    func moduleSwitched(_ prefs: Preferences) {
+        switch page {
+        case .monitor(let m), .moduleSettings(let m):
+            if !prefs.isEnabled(m) { page = .overview }
+        default: break
+        }
+    }
+
     /// The Processes page's sort column, set by the "全部" links on the way in.
     var processSort: ProcessSort = .cpu
     /// A rule the Alerts page should point out when it opens (from a chart or module settings).

@@ -133,10 +133,10 @@ struct SettingsPage: View {
             }
 
             VStack(alignment: .leading, spacing: 0) {
-                Text(L10n.Settings.sidebarGroup).ui(13, 500).foregroundStyle(Theme.sub)
+                Text(L10n.Settings.modulesGroup).ui(13, 500).foregroundStyle(Theme.sub)
                     .padding(.horizontal, 14).padding(.bottom, 8)
                     .accessibilityAddTraits(.isHeader)
-                SidebarChips().padding(6)
+                ModuleSwitchChips().padding(6)
                     .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
             }
 
@@ -247,7 +247,8 @@ struct ModuleChips: View {
     var body: some View {
         let prefs = settings.prefs
         let shown = prefs.menubar.order.filter { prefs.showsInMenubar($0) }
-        let hidden = prefs.menubar.order.filter { !prefs.showsInMenubar($0) }
+        // Switched-off modules can't go in the menu bar; they come back with their module.
+        let hidden = prefs.menubar.order.filter { !prefs.showsInMenubar($0) && prefs.isEnabled($0) }
         // One list, so a chip keeps its identity and slides across when it changes sides.
         let items = shown.map { ChipSlot.module($0) } + (shown.isEmpty || hidden.isEmpty ? [] : [.divider]) + hidden.map { .module($0) }
         FlowLayout(spacing: 4) {
@@ -289,20 +290,17 @@ struct ModuleChips: View {
     }
 }
 
-/// The hardware modules' pages as chips: glass while in the sidebar. Click shows or hides.
-struct SidebarChips: View {
+/// Every module as a chip: glass while switched on. Click switches it on or off (an off module
+/// is not read and leaves the overview, sidebar, menu bar and alerts).
+struct ModuleSwitchChips: View {
     var settings = SettingsStore.shared
 
     var body: some View {
-        let hidden = Set(settings.prefs.general.sidebarHidden)
         FlowLayout(spacing: 4) {
             ForEach(Sidebar.moduleOrder, id: \.self) { m in
-                let shown = !hidden.contains(m)
+                let shown = settings.prefs.isEnabled(m)
                 Button {
-                    withAnimation(Motion.slide) {
-                        if shown { settings.prefs.general.sidebarHidden.append(m) } else { settings.prefs.general.sidebarHidden.removeAll { $0 == m } }
-                    }
-                    if shown, Navigator.shared.page.sidebarPage == .monitor(m) { Navigator.shared.page = .overview }
+                    withAnimation(Motion.slide) { settings.prefs.setEnabled(m, !shown) }
                 } label: {
                     HStack(spacing: 6) {
                         LineIcon(d: Icons.module(m), size: 14, lineWidth: 1.5)
@@ -321,7 +319,7 @@ struct SidebarChips: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(L10n.Settings.sidebarModules)
+        .accessibilityLabel(L10n.Settings.modulesOn)
     }
 }
 

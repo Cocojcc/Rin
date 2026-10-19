@@ -77,6 +77,18 @@ enum Snapshots {
                 if let out = try? Process.run(URL(fileURLWithPath: "/usr/bin/pmset"), arguments: ["-g", "assertions"]) { out.waitUntilExit() }
                 KeepAwake.shared.stop()
             }
+            if want("page") || want("page-overview-edit") {
+                SettingsStore.shared.prefs.setEnabled(.gpu, false)
+                SettingsStore.shared.prefs.setEnabled(.bluetooth, false)
+                Navigator.shared.page = .overview
+                save(MainView().frame(width: pageWidth, height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-overview-off-\(tag).png"))
+                OverviewPage.initialEditing = true
+                save(MainView().frame(width: pageWidth, height: UIScale.of(1100)).background(wall), appearance, dir.appendingPathComponent("page-overview-edit-\(tag).png"))
+                OverviewPage.initialEditing = false
+                save(PanelRoot(kind: .combined).padding(20).background(wall), appearance, dir.appendingPathComponent("panel-combined-off-\(tag).png"))
+                SettingsStore.shared.prefs.setEnabled(.gpu, true)
+                SettingsStore.shared.prefs.setEnabled(.bluetooth, true)
+            }
             if want("page") || want("page-alerts") {
                 seedAlerts()
                 Navigator.shared.page = .alerts

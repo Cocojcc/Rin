@@ -105,12 +105,11 @@ struct Sidebar: View {
         (.about, Icons.mac, L10n.Sidebar.aboutMac),
     ]
 
-    /// The hardware modules, in the sidebar's order, less the ones hidden in Settings.
+    /// The hardware modules in the sidebar's order; switched-off ones are left out.
     static let moduleOrder: [Module] = [.cpu, .gpu, .memory, .network, .disk, .battery, .bluetooth, .sensors]
 
     private var modulePages: [(Page, String, String)] {
-        let hidden = Set(settings.prefs.general.sidebarHidden)
-        return Self.moduleOrder.filter { !hidden.contains($0) }.map { (.monitor($0), Icons.module($0), $0.title) }
+        Self.moduleOrder.filter(settings.prefs.isEnabled).map { (.monitor($0), Icons.module($0), $0.title) }
     }
 
     var body: some View {
@@ -133,7 +132,7 @@ struct Sidebar: View {
                     item(entry)
                         .contextMenu {
                             if case .monitor(let m) = entry.0 {
-                                Button(L10n.Sidebar.hideModule(m.title)) { hide(m) }
+                                Button(L10n.Sidebar.turnOffModule(m.title)) { turnOff(m) }
                             }
                         }
                 }
@@ -166,9 +165,8 @@ struct Sidebar: View {
         .accessibilityLabel(L10n.Sidebar.label)
     }
 
-    private func hide(_ m: Module) {
-        if !settings.prefs.general.sidebarHidden.contains(m) { settings.prefs.general.sidebarHidden.append(m) }
-        if navigator.page.sidebarPage == .monitor(m) { navigator.page = .overview }
+    private func turnOff(_ m: Module) {
+        settings.prefs.setEnabled(m, false)
     }
 
     /// `badge`: new alerts, a red count on the right.

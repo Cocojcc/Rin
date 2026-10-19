@@ -25,116 +25,17 @@ struct CombinedPanel: View {
             }
             .padding(.leading, 6)
 
+            let on = prefs.isEnabled
+            // A switched-off module's tile leaves; the tile beside it takes the whole row.
+            let second: AnyView? = s.battery.hasBattery && on(.battery) ? batteryTile(s) : on(.gpu) ? gpuTile(s) : nil
             Grid(horizontalSpacing: 10, verticalSpacing: 10) {
-                GridRow {
-                    tile(.cpu) {
-                        tileHeader(.cpu, right: SystemInfo.chipName)
-                        Spacer(minLength: 4)
-                        bigValue(percentNumber(s.cpu.total), L10n.Common.percentSign)
-                        Spacer(minLength: 4)
-                        HistoryBars(values: monitor.history.latest(.cpu, seconds: 32 * prefs.refresh(.cpu)).map { $0 / 100 }, color: Theme.cpu)
-                            .frame(height: 26)
-                    }
-                    tile(.memory) {
-                        let pr = PanelText.pressure(s.memory.pressure)
-                        HStack(spacing: 8) {
-                            tileTitle(.memory)
-                            Spacer(minLength: 0)
-                            StatusPill(text: pr.0, fg: pr.1, bg: pr.2)
-                        }
-                        Spacer(minLength: 4)
-                        bigValue(String(format: "%.1f", Double(s.memory.used) / 1_073_741_824), L10n.Panel.ofTotal(Format.memory(s.memory.total)))
-                        Spacer(minLength: 4)
-                        MemoryComposition(m: s.memory)
-                        Text(L10n.Panel.memoryBreakdown(Format.memory(s.memory.app), Format.memory(s.memory.wired), Format.memory(s.memory.compressed)))
-                            .ui(12).foregroundStyle(Theme.sub).lineLimit(1).padding(.top, 8)
-                    }
+                pairRow(on(.cpu) ? cpuTile(s, prefs) : nil, on(.memory) ? memoryTile(s) : nil)
+                if on(.network) {
+                    GridRow { networkTile(s, prefs).gridCellColumns(2) }
                 }
-                GridRow {
-                    tile(.network, height: 116) {
-                        HStack(spacing: 14) {
-                            VStack(alignment: .leading, spacing: 0) {
-                                HStack(spacing: 6) {
-                                    tileTitle(.network)
-                                    Text(PanelText.kindName(s.network.kind)).ui(13).foregroundStyle(Theme.sub)
-                                }
-                                Spacer(minLength: 4)
-                                let down = Format.rateParts(s.network.down, unit: prefs.network.speedUnit)
-                                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                                    Text(MenuBarText.downArrow).ui(15, 500).foregroundStyle(Theme.down)
-                                    Text(s.network.connected ? down.0 : L10n.Common.dash).ui(32, 500).kerning(-0.64)
-                                    Text(down.1).ui(13).foregroundStyle(Theme.sub)
-                                }
-                                let up = Format.rateParts(s.network.up, unit: prefs.network.speedUnit)
-                                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                                    Text(MenuBarText.upArrow).ui(13, 500).foregroundStyle(Theme.up)
-                                    Text(s.network.connected ? up.0 : L10n.Common.dash).ui(16, 500)
-                                    Text(up.1).ui(13).foregroundStyle(Theme.sub)
-                                }
-                            }
-                            VStack(alignment: .trailing, spacing: 6) {
-                                let d = monitor.history.latest(.netDown, seconds: 30 * prefs.refresh(.network))
-                                let u = monitor.history.latest(.netUp, seconds: 30 * prefs.refresh(.network))
-                                let peak = max(d.max() ?? 0, u.max() ?? 0, 10_000) * 1.1
-                                MiniChart(series: [.init(values: d.map { $0 / peak }, color: Theme.down),
-                                                   .init(values: u.map { $0 / peak }, color: Theme.up, fill: 0, lineWidth: 1.25)], gridLines: 1)
-                                    .frame(height: 62)
-                                HStack(spacing: 12) {
-                                    LegendDot(color: Theme.down, label: L10n.Panel.download, size: 6)
-                                    LegendDot(color: Theme.up, label: L10n.Panel.upload, size: 6)
-                                }
-                            }
-                            .frame(width: 176)
-                        }
-                    }
-                    .gridCellColumns(2)
-                }
-                GridRow {
-                    let root = s.disk.root
-                    tile(.disk, height: 136) {
-                        tileHeader(.disk, right: root?.name ?? "")
-                        Spacer(minLength: 4)
-                        let free = Format.storage(root?.available ?? 0).split(separator: " ").map(String.init)
-                        bigValue(free.first ?? "", L10n.Panel.unitAvailable(free.count > 1 ? free[1] : ""))
-                        Spacer(minLength: 4)
-                        MeterBar(fraction: root?.usedFraction ?? 0, color: Theme.disk)
-                        Text(L10n.Panel.readWriteShort(Format.rate(s.disk.read), Format.rate(s.disk.write)))
-                            .ui(12).foregroundStyle(Theme.sub).lineLimit(1).padding(.top, 8)
-                    }
-                    if s.battery.hasBattery {
-                        tile(.battery, height: 136) {
-                            tileHeader(.battery, right: PanelText.batteryState(s.battery))
-                            Spacer(minLength: 4)
-                            bigValue(percentNumber(s.battery.level), L10n.Common.percentSign)
-                            Spacer(minLength: 4)
-                            MeterBar(fraction: s.battery.level, color: s.battery.level <= 0.2 && !s.battery.onAC ? Theme.danger : Theme.bat)
-                            Text(batteryLine(s.battery)).ui(12).foregroundStyle(Theme.sub).lineLimit(1).padding(.top, 8)
-                        }
-                    } else {
-                        tile(.gpu, height: 136) {
-                            tileHeader(.gpu, right: s.gpu.model)
-                            Spacer(minLength: 4)
-                            bigValue(percentNumber(s.gpu.utilization), L10n.Common.percentSign)
-                            Spacer(minLength: 4)
-                            MeterBar(fraction: s.gpu.utilization, color: Theme.gpu)
-                            Text(L10n.Panel.vramUsed(Format.memory(s.gpu.memoryUsed))).ui(12).foregroundStyle(Theme.sub).padding(.top, 8)
-                        }
-                    }
-                }
-                GridRow {
-                    tile(.sensors, height: nil) {
-                        tileTitle(.sensors)
-                        HStack(alignment: .top, spacing: 8) {
-                            sensorStat(L10n.Module.cpu, s.sensors.cpuAverage.map { Format.temperature($0, unit: unit) } ?? L10n.Common.dash, nil)
-                            sensorStat(L10n.Module.gpu, s.sensors.value(.gpu).map { Format.temperature($0, unit: unit) } ?? L10n.Common.dash, nil)
-                            sensorStat(L10n.Sensors.fan, s.sensors.fans.first.map { "\(Int($0.rpm.rounded()))" } ?? L10n.Common.dash,
-                                       s.sensors.fans.isEmpty ? nil : L10n.Common.rpmUnit)
-                            sensorStat(L10n.Sensors.systemPower, s.sensors.systemPower.map { String(format: "%.1f", $0) } ?? L10n.Common.dash,
-                                       s.sensors.systemPower == nil ? nil : L10n.Common.wattUnit)
-                        }
-                        .padding(.top, 10)
-                    }
-                    .gridCellColumns(2)
+                pairRow(on(.disk) ? diskTile(s) : nil, second)
+                if on(.sensors) {
+                    GridRow { sensorsTile(s, unit).gridCellColumns(2) }
                 }
             }
 
@@ -176,6 +77,146 @@ struct CombinedPanel: View {
         else if !b.onAC, let m = b.minutesToEmpty { parts.append(L10n.Battery.remaining(Format.clockDuration(minutes: m))) }
         if let h = b.health { parts.append(L10n.Panel.healthShort(Format.percent(h))) }
         return parts.joined(separator: L10n.A11y.dotSeparator)
+    }
+
+    @ViewBuilder private func pairRow(_ a: AnyView?, _ b: AnyView?) -> some View {
+        if let a, let b {
+            GridRow { a; b }
+        } else if let only = a ?? b {
+            GridRow { only.gridCellColumns(2) }
+        }
+    }
+
+    private func cpuTile(_ s: Snapshot, _ prefs: Preferences) -> AnyView {
+        AnyView(
+            tile(.cpu) {
+                tileHeader(.cpu, right: SystemInfo.chipName)
+                Spacer(minLength: 4)
+                bigValue(percentNumber(s.cpu.total), L10n.Common.percentSign)
+                Spacer(minLength: 4)
+                HistoryBars(values: monitor.history.latest(.cpu, seconds: 32 * prefs.refresh(.cpu)).map { $0 / 100 }, color: Theme.cpu)
+                    .frame(height: 26)
+            }
+        )
+    }
+
+    private func memoryTile(_ s: Snapshot) -> AnyView {
+        AnyView(
+            tile(.memory) {
+                let pr = PanelText.pressure(s.memory.pressure)
+                HStack(spacing: 8) {
+                    tileTitle(.memory)
+                    Spacer(minLength: 0)
+                    StatusPill(text: pr.0, fg: pr.1, bg: pr.2)
+                }
+                Spacer(minLength: 4)
+                bigValue(String(format: "%.1f", Double(s.memory.used) / 1_073_741_824), L10n.Panel.ofTotal(Format.memory(s.memory.total)))
+                Spacer(minLength: 4)
+                MemoryComposition(m: s.memory)
+                Text(L10n.Panel.memoryBreakdown(Format.memory(s.memory.app), Format.memory(s.memory.wired), Format.memory(s.memory.compressed)))
+                    .ui(12).foregroundStyle(Theme.sub).lineLimit(1).padding(.top, 8)
+            }
+        )
+    }
+
+    private func networkTile(_ s: Snapshot, _ prefs: Preferences) -> AnyView {
+        AnyView(
+            tile(.network, height: 116) {
+                HStack(spacing: 14) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack(spacing: 6) {
+                            tileTitle(.network)
+                            Text(PanelText.kindName(s.network.kind)).ui(13).foregroundStyle(Theme.sub)
+                        }
+                        Spacer(minLength: 4)
+                        let down = Format.rateParts(s.network.down, unit: prefs.network.speedUnit)
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text(MenuBarText.downArrow).ui(15, 500).foregroundStyle(Theme.down)
+                            Text(s.network.connected ? down.0 : L10n.Common.dash).ui(32, 500).kerning(-0.64)
+                            Text(down.1).ui(13).foregroundStyle(Theme.sub)
+                        }
+                        let up = Format.rateParts(s.network.up, unit: prefs.network.speedUnit)
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text(MenuBarText.upArrow).ui(13, 500).foregroundStyle(Theme.up)
+                            Text(s.network.connected ? up.0 : L10n.Common.dash).ui(16, 500)
+                            Text(up.1).ui(13).foregroundStyle(Theme.sub)
+                        }
+                    }
+                    VStack(alignment: .trailing, spacing: 6) {
+                        let d = monitor.history.latest(.netDown, seconds: 30 * prefs.refresh(.network))
+                        let u = monitor.history.latest(.netUp, seconds: 30 * prefs.refresh(.network))
+                        let peak = max(d.max() ?? 0, u.max() ?? 0, 10_000) * 1.1
+                        MiniChart(series: [.init(values: d.map { $0 / peak }, color: Theme.down),
+                                           .init(values: u.map { $0 / peak }, color: Theme.up, fill: 0, lineWidth: 1.25)], gridLines: 1)
+                            .frame(height: 62)
+                        HStack(spacing: 12) {
+                            LegendDot(color: Theme.down, label: L10n.Panel.download, size: 6)
+                            LegendDot(color: Theme.up, label: L10n.Panel.upload, size: 6)
+                        }
+                    }
+                    .frame(width: 176)
+                }
+            }
+        )
+    }
+
+    private func diskTile(_ s: Snapshot) -> AnyView {
+        let root = s.disk.root
+        return AnyView(
+            tile(.disk, height: 136) {
+                tileHeader(.disk, right: root?.name ?? "")
+                Spacer(minLength: 4)
+                let free = Format.storage(root?.available ?? 0).split(separator: " ").map(String.init)
+                bigValue(free.first ?? "", L10n.Panel.unitAvailable(free.count > 1 ? free[1] : ""))
+                Spacer(minLength: 4)
+                MeterBar(fraction: root?.usedFraction ?? 0, color: Theme.disk)
+                Text(L10n.Panel.readWriteShort(Format.rate(s.disk.read), Format.rate(s.disk.write)))
+                    .ui(12).foregroundStyle(Theme.sub).lineLimit(1).padding(.top, 8)
+            }
+        )
+    }
+
+    private func batteryTile(_ s: Snapshot) -> AnyView {
+        AnyView(
+            tile(.battery, height: 136) {
+                tileHeader(.battery, right: PanelText.batteryState(s.battery))
+                Spacer(minLength: 4)
+                bigValue(percentNumber(s.battery.level), L10n.Common.percentSign)
+                Spacer(minLength: 4)
+                MeterBar(fraction: s.battery.level, color: s.battery.level <= 0.2 && !s.battery.onAC ? Theme.danger : Theme.bat)
+                Text(batteryLine(s.battery)).ui(12).foregroundStyle(Theme.sub).lineLimit(1).padding(.top, 8)
+            }
+        )
+    }
+
+    private func gpuTile(_ s: Snapshot) -> AnyView {
+        AnyView(
+            tile(.gpu, height: 136) {
+                tileHeader(.gpu, right: s.gpu.model)
+                Spacer(minLength: 4)
+                bigValue(percentNumber(s.gpu.utilization), L10n.Common.percentSign)
+                Spacer(minLength: 4)
+                MeterBar(fraction: s.gpu.utilization, color: Theme.gpu)
+                Text(L10n.Panel.vramUsed(Format.memory(s.gpu.memoryUsed))).ui(12).foregroundStyle(Theme.sub).padding(.top, 8)
+            }
+        )
+    }
+
+    private func sensorsTile(_ s: Snapshot, _ unit: TemperatureUnit) -> AnyView {
+        AnyView(
+            tile(.sensors, height: nil) {
+                tileTitle(.sensors)
+                HStack(alignment: .top, spacing: 8) {
+                    sensorStat(L10n.Module.cpu, s.sensors.cpuAverage.map { Format.temperature($0, unit: unit) } ?? L10n.Common.dash, nil)
+                    sensorStat(L10n.Module.gpu, s.sensors.value(.gpu).map { Format.temperature($0, unit: unit) } ?? L10n.Common.dash, nil)
+                    sensorStat(L10n.Sensors.fan, s.sensors.fans.first.map { "\(Int($0.rpm.rounded()))" } ?? L10n.Common.dash,
+                               s.sensors.fans.isEmpty ? nil : L10n.Common.rpmUnit)
+                    sensorStat(L10n.Sensors.systemPower, s.sensors.systemPower.map { String(format: "%.1f", $0) } ?? L10n.Common.dash,
+                               s.sensors.systemPower == nil ? nil : L10n.Common.wattUnit)
+                }
+                .padding(.top, 10)
+            }
+        )
     }
 
     private func tile<Content: View>(_ m: Module, height: CGFloat? = 140, @ViewBuilder content: () -> Content) -> some View {

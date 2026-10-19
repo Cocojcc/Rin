@@ -29,8 +29,9 @@ struct GeneralPrefs: Codable, Equatable {
     var widgetsMigrated = false
     /// Set once widgets that combined a graphic with its number were split into pieces.
     var widgetsSplit = false
-    /// Module pages left out of the sidebar.
-    var sidebarHidden: [Module] = []
+    /// Modules switched off: not read, and gone from the overview, sidebar, menu bar and alerts.
+    /// Their own settings stay as they were for when they are switched back on.
+    var disabledModules: [Module] = []
 }
 
 struct CPUPrefs: Codable, Equatable {
@@ -180,6 +181,13 @@ struct Preferences: Codable, Equatable {
     var alerts = AlertPrefs()
     /// Menu bar widgets per module (keyed by module raw value); missing entries use the defaults.
     var widgetState: [String: ModuleWidgets] = [:]
+
+    func isEnabled(_ m: Module) -> Bool { !general.disabledModules.contains(m) }
+
+    mutating func setEnabled(_ m: Module, _ on: Bool) {
+        general.disabledModules.removeAll { $0 == m }
+        if !on { general.disabledModules.append(m) }
+    }
 
     /// The module's "在菜单栏显示" switch. The item shows while this is on and at least one
     /// widget is picked (`showsInMenubar`).

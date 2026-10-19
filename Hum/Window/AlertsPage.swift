@@ -16,7 +16,7 @@ struct AlertsPage: View {
 
     var body: some View {
         let prefs = settings.prefs
-        let enabledCount = Alerts.Rule.allCases.filter { prefs[keyPath: $0.enabledKey] }.count
+        let enabledCount = Alerts.Rule.allCases.filter { prefs[keyPath: $0.enabledKey] && prefs.isEnabled($0.module) }.count
         VStack(alignment: .leading, spacing: 20) {
             PageTitle(title: L10n.Sidebar.alerts)
             Section(title: L10n.Alerts.rules, right: L10n.Alerts.rulesOn(enabledCount)) {
@@ -91,7 +91,7 @@ struct AlertsPage: View {
 
     /// "+ 添加提醒": a menu of the rules that are off; picking one turns it on.
     @ViewBuilder private var addRow: some View {
-        let off = Alerts.Rule.allCases.filter { !settings.prefs[keyPath: $0.enabledKey] }
+        let off = Alerts.Rule.allCases.filter { !settings.prefs[keyPath: $0.enabledKey] && settings.prefs.isEnabled($0.module) }
         Menu {
             ForEach(off, id: \.self) { rule in
                 Button(AlertText.name(rule)) {

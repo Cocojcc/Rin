@@ -111,8 +111,13 @@ struct AlertRuleRow: View {
                 AlertRuleSentence(rule: rule)
             }
             Spacer(minLength: 8)
-            HumSwitch(isOn: pref(rule.enabledKey), label: AlertText.name(rule))
+            if settings.prefs.isEnabled(rule.module) {
+                HumSwitch(isOn: pref(rule.enabledKey), label: AlertText.name(rule))
+            } else {
+                Text(L10n.Alerts.moduleOff).ui(12).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
+            }
         }
+        .opacity(settings.prefs.isEnabled(rule.module) ? 1 : 0.5)
         .frame(minHeight: minHeight)
         .background {
             RoundedRectangle(cornerRadius: 10, style: .continuous)

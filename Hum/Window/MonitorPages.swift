@@ -158,25 +158,48 @@ struct OverviewPage: View {
     var monitor = Monitor.shared
     var settings = SettingsStore.shared
     var alerts = Alerts.shared
+    /// Edit mode: every card shows, each with its module's switch; off ones stay dimmed in place.
+    @State private var editing = OverviewPage.initialEditing
+    /// Lets the snapshot tool render edit mode.
+    static var initialEditing = false
 
     var body: some View {
         let s = monitor.snapshot
         let unit = settings.prefs.general.temperatureUnit
         let _ = monitor.tick
+        let shows = { (m: Module) in editing || settings.prefs.isEnabled(m) }
         VStack(alignment: .leading, spacing: 20) {
-            PageTitle(title: L10n.Overview.title)
+            PageTitle(title: L10n.Overview.title) { editButton }
             status
-            CardGrid(spacing: 10) {
-                cpuCard(s, unit)
-                memoryCard(s)
-                networkCard(s)
-                diskCard(s)
-                batteryCard(s)
-                sensorsCard(s, unit)
-                peakCard()
-                gpuCard(s, unit)
-                bluetoothCard(s)
+            if !editing && Module.allCases.allSatisfy({ !settings.prefs.isEnabled($0) }) {
+                Text(L10n.Overview.allOff).ui(13).foregroundStyle(Theme.faint).padding(.horizontal, 14)
             }
+            CardGrid(spacing: 10) {
+                if shows(.cpu) { cpuCard(s, unit) }
+                if shows(.memory) { memoryCard(s) }
+                if shows(.network) { networkCard(s) }
+                if shows(.disk) { diskCard(s) }
+                if shows(.battery) { batteryCard(s) }
+                if shows(.sensors) { sensorsCard(s, unit) }
+                if shows(.cpu) { peakCard() }
+                if shows(.gpu) { gpuCard(s, unit) }
+                if shows(.bluetooth) { bluetoothCard(s) }
+            }
+            .environment(\.overviewEditing, editing)
+        }
+    }
+
+    @ViewBuilder private var editButton: some View {
+        if editing {
+            PrimaryButton(title: L10n.Overview.done, height: 28, radius: 8, fontSize: 12) {
+                withAnimation(Motion.slide) { editing = false }
+            }
+            .fixedSize()
+        } else {
+            WellButton(title: L10n.Overview.edit, height: 28, radius: 8, fontSize: 12) {
+                withAnimation(Motion.slide) { editing = true }
+            }
+            .accessibilityHint(L10n.Overview.editA11y)
         }
     }
 
@@ -451,6 +474,15 @@ struct OverviewPage: View {
 
 /// An overview card: icon and title, a status on the right, content, and a footer pinned to
 /// the bottom. The whole card opens its monitor page and tints under the pointer.
+private struct OverviewEditingKey: EnvironmentKey { static let defaultValue = false }
+
+private extension EnvironmentValues {
+    var overviewEditing: Bool {
+        get { self[OverviewEditingKey.self] }
+        set { self[OverviewEditingKey.self] = newValue }
+    }
+}
+
 private struct OverviewCard<Content: View, Footer: View>: View {
     let module: Module
     var title: String? = nil
@@ -460,6 +492,8 @@ private struct OverviewCard<Content: View, Footer: View>: View {
     @ViewBuilder var content: Content
     @ViewBuilder var footer: Footer
     @State private var hovering = false
+    @Environment(\.overviewEditing) private var editing
+    var settings = SettingsStore.shared
 
     init(module: Module, title: String? = nil, icon: String? = nil, status: (String, Color)?,
          action: (() -> Void)? = nil, @ViewBuilder content: () -> Content, @ViewBuilder footer: () -> Footer) {
@@ -472,36 +506,55 @@ private struct OverviewCard<Content: View, Footer: View>: View {
         self.footer = footer()
     }
 
+    /// The CPU peak card rides on the CPU module's switch, so it shows none of its own.
+    private var hasSwitch: Bool { title == nil }
+
     var body: some View {
-        Button {
-            if let action { action() } else { Navigator.shared.page = .monitor(module) }
-        } label: {
-            VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 8) {
-                        HStack(spacing: 8) {
-                            LineIcon(d: icon ?? Icons.module(module), size: 16, lineWidth: 1.5)
-                            Text(title ?? module.title).ui(13, 500)
-                        }
-                        .foregroundStyle(Theme.sub)
-                        Spacer(minLength: 0)
-                        if let status { Text(status.0).ui(12, 500).foregroundStyle(status.1).lineLimit(1) }
-                    }
-                    .frame(height: 18)
-                    content
-                }
-                Spacer(minLength: 12)
-                footer
+        if editing {
+            card(on: settings.prefs.isEnabled(module))
+        } else {
+            Button {
+                if let action { action() } else { Navigator.shared.page = .monitor(module) }
+            } label: {
+                card(on: true)
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(hovering ? Theme.well : Theme.panel))
-            .hoverAnimation(hovering)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .onHover { hovering = $0 }
+            .accessibilityHint(L10n.Panel.openMonitor(module.title))
         }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .accessibilityHint(L10n.Panel.openMonitor(module.title))
+    }
+
+    private func card(on: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    HStack(spacing: 8) {
+                        LineIcon(d: icon ?? Icons.module(module), size: 16, lineWidth: 1.5)
+                        Text(title ?? module.title).ui(13, 500)
+                    }
+                    .foregroundStyle(Theme.sub)
+                    Spacer(minLength: 0)
+                    if editing {
+                        if hasSwitch {
+                            HumSwitch(isOn: Binding(get: { settings.prefs.isEnabled(module) },
+                                                    set: { v in withAnimation(Motion.slide) { settings.prefs.setEnabled(module, v) } }),
+                                      label: L10n.Overview.moduleSwitch(module.title))
+                        }
+                    } else if let status {
+                        Text(status.0).ui(12, 500).foregroundStyle(status.1).lineLimit(1)
+                    }
+                }
+                .frame(height: 20)
+                content.opacity(on ? 1 : 0.35)
+            }
+            Spacer(minLength: 12)
+            footer.opacity(on ? 1 : 0.35)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(hovering && !editing ? Theme.well : Theme.panel))
+        .hoverAnimation(hovering)
+        .contentShape(Rectangle())
     }
 }
 

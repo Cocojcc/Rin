@@ -115,11 +115,12 @@ final class Monitor {
             default: break
             }
         }
+        shown = shown.filter(prefs.isEnabled)
         var read = shown.union(prefs.alertedModules)
         let allProcesses = consumers.contains(.window(.processes))
         let batteryPage = consumers.contains(.window(.monitor(.battery)))
         // The battery page's "整机" figure comes from the SMC on Macs without a battery.
-        if batteryPage { read.insert(.sensors) }
+        if batteryPage && prefs.isEnabled(.sensors) { read.insert(.sensors) }
         config.monitored = read
         config.processesWanted = allProcesses || batteryPage
         config.processes.full = allProcesses

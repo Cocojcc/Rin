@@ -83,7 +83,7 @@ enum L10n {
         static var processes: String { tr("sidebar.processes") }
         static var sleep: String { tr("sidebar.sleep") }
         static var aboutMac: String { tr("sidebar.aboutMac") }
-        static func hideModule(_ a: String) -> String { tr("sidebar.hideModule", a) }
+        static func turnOffModule(_ a: String) -> String { tr("sidebar.turnOffModule", a) }
     }
 
     enum Common {
@@ -134,6 +134,11 @@ enum L10n {
         static var cpuPeaks: String { tr("overview.cpuPeaks") }
         static var diskHealthy: String { tr("overview.diskHealthy") }
         static func cycles(_ a: String) -> String { tr("overview.cycles", a) }
+        static var edit: String { tr("overview.edit") }
+        static var done: String { tr("overview.done") }
+        static var editA11y: String { tr("overview.editA11y") }
+        static func moduleSwitch(_ a: String) -> String { tr("overview.moduleSwitch", a) }
+        static var allOff: String { tr("overview.allOff") }
     }
 
     enum Battery {
@@ -278,6 +283,7 @@ enum L10n {
         static func ruleOn(_ a: String) -> String { tr("alerts.ruleOn", a) }
         static func rulesOnCount(_ a: Int) -> String { tr("alerts.rulesOnCount", a) }
         static func openRulesA11y(_ a: String) -> String { tr("alerts.openRulesA11y", a) }
+        static var moduleOff: String { tr("alerts.moduleOff") }
     }
 
     enum Panel {
@@ -715,8 +721,8 @@ enum L10n {
         static var bluetoothDisconnectAlert: String { tr("settings.bluetoothDisconnectAlert") }
         static var bluetoothDisconnectAlertA11y: String { tr("settings.bluetoothDisconnectAlertA11y") }
         static func percentValue(_ a: Int) -> String { tr("settings.percentValue", a) }
-        static var sidebarGroup: String { tr("settings.sidebarGroup") }
-        static var sidebarModules: String { tr("settings.sidebarModules") }
+        static var modulesGroup: String { tr("settings.modulesGroup") }
+        static var modulesOn: String { tr("settings.modulesOn") }
     }
 
     enum Notch {

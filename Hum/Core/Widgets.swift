@@ -311,7 +311,7 @@ extension Preferences {
 
     /// Shown in the menu bar: switched on and at least one widget picked (so clearing every
     /// widget also takes it out).
-    func showsInMenubar(_ m: Module) -> Bool { isVisible(m) && !widgets(m).isEmpty }
+    func showsInMenubar(_ m: Module) -> Bool { isEnabled(m) && isVisible(m) && !widgets(m).isEmpty }
 
     /// Modules an alert rule watches; they are read even when not in the menu bar.
     var alertedModules: Set<Module> {
@@ -326,6 +326,6 @@ extension Preferences {
         if a.tempOn { out.insert(.sensors) }
         if a.networkOn { out.insert(.network) }
         if a.bluetoothLowOn || a.bluetoothDisconnectOn { out.insert(.bluetooth) }
-        return out
+        return out.filter(isEnabled)
     }
 }

@@ -39,6 +39,7 @@ final class StatusBarController: NSObject {
             _ = SettingsStore.shared.prefs
         } onChange: { [weak self] in
             DispatchQueue.main.async {
+                Navigator.shared.moduleSwitched(SettingsStore.shared.prefs)
                 Monitor.shared.applyConfiguration()
                 Appearance.apply()
                 self?.rebuildIfNeeded()

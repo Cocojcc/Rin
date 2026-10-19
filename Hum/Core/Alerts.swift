@@ -66,7 +66,7 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
             }
         }
 
-        func isOn(_ p: Preferences) -> Bool { p.alerts.enabled && p[keyPath: enabledKey] }
+        func isOn(_ p: Preferences) -> Bool { p.alerts.enabled && p[keyPath: enabledKey] && p.isEnabled(module) }
 
         /// The rule a module page's chart offers.
         static func primary(for module: Module) -> Rule {
@@ -233,7 +233,7 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
         }
 
         let top = s.processes.byCPU.first
-        check(.cpu, enabled: a.cpuOn, condition: s.cpu.total * 100 >= a.cpuThreshold, after: a.cpuMinutes * 60, tone: .warn,
+        check(.cpu, enabled: a.cpuOn && prefs.isEnabled(.cpu), condition: s.cpu.total * 100 >= a.cpuThreshold, after: a.cpuMinutes * 60, tone: .warn,
               update: { $0.value = s.cpu.total * 100 }) {
             AlertEvent(rule: .cpu, date: now, value: s.cpu.total * 100, limit: a.cpuThreshold,
                        culprit: top?.name, culpritValue: top.map { Format.percentValue($0.cpu) })
@@ -241,14 +241,14 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
 
         // Per-process GPU usage is only read while a GPU view is open, so the culprit may be missing.
         let gpuTop = s.processes.byGPU.first
-        check(.gpu, enabled: a.gpuOn, condition: s.gpu.utilization * 100 >= a.gpuThreshold, after: a.gpuMinutes * 60, tone: .warn,
+        check(.gpu, enabled: a.gpuOn && prefs.isEnabled(.gpu), condition: s.gpu.utilization * 100 >= a.gpuThreshold, after: a.gpuMinutes * 60, tone: .warn,
               update: { $0.value = s.gpu.utilization * 100 }) {
             AlertEvent(rule: .gpu, date: now, value: s.gpu.utilization * 100, limit: a.gpuThreshold,
                        culprit: gpuTop?.name, culpritValue: gpuTop.map { Format.percentValue($0.gpu) })
         }
 
         let memTop = s.processes.byMemory.first
-        check(.memory, enabled: a.memoryOn, condition: s.memory.pressure.rawValue >= a.memoryLevel.rawValue, after: 10,
+        check(.memory, enabled: a.memoryOn && prefs.isEnabled(.memory), condition: s.memory.pressure.rawValue >= a.memoryLevel.rawValue, after: 10,
               tone: a.memoryLevel == .critical ? .crit : .warn) {
             AlertEvent(rule: .memory, date: now, value: Double(s.memory.pressure.rawValue), limit: Double(a.memoryLevel.rawValue),
                        culprit: memTop?.name, culpritValue: memTop.map { Format.memory($0.memory) })
@@ -256,19 +256,19 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
 
         let root = s.disk.root
         let limitBytes = a.diskFreeGB * 1_000_000_000
-        check(.disk, enabled: a.diskOn, condition: root.map { Double($0.available) < limitBytes } ?? false, after: 0, tone: .warn,
+        check(.disk, enabled: a.diskOn && prefs.isEnabled(.disk), condition: root.map { Double($0.available) < limitBytes } ?? false, after: 0, tone: .warn,
               endValue: root.map { Double($0.available) }, update: { e in root.map { e.value = Double($0.available) } }) {
             AlertEvent(rule: .disk, date: now, value: Double(root?.available ?? 0), limit: limitBytes, subject: root?.name)
         }
 
         let b = s.battery
-        check(.battery, enabled: a.batteryOn && b.hasBattery, condition: b.level * 100 <= a.batteryPercent && !b.onAC, after: 0, tone: .crit,
+        check(.battery, enabled: a.batteryOn && b.hasBattery && prefs.isEnabled(.battery), condition: b.level * 100 <= a.batteryPercent && !b.onAC, after: 0, tone: .crit,
               update: { $0.value = b.level * 100 }) {
             AlertEvent(rule: .battery, date: now, value: b.level * 100, limit: a.batteryPercent, timeLeft: b.minutesToEmpty.map { Double($0) * 60 })
         }
 
         let temp = s.sensors.cpuAverage ?? 0
-        check(.temperature, enabled: a.tempOn, condition: temp >= a.tempThreshold, after: 10, tone: .crit, update: { $0.value = temp }) {
+        check(.temperature, enabled: a.tempOn && prefs.isEnabled(.sensors), condition: temp >= a.tempThreshold, after: 10, tone: .crit, update: { $0.value = temp }) {
             AlertEvent(rule: .temperature, date: now, value: temp, limit: a.tempThreshold,
                        culprit: top?.name, culpritValue: top.map { Format.percentValue($0.cpu) })
         }
@@ -277,7 +277,7 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
         let connected = s.network.connected
         if connected { everConnected = true }
         // The link it came back on names the recovery ("Wi-Fi 已自动重新连接").
-        check(.network, enabled: a.networkOn, condition: !connected && everConnected, after: 5, tone: .dim,
+        check(.network, enabled: a.networkOn && prefs.isEnabled(.network), condition: !connected && everConnected, after: 5, tone: .dim,
               endValue: connected ? Double(Self.kindCode(s.network.kind)) : nil) {
             AlertEvent(rule: .network, date: now, value: 0, limit: 0)
         }
@@ -291,7 +291,7 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
 
     /// Per device, so these keep their own memory instead of the module-wide rule state.
     private func checkBluetooth(_ s: Snapshot, _ a: AlertPrefs, _ prefs: Preferences) {
-        guard s.monitored.contains(.bluetooth) else { lastConnected = nil; return }
+        guard s.monitored.contains(.bluetooth), prefs.isEnabled(.bluetooth) else { lastConnected = nil; return }
         let low = prefs.bluetooth.lowLevel
         let now = s.date
         for d in s.bluetooth.withBattery {
