@@ -64,7 +64,7 @@ final class OnboardingController: NSObject, NSWindowDelegate {
 struct OnboardingRoot: View {
     var body: some View {
         UIScaled { OnboardingView() }
-            .background(GlassBackground(radius: UIScale.of(18), material: .underWindowBackground))
+            .background(GlassBackground(radius: UIScale.of(18), tint: Theme.windowGlass, material: .underWindowBackground))
             .ignoresSafeArea()
     }
 }

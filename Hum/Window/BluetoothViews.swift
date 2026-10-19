@@ -35,13 +35,15 @@ enum BluetoothText {
 /// Lays children out in equal columns: a fixed count, or as many as fit `minWidth`.
 struct EvenGrid: Layout {
     var columns: Int? = nil
+    /// With `columns` nil, never more than this many to a row.
+    var maxColumns = Int.max
     var minWidth: CGFloat = 76
     var hSpacing: CGFloat = 4
     var vSpacing: CGFloat = 16
 
     private func metrics(_ width: CGFloat, _ count: Int) -> (cols: Int, item: CGFloat) {
         let fit = Int((width + hSpacing) / (minWidth + hSpacing))
-        let cols = max(1, columns ?? min(max(1, fit), max(1, count)))
+        let cols = max(1, columns ?? min(max(1, fit), max(1, count), maxColumns))
         return (cols, (width - CGFloat(cols - 1) * hSpacing) / CGFloat(cols))
     }
 

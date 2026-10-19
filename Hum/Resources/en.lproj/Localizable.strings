@@ -552,7 +552,6 @@
 "settings.showLatency" = "Show latency";
 "settings.showThermal" = "Show thermal state";
 "settings.showVideo" = "Show video engines";
-"settings.tabAlerts" = "Alerts";
 "settings.tabModule" = "General";
 "settings.tabPanel" = "Dropdown";
 "settings.tabWidgets" = "Widgets";
@@ -934,14 +933,6 @@
 "alerts.editA11y" = "Edit alert: %@";
 "alerts.edit" = "Edit alert";
 "alerts.add" = "Add alert";
-"alerts.above" = "Above";
-"alerts.freeBelow" = "Free space under";
-"alerts.levelBelow" = "Below";
-"alerts.pressureTurns" = "Pressure turns";
-"alerts.whenDisconnected" = "When it disconnects";
-"alerts.done" = "Done";
-"alerts.all" = "All alerts";
-"alerts.allA11y" = "Show all alerts";
 "alerts.rules" = "Rules";
 "alerts.rulesOn" = "%d on";
 "alerts.recent" = "Recent";
@@ -952,3 +943,11 @@
 "alerts.badgeA11y" = "%d new alerts";
 "alerts.noneYet" = "Nothing has fired yet";
 "alerts.overLimit" = "Over %@";
+"sidebar.hideModule" = "Hide %@ from the Sidebar";
+"settings.sidebarGroup" = "Sidebar";
+"settings.sidebarModules" = "Modules in the sidebar";
+"alerts.rulesRow" = "Alert rules";
+"alerts.rulesOff" = "Off";
+"alerts.ruleOn" = "On · %@";
+"alerts.rulesOnCount" = "%d on";
+"alerts.openRulesA11y" = "Edit %@ alerts on the Alerts page";

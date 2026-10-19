@@ -30,16 +30,54 @@ struct RangeControl: View {
     }
 }
 
-/// Range control on the left, legend or a link on the right; the chart panel underneath.
+/// Range control on the left, legend or a link on the right; the chart panel underneath. When a
+/// narrow window can't fit both, the legend moves to its own line, still on the right.
 struct RangeRow<Leading: View, Trailing: View>: View {
     @ViewBuilder var leading: Leading
     @ViewBuilder var trailing: Trailing
+    @Environment(\.textScale) private var textScale
 
     var body: some View {
-        HStack(spacing: 16) {
+        RangeRowLayout(textScale: textScale) {
             HStack(spacing: 8) { leading }
-            Spacer(minLength: 0)
             trailing
+        }
+    }
+}
+
+/// One line while the right side fits (its text may settle back to the design's size for that),
+/// otherwise the right side drops below, still flush right.
+private struct RangeRowLayout: Layout {
+    var textScale: CGFloat
+    private let gap: CGFloat = 16
+    private let lineGap: CGFloat = 8
+
+    private func measure(_ width: CGFloat?, _ subviews: Subviews) -> (lead: CGSize, trail: CGSize, oneLine: Bool) {
+        let lead = subviews[0].sizeThatFits(.unspecified)
+        let trail = subviews[1].sizeThatFits(.unspecified)
+        guard let width, width.isFinite else { return (lead, trail, true) }
+        return (lead, trail, lead.width + gap + trail.width / textScale <= width + 0.5)
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard subviews.count == 2 else { return .zero }
+        let m = measure(proposal.width, subviews)
+        let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? (m.lead.width + gap + m.trail.width)
+        return CGSize(width: width, height: m.oneLine ? max(m.lead.height, m.trail.height) : m.lead.height + lineGap + m.trail.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard subviews.count == 2 else { return }
+        let m = measure(bounds.width, subviews)
+        if m.oneLine {
+            let room = max(0, min(m.trail.width, bounds.width - m.lead.width - gap))
+            subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(m.lead))
+            subviews[1].place(at: CGPoint(x: bounds.maxX, y: bounds.midY), anchor: .trailing,
+                              proposal: ProposedViewSize(width: room, height: m.trail.height))
+        } else {
+            subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.minY), anchor: .topLeading, proposal: ProposedViewSize(m.lead))
+            subviews[1].place(at: CGPoint(x: bounds.maxX, y: bounds.minY + m.lead.height + lineGap), anchor: .topTrailing,
+                              proposal: ProposedViewSize(width: min(m.trail.width, bounds.width), height: m.trail.height))
         }
     }
 }

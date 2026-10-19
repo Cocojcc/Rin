@@ -9,6 +9,8 @@ struct AlertsPage: View {
     /// Triggers that were new when the page opened keep their dot while it is up.
     @State private var fresh: Set<UUID> = []
     @State private var authorization: UNAuthorizationStatus = .notDetermined
+    /// The rule a chart or a module's settings sent us to, tinted for a moment.
+    @State private var highlighted: Alerts.Rule?
 
     private static let recentShown = 6
 
@@ -20,7 +22,7 @@ struct AlertsPage: View {
             Section(title: L10n.Alerts.rules, right: L10n.Alerts.rulesOn(enabledCount)) {
                 VStack(spacing: 0) {
                     DividedRows {
-                        ForEach(Alerts.Rule.allCases, id: \.self) { AlertRuleRow(rule: $0) }
+                        ForEach(Alerts.Rule.allCases, id: \.self) { AlertRuleRow(rule: $0, highlighted: highlighted == $0) }
                         addRow
                     }
                 }
@@ -70,7 +72,16 @@ struct AlertsPage: View {
                 .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
             }
         }
-        .onAppear { takeNew() }
+        .onAppear {
+            takeNew()
+            if let focus = Navigator.shared.alertFocus {
+                Navigator.shared.alertFocus = nil
+                highlighted = focus
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+                    withAnimation(.easeOut(duration: 0.6)) { highlighted = nil }
+                }
+            }
+        }
         .onChange(of: alerts.unseenCount) { _, count in if count > 0 { takeNew() } }
         .task { await refreshAuthorization() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in

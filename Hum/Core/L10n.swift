@@ -83,6 +83,7 @@ enum L10n {
         static var processes: String { tr("sidebar.processes") }
         static var sleep: String { tr("sidebar.sleep") }
         static var aboutMac: String { tr("sidebar.aboutMac") }
+        static func hideModule(_ a: String) -> String { tr("sidebar.hideModule", a) }
     }
 
     enum Common {
@@ -262,14 +263,6 @@ enum L10n {
         static func editA11y(_ a: String) -> String { tr("alerts.editA11y", a) }
         static var edit: String { tr("alerts.edit") }
         static var add: String { tr("alerts.add") }
-        static var above: String { tr("alerts.above") }
-        static var freeBelow: String { tr("alerts.freeBelow") }
-        static var levelBelow: String { tr("alerts.levelBelow") }
-        static var pressureTurns: String { tr("alerts.pressureTurns") }
-        static var whenDisconnected: String { tr("alerts.whenDisconnected") }
-        static var done: String { tr("alerts.done") }
-        static var all: String { tr("alerts.all") }
-        static var allA11y: String { tr("alerts.allA11y") }
         static var rules: String { tr("alerts.rules") }
         static func rulesOn(_ a: Int) -> String { tr("alerts.rulesOn", a) }
         static var recent: String { tr("alerts.recent") }
@@ -280,6 +273,11 @@ enum L10n {
         static func badgeA11y(_ a: Int) -> String { tr("alerts.badgeA11y", a) }
         static var noneYet: String { tr("alerts.noneYet") }
         static func overLimit(_ a: String) -> String { tr("alerts.overLimit", a) }
+        static var rulesRow: String { tr("alerts.rulesRow") }
+        static var rulesOff: String { tr("alerts.rulesOff") }
+        static func ruleOn(_ a: String) -> String { tr("alerts.ruleOn", a) }
+        static func rulesOnCount(_ a: Int) -> String { tr("alerts.rulesOnCount", a) }
+        static func openRulesA11y(_ a: String) -> String { tr("alerts.openRulesA11y", a) }
     }
 
     enum Panel {
@@ -683,7 +681,6 @@ enum L10n {
         static var showLatency: String { tr("settings.showLatency") }
         static var showThermal: String { tr("settings.showThermal") }
         static var showVideo: String { tr("settings.showVideo") }
-        static var tabAlerts: String { tr("settings.tabAlerts") }
         static var tabModule: String { tr("settings.tabModule") }
         static var tabPanel: String { tr("settings.tabPanel") }
         static var tabWidgets: String { tr("settings.tabWidgets") }
@@ -718,6 +715,8 @@ enum L10n {
         static var bluetoothDisconnectAlert: String { tr("settings.bluetoothDisconnectAlert") }
         static var bluetoothDisconnectAlertA11y: String { tr("settings.bluetoothDisconnectAlertA11y") }
         static func percentValue(_ a: Int) -> String { tr("settings.percentValue", a) }
+        static var sidebarGroup: String { tr("settings.sidebarGroup") }
+        static var sidebarModules: String { tr("settings.sidebarModules") }
     }
 
     enum Notch {

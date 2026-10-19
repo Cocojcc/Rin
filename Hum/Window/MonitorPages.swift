@@ -353,7 +353,8 @@ struct OverviewPage: View {
                     HStack(spacing: 6) {
                         Text(Format.percent(p.value / 100)).fontWeight(.medium)
                         Text(p.top.first?.name ?? L10n.Common.dash).lineLimit(1).truncationMode(.tail).frame(maxWidth: .infinity, alignment: .leading)
-                        Text(Format.shortDayAndTime(p.date)).foregroundStyle(Theme.sub).fixedSize()
+                        // Within the last 24 hours a time alone says which moment it was.
+                        Text(Format.time(p.date)).foregroundStyle(Theme.sub).fixedSize()
                     }
                     .ui(12)
                     .frame(height: 18)

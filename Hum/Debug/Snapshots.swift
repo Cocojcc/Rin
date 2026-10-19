@@ -24,6 +24,9 @@ enum Snapshots {
         return true
     }
 
+    /// Window width for page snapshots; `HUM_SNAPSHOT_WIDTH=720` checks the narrowest window.
+    private static let pageWidth = UIScale.of(CGFloat(Double(ProcessInfo.processInfo.environment["HUM_SNAPSHOT_WIDTH"] ?? "") ?? 800))
+
     private static func render(to dir: URL, only: String?) {
         for dark in [false, true] {
             let tag = dark ? "dark" : "light"
@@ -45,7 +48,7 @@ enum Snapshots {
                 NotchWatcher.shared.debugSetHidden([.cpu, .memory])
                 save(NotchAlertRoot().padding(40).background(wall), appearance, dir.appendingPathComponent("notch-alert-\(tag).png"))
                 Navigator.shared.page = .settings
-                save(MainView().frame(width: UIScale.of(800), height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-settings-notch-\(tag).png"))
+                save(MainView().frame(width: pageWidth, height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-settings-notch-\(tag).png"))
                 NotchWatcher.shared.debugSetHidden([])
             }
             let pages: [(Page, String)] = [
@@ -56,39 +59,38 @@ enum Snapshots {
             ] + Module.allCases.map { (.moduleSettings($0), "module-\($0.rawValue)") }
             for (page, name) in pages where want("page") || want("page-\(name)") {
                 Navigator.shared.page = page
-                save(MainView().frame(width: UIScale.of(800), height: UIScale.of(1400)).background(wall), appearance, dir.appendingPathComponent("page-\(name)-\(tag).png"))
+                save(MainView().frame(width: pageWidth, height: UIScale.of(1400)).background(wall), appearance, dir.appendingPathComponent("page-\(name)-\(tag).png"))
             }
             if want("page") || want("page-processes") {
                 Navigator.shared.page = .processes
                 ProcessesPage.initialSelection = nil
-                save(MainView().frame(width: UIScale.of(800), height: UIScale.of(760)).background(wall), appearance, dir.appendingPathComponent("page-processes-\(tag).png"))
+                save(MainView().frame(width: pageWidth, height: UIScale.of(760)).background(wall), appearance, dir.appendingPathComponent("page-processes-\(tag).png"))
                 let busiest = Monitor.shared.snapshot.processes.all.filter { !$0.isSystem && $0.bundlePath != nil }.max { $0.cpu < $1.cpu }
                 ProcessesPage.initialSelection = busiest?.id
-                save(MainView().frame(width: UIScale.of(800), height: UIScale.of(760)).background(wall), appearance, dir.appendingPathComponent("page-processes-open-\(tag).png"))
+                save(MainView().frame(width: pageWidth, height: UIScale.of(760)).background(wall), appearance, dir.appendingPathComponent("page-processes-open-\(tag).png"))
                 ProcessesPage.initialSelection = nil
             }
             if want("page") || want("page-sleep") {
                 KeepAwake.shared.start(.minutes(30))
                 Navigator.shared.page = .sleep
-                save(MainView().frame(width: UIScale.of(800), height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-sleep-on-\(tag).png"))
+                save(MainView().frame(width: pageWidth, height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-sleep-on-\(tag).png"))
                 if let out = try? Process.run(URL(fileURLWithPath: "/usr/bin/pmset"), arguments: ["-g", "assertions"]) { out.waitUntilExit() }
                 KeepAwake.shared.stop()
             }
             if want("page") || want("page-alerts") {
                 seedAlerts()
                 Navigator.shared.page = .alerts
-                save(MainView().frame(width: UIScale.of(800), height: UIScale.of(1100)).background(wall), appearance, dir.appendingPathComponent("page-alerts-\(tag).png"))
+                save(MainView().frame(width: pageWidth, height: UIScale.of(1100)).background(wall), appearance, dir.appendingPathComponent("page-alerts-\(tag).png"))
                 seedAlerts()
                 Navigator.shared.page = .overview
-                save(MainView().frame(width: UIScale.of(800), height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-overview-alert-\(tag).png"))
-                save(UIScaled { AlertQuickSettings(rule: .cpu) {} }.padding(20).background(wall), appearance, dir.appendingPathComponent("alert-quick-\(tag).png"))
+                save(MainView().frame(width: pageWidth, height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-overview-alert-\(tag).png"))
                 Alerts.shared.debugSeed([], open: nil)
             }
             for m in Module.allCases where want("tabs") {
                 for tab in ModuleSettingsTab.allCases where tab != .module {
                     ModuleSettingsPage.initialTab = tab
                     Navigator.shared.page = .moduleSettings(m)
-                    save(MainView().frame(width: UIScale.of(800), height: UIScale.of(2000)).background(wall), appearance,
+                    save(MainView().frame(width: pageWidth, height: UIScale.of(2000)).background(wall), appearance,
                          dir.appendingPathComponent("tabs-\(m.rawValue)-\(tab.rawValue)-\(tag).png"))
                 }
                 ModuleSettingsPage.initialTab = .module

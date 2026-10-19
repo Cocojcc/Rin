@@ -552,7 +552,6 @@
 "settings.showLatency" = "显示延迟";
 "settings.showThermal" = "显示散热状态";
 "settings.showVideo" = "显示视频编解码";
-"settings.tabAlerts" = "提醒";
 "settings.tabModule" = "常规";
 "settings.tabPanel" = "下拉面板";
 "settings.tabWidgets" = "小组件";
@@ -934,14 +933,6 @@
 "alerts.editA11y" = "编辑提醒：%@";
 "alerts.edit" = "编辑提醒";
 "alerts.add" = "添加提醒";
-"alerts.above" = "高于";
-"alerts.freeBelow" = "剩余少于";
-"alerts.levelBelow" = "电量低于";
-"alerts.pressureTurns" = "压力变为";
-"alerts.whenDisconnected" = "断开时";
-"alerts.done" = "完成";
-"alerts.all" = "全部提醒";
-"alerts.allA11y" = "查看全部提醒";
 "alerts.rules" = "规则";
 "alerts.rulesOn" = "%d 条已开启";
 "alerts.recent" = "最近触发";
@@ -952,3 +943,11 @@
 "alerts.badgeA11y" = "%d 条新提醒";
 "alerts.noneYet" = "还没有触发过";
 "alerts.overLimit" = "超过 %@";
+"sidebar.hideModule" = "在侧边栏中隐藏「%@」";
+"settings.sidebarGroup" = "侧边栏";
+"settings.sidebarModules" = "侧边栏中的模块";
+"alerts.rulesRow" = "提醒规则";
+"alerts.rulesOff" = "未开启";
+"alerts.ruleOn" = "已开启 · %@";
+"alerts.rulesOnCount" = "已开启 %d 条";
+"alerts.openRulesA11y" = "在提醒页编辑%@的提醒";

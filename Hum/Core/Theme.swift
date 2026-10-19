@@ -43,6 +43,9 @@ extension Color {
 enum Theme {
     // Glass surfaces
     static let glass = Color.dyn(RGBA(255, 255, 255, 0.62), RGBA(38, 38, 40, 0.6))
+    /// The main window's tint: more solid than the dropdowns' glass, so dense pages read the same
+    /// over any wallpaper or window behind them.
+    static let windowGlass = Color.dyn(RGBA(255, 255, 255, 0.82), RGBA(38, 38, 40, 0.8))
     static let side = Color.dyn(RGBA(255, 255, 255, 0.28), RGBA(20, 20, 22, 0.25))
     static let glassRim = Color.dyn(RGBA(255, 255, 255, 0.8), RGBA(255, 255, 255, 0.14))
     static let glassEdge = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(0, 0, 0, 0.5))

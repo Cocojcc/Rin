@@ -29,6 +29,8 @@ struct GeneralPrefs: Codable, Equatable {
     var widgetsMigrated = false
     /// Set once widgets that combined a graphic with its number were split into pieces.
     var widgetsSplit = false
+    /// Module pages left out of the sidebar.
+    var sidebarHidden: [Module] = []
 }
 
 struct CPUPrefs: Codable, Equatable {

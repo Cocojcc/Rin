@@ -28,6 +28,8 @@ final class Navigator {
     static let shared = Navigator()
     /// The Processes page's sort column, set by the "全部" links on the way in.
     var processSort: ProcessSort = .cpu
+    /// A rule the Alerts page should point out when it opens (from a chart or module settings).
+    var alertFocus: Alerts.Rule?
     var page: Page = .overview {
         didSet {
             guard page != oldValue else { return }
@@ -47,6 +49,12 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     func showProcesses(sortedBy sort: ProcessSort) {
         Navigator.shared.processSort = sort
         show(.processes)
+    }
+
+    /// Opens the Alerts page with one rule pointed out.
+    func showAlerts(focus rule: Alerts.Rule?) {
+        Navigator.shared.alertFocus = rule
+        show(.alerts)
     }
 
     func show(_ page: Page) {

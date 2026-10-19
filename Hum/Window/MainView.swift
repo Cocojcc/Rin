@@ -17,7 +17,7 @@ struct MainView: View {
         }
         // The hosting controller sets the window's minimum from this, overriding contentMinSize.
         .frame(minWidth: MainView.minSize.width, minHeight: MainView.minSize.height)
-        .background(GlassBackground(radius: UIScale.of(18), material: .underWindowBackground))
+        .background(GlassBackground(radius: UIScale.of(18), tint: Theme.windowGlass, material: .underWindowBackground))
         .environment(\.accent, settings.prefs.general.accent.colors)
         .environment(\.textScale, Fonts.windowTextScale)
         .environment(\.pageGlass, pageGlass)
@@ -92,21 +92,26 @@ struct Sidebar: View {
     var monitor = Monitor.shared
     var alerts = Alerts.shared
 
-    private let overviewPage: (Page, String, String) = (.overview, Icons.overview, L10n.Sidebar.overview)
-    private let pages: [(Page, String, String)] = [
+    var settings = SettingsStore.shared
+
+    /// Three groups: the whole machine, one page per hardware module, then the tools.
+    private let overviewPages: [(Page, String, String)] = [
+        (.overview, Icons.overview, L10n.Sidebar.overview),
         (.processes, Icons.processes, L10n.Sidebar.processes),
-        (.monitor(.cpu), Icons.cpu, L10n.Module.cpu),
-        (.monitor(.gpu), Icons.gpu, L10n.Module.gpu),
-        (.monitor(.memory), Icons.memory, L10n.Module.memory),
-        (.monitor(.network), Icons.network, L10n.Module.network),
-        (.monitor(.disk), Icons.disk, L10n.Module.disk),
-        (.monitor(.battery), Icons.battery, L10n.Module.battery),
-        (.sleep, Icons.sleep, L10n.Sidebar.sleep),
-        (.monitor(.bluetooth), Icons.bluetooth, L10n.Module.bluetooth),
-        (.monitor(.sensors), Icons.sensors, L10n.Module.sensors),
     ]
-    private let alertsPage: (Page, String, String) = (.alerts, Icons.bell, L10n.Sidebar.alerts)
-    private let aboutPage: (Page, String, String) = (.about, Icons.mac, L10n.Sidebar.aboutMac)
+    private let toolPages: [(Page, String, String)] = [
+        (.sleep, Icons.sleep, L10n.Sidebar.sleep),
+        (.alerts, Icons.bell, L10n.Sidebar.alerts),
+        (.about, Icons.mac, L10n.Sidebar.aboutMac),
+    ]
+
+    /// The hardware modules, in the sidebar's order, less the ones hidden in Settings.
+    static let moduleOrder: [Module] = [.cpu, .gpu, .memory, .network, .disk, .battery, .bluetooth, .sensors]
+
+    private var modulePages: [(Page, String, String)] {
+        let hidden = Set(settings.prefs.general.sidebarHidden)
+        return Self.moduleOrder.filter { !hidden.contains($0) }.map { (.monitor($0), Icons.module($0), $0.title) }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -122,11 +127,18 @@ struct Sidebar: View {
             .padding(.bottom, 18)
 
             VStack(alignment: .leading, spacing: 2) {
-                // The overview, the monitors, then Alerts and About This Mac sit in three groups.
-                item(overviewPage).padding(.bottom, 12)
-                ForEach(pages, id: \.0) { item($0) }
-                item(alertsPage, badge: alerts.unseenCount).padding(.top, 12)
-                item(aboutPage)
+                ForEach(overviewPages, id: \.0) { item($0) }
+                Color.clear.frame(height: 10)
+                ForEach(modulePages, id: \.0) { entry in
+                    item(entry)
+                        .contextMenu {
+                            if case .monitor(let m) = entry.0 {
+                                Button(L10n.Sidebar.hideModule(m.title)) { hide(m) }
+                            }
+                        }
+                }
+                Color.clear.frame(height: 10)
+                ForEach(toolPages, id: \.0) { item($0, badge: $0.0 == .alerts ? alerts.unseenCount : 0) }
             }
             .slidingThumb(navigator.page.sidebarPage) { GlassThumb() }
             Spacer(minLength: 12)
@@ -152,6 +164,11 @@ struct Sidebar: View {
         .overlay(alignment: .trailing) { Rectangle().fill(Theme.line).frame(width: 0.5) }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Sidebar.label)
+    }
+
+    private func hide(_ m: Module) {
+        if !settings.prefs.general.sidebarHidden.contains(m) { settings.prefs.general.sidebarHidden.append(m) }
+        if navigator.page.sidebarPage == .monitor(m) { navigator.page = .overview }
     }
 
     /// `badge`: new alerts, a red count on the right.

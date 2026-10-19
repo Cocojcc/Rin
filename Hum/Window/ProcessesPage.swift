@@ -130,7 +130,7 @@ struct ProcessesPage: View {
                     .padding(.trailing, 14)
             }
             HStack(alignment: .top, spacing: 12) {
-                ProcessGrid(rows: rows, columns: columns(inspecting: selection != nil),
+                ProcessGrid(rows: rows, allColumns: columns(inspecting: selection != nil),
                             sort: navigator.processSort, selected: $selected) { navigator.processSort = $0 }
                 if let selection {
                     ProcessInspector(process: selection) { selected = nil }
@@ -195,10 +195,28 @@ private struct SearchField: View {
 
 private struct ProcessGrid: View {
     var rows: [ProcessUsage]
-    var columns: [ProcessSort]
+    var allColumns: [ProcessSort]
     var sort: ProcessSort
     @Binding var selected: String?
     var onSort: (ProcessSort) -> Void
+    @State private var width: CGFloat = 0
+
+    /// Narrow tables drop the less telling columns first, so names stay readable; the sorted
+    /// column always stays.
+    private var columns: [ProcessSort] {
+        guard width > 0 else { return allColumns }
+        var cols = allColumns
+        func needed() -> CGFloat {
+            // Header padding, row inset and padding, icon and gap, the name, then each column.
+            28 + 8 + 26 + Self.minNameWidth + cols.reduce(0) { $0 + $1.width + 8 }
+        }
+        for drop in [ProcessSort.network, .disk, .energy, .gpu] where needed() > width && drop != sort {
+            cols.removeAll { $0 == drop }
+        }
+        return cols
+    }
+
+    private static let minNameWidth: CGFloat = 150
 
     var body: some View {
         VStack(spacing: 0) {
@@ -211,6 +229,13 @@ private struct ProcessGrid: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background {
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear { width = geo.size.width }
+                    .onChange(of: geo.size.width) { _, w in width = w }
+            }
+        }
         .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }

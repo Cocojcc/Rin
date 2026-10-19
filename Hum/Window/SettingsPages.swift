@@ -53,7 +53,7 @@ struct SettingsPage: View {
                 }
                 SettingsRow(title: L10n.Settings.accent) {
                     HStack(spacing: 10) {
-                        Text(L10n.Settings.palette(g.accent)).ui(12).foregroundStyle(Theme.sub)
+                        Text(L10n.Settings.palette(g.accent)).ui(12).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
                         AccentPicker(selection: pref(\.general.accent))
                     }
                 }
@@ -130,6 +130,14 @@ struct SettingsPage: View {
                         HumSwitch(isOn: pref(\.menubar.colorOnHighLoad), label: L10n.Settings.colorOnHighLoad)
                     }
                 }
+            }
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text(L10n.Settings.sidebarGroup).ui(13, 500).foregroundStyle(Theme.sub)
+                    .padding(.horizontal, 14).padding(.bottom, 8)
+                    .accessibilityAddTraits(.isHeader)
+                SidebarChips().padding(6)
+                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
             }
 
             SettingsGroup(title: L10n.Settings.performance) {
@@ -278,6 +286,42 @@ struct ModuleChips: View {
         .modifier(ReorderModifier(module: m, dragging: $dragging))
         .accessibilityLabel(isBlocked ? L10n.Settings.blockedChip(m.title) : m.title)
         .accessibilityAddTraits(shown ? [.isSelected] : [])
+    }
+}
+
+/// The hardware modules' pages as chips: glass while in the sidebar. Click shows or hides.
+struct SidebarChips: View {
+    var settings = SettingsStore.shared
+
+    var body: some View {
+        let hidden = Set(settings.prefs.general.sidebarHidden)
+        FlowLayout(spacing: 4) {
+            ForEach(Sidebar.moduleOrder, id: \.self) { m in
+                let shown = !hidden.contains(m)
+                Button {
+                    withAnimation(Motion.slide) {
+                        if shown { settings.prefs.general.sidebarHidden.append(m) } else { settings.prefs.general.sidebarHidden.removeAll { $0 == m } }
+                    }
+                    if shown, Navigator.shared.page.sidebarPage == .monitor(m) { Navigator.shared.page = .overview }
+                } label: {
+                    HStack(spacing: 6) {
+                        LineIcon(d: Icons.module(m), size: 14, lineWidth: 1.5)
+                        Text(m.title).ui(12).lineLimit(1)
+                    }
+                    .foregroundStyle(shown ? Theme.text : Theme.sub)
+                    .padding(.horizontal, 10)
+                    .frame(height: 30)
+                    .background { if shown { GlassThumb() } }
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(m.title)
+                .accessibilityAddTraits(shown ? [.isSelected] : [])
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L10n.Settings.sidebarModules)
     }
 }
 
@@ -485,7 +529,7 @@ extension ModuleHeader where Extra == EmptyView {
     }
 }
 
-enum ModuleSettingsTab: Int, CaseIterable { case module, widgets, panel, alerts }
+enum ModuleSettingsTab: Int, CaseIterable { case module, widgets, panel }
 
 struct ModuleSettingsPage: View {
     let module: Module
@@ -501,13 +545,12 @@ struct ModuleSettingsPage: View {
             VStack(alignment: .leading, spacing: 12) {
                 Segmented(label: L10n.Settings.tabsA11y,
                           options: [(ModuleSettingsTab.module, L10n.Settings.tabModule), (.widgets, L10n.Settings.tabWidgets),
-                                    (.panel, L10n.Settings.tabPanel), (.alerts, L10n.Settings.tabAlerts)],
+                                    (.panel, L10n.Settings.tabPanel)],
                           selection: $tab, style: .tabs)
                 switch tab {
                 case .module: ModuleTab(module: module)
                 case .widgets: WidgetsTab(module: module)
                 case .panel: PanelTab(module: module)
-                case .alerts: AlertsTab(module: module)
                 }
             }
         }
@@ -655,12 +698,32 @@ struct ModuleTab: View {
                     MenuPill(label: L10n.Settings.whichSensor, options: SensorChoice.allCases.map { ($0, L10n.Sensors.choice($0)) }, selection: pref(\.sensors.sensor))
                 }
             }
+            AlertRulesRow(module: module)
         }
     }
 
     private func refreshRow(_ keyPath: WritableKeyPath<Preferences, Double>) -> some View {
         SettingsRow(title: L10n.Settings.refreshInterval) {
             MenuPill(label: L10n.Settings.refreshInterval, options: refreshChoices, selection: pref(keyPath))
+        }
+    }
+}
+
+/// "提醒规则  已开启 · 90% ›": the module's rules are edited on the Alerts page; this row says
+/// where they stand and goes there.
+private struct AlertRulesRow: View {
+    let module: Module
+    var settings = SettingsStore.shared
+
+    var body: some View {
+        let rules = Alerts.Rule.allCases.filter { $0.module == module }
+        let on = rules.filter { $0.isOn(settings.prefs) }
+        let value = on.isEmpty ? L10n.Alerts.rulesOff
+            : rules.count == 1 ? L10n.Alerts.ruleOn(AlertText.pill(on[0], settings.prefs)) : L10n.Alerts.rulesOnCount(on.count)
+        SettingsRow(title: L10n.Alerts.rulesRow) {
+            ChevronLink(title: value, a11y: L10n.Alerts.openRulesA11y(module.title)) {
+                MainWindowController.shared.showAlerts(focus: on.first ?? rules.first)
+            }
         }
     }
 }
@@ -1129,23 +1192,6 @@ struct PanelTab: View {
 
     private func toggleRow(_ title: String, _ keyPath: WritableKeyPath<Preferences, Bool>) -> some View {
         SettingsRow(title: title) { HumSwitch(isOn: pref(keyPath), label: title) }
-    }
-}
-
-struct AlertsTab: View {
-    let module: Module
-    var settings = SettingsStore.shared
-
-    var body: some View {
-        VStack(alignment: .trailing, spacing: 10) {
-            SettingsGroup {
-                ForEach(Alerts.Rule.allCases.filter { $0.module == module }, id: \.self) {
-                    AlertRuleRow(rule: $0, showsIcon: false, minHeight: 48)
-                }
-            }
-            .opacity(settings.prefs.alerts.enabled ? 1 : 0.5)
-            AllAlertsLink().padding(.horizontal, 14)
-        }
     }
 }
 

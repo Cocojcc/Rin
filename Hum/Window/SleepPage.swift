@@ -242,7 +242,8 @@ private struct ModeChips: View {
 
     var body: some View {
         let chosen = choice(keepAwake.mode)
-        EvenGrid(columns: 4, hSpacing: 6, vSpacing: 6) {
+        // Four to a row, three when the window is narrow.
+        EvenGrid(maxColumns: 4, minWidth: 128, hSpacing: 6, vSpacing: 6) {
             ForEach(KeepAwake.Mode.presets, id: \.self) { mode in
                 chip(icon(mode), title(mode), on: chosen == .preset(mode)) { keepAwake.select(mode); start() }
             }
