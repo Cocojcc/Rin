@@ -189,18 +189,10 @@ struct OverviewPage: View {
         }
     }
 
-    @ViewBuilder private var editButton: some View {
-        if editing {
-            PrimaryButton(title: L10n.Overview.done, height: 28, radius: 8, fontSize: 12) {
-                withAnimation(Motion.slide) { editing = false }
-            }
-            .fixedSize()
-        } else {
-            WellButton(title: L10n.Overview.edit, height: 28, radius: 8, fontSize: 12) {
-                withAnimation(Motion.slide) { editing = true }
-            }
-            .accessibilityHint(L10n.Overview.editA11y)
-        }
+    /// A pencil on a glass track, like a module page's monitor / settings toggle; while editing
+    /// it sits on the glass thumb as a check mark.
+    private var editButton: some View {
+        OverviewEditButton(editing: editing) { withAnimation(Motion.slide) { editing.toggle() } }
     }
 
     /// A firing alert takes the status strip's place until it clears or is muted.
@@ -474,6 +466,34 @@ struct OverviewPage: View {
 
 /// An overview card: icon and title, a status on the right, content, and a footer pinned to
 /// the bottom. The whole card opens its monitor page and tints under the pointer.
+private struct OverviewEditButton: View {
+    var editing: Bool
+    var action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        let label = editing ? L10n.Overview.done : L10n.Overview.edit
+        Button(action: action) {
+            LineIcon(d: editing ? Icons.check : Icons.pencil, size: 16, lineWidth: 1.5)
+                .foregroundStyle(editing || hovering ? Theme.text : Theme.sub)
+                .frame(width: 32, height: 24)
+                .background {
+                    if editing { GlassThumb() } else if hovering { Capsule().fill(Theme.lgHover) }
+                }
+                .hoverAnimation(hovering)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .padding(2)
+        .background(GlassTrack())
+        .help(label)
+        .accessibilityLabel(label)
+        .accessibilityHint(editing ? "" : L10n.Overview.editA11y)
+        .accessibilityAddTraits(editing ? [.isSelected] : [])
+    }
+}
+
 private struct OverviewEditingKey: EnvironmentKey { static let defaultValue = false }
 
 private extension EnvironmentValues {

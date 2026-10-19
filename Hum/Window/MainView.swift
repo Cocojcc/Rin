@@ -117,10 +117,7 @@ struct Sidebar: View {
             Color.clear.frame(height: 32)   // traffic lights
             HStack(spacing: 10) {
                 AppMark(size: 26)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(L10n.App.name).ui(20, 600).kerning(-0.2)
-                    Text(L10n.App.version(SystemInfo.appVersion)).ui(12).foregroundStyle(Theme.sub)
-                }
+                Text(L10n.App.name).ui(20, 600).kerning(-0.2)
             }
             .padding(.horizontal, 10)
             .padding(.bottom, 18)

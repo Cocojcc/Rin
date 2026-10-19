@@ -34,7 +34,6 @@ enum L10n {
 
     enum App {
         static var name: String { tr("app.name") }
-        static func version(_ v: String) -> String { tr("app.version", v) }
     }
 
     enum Module {

@@ -1,7 +1,6 @@
 /* Hum — 简体中文 */
 
 "app.name" = "Hum";
-"app.version" = "版本 %@";
 
 "module.cpu" = "CPU";
 "module.gpu" = "GPU";
