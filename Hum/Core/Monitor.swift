@@ -106,12 +106,13 @@ final class Monitor {
             return
         }
         // A module is read only while something uses it: its menu bar item, an alert rule, or a
-        // view showing it. The overview and the combined panel show the whole machine.
+        // view showing it. The overview shows the whole machine.
         var shown = Set(Module.allCases.filter(prefs.showsInMenubar))
         for consumer in consumers {
             switch consumer {
             case .popover(let m), .window(.monitor(let m)), .window(.moduleSettings(let m)): shown.insert(m)
-            case .combinedPanel, .window(.overview): shown = Set(Module.allCases)
+            case .combinedPanel: shown.formUnion(CombinedPanel.modules)
+            case .window(.overview): shown = Set(Module.allCases)
             default: break
             }
         }

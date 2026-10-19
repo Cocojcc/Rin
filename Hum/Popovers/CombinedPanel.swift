@@ -9,6 +9,9 @@ struct CombinedPanel: View {
     @State private var sortByMemory = false
     @State private var hovered: Module?
 
+    /// The modules on the sheet, in order; the monitor reads these while the panel is open.
+    static let modules: [Module] = [.cpu, .memory, .network, .disk, .sensors]
+
     /// Cell padding; the second column's readouts line up with it in the full-width cells.
     private static let inset: CGFloat = 14
 
@@ -52,12 +55,10 @@ struct CombinedPanel: View {
     /// Rows of one or two cells. A switched-off module leaves; the cell beside it takes the row.
     private func sheet(_ s: Snapshot, _ prefs: Preferences) -> some View {
         let on = prefs.isEnabled
-        let second: Module? = s.battery.hasBattery && on(.battery) ? .battery : on(.gpu) ? .gpu : nil
         let rows: [[Module]] = [
             [Module.cpu, .memory].filter(on),
             on(.network) ? [.network] : [],
-            [on(.disk) ? .disk : nil, second].compactMap { $0 },
-            on(.sensors) ? [.sensors] : [],
+            [Module.disk, .sensors].filter(on),
         ].filter { !$0.isEmpty }
         return VStack(spacing: 0) {
             ForEach(Array(rows.enumerated()), id: \.offset) { i, row in
@@ -120,20 +121,9 @@ struct CombinedPanel: View {
             readout(free.first ?? "", L10n.Panel.unitAvailable(free.count > 1 ? free[1] : ""))
             graphic { MeterBar(fraction: root?.usedFraction ?? 0, color: Theme.disk) }
             caption(L10n.Panel.readWriteShort(Format.rate(s.disk.read), Format.rate(s.disk.write)))
-        case .battery:
-            let b = s.battery
-            label(.battery, detail: PanelText.batteryState(b))
-            readout(percentNumber(b.level), L10n.Common.percentSign)
-            graphic { MeterBar(fraction: b.level, color: b.level <= 0.2 && !b.onAC ? Theme.danger : Theme.bat) }
-            caption(batteryLine(b))
-        case .gpu:
-            label(.gpu)
-            readout(percentNumber(s.gpu.utilization), L10n.Common.percentSign)
-            graphic { MeterBar(fraction: s.gpu.utilization, color: Theme.gpu) }
-            caption(L10n.Panel.vramUsed(Format.memory(s.gpu.memoryUsed)))
         case .sensors:
-            sensors(s, prefs.general.temperatureUnit)
-        case .bluetooth:
+            if wide { sensors(s, prefs.general.temperatureUnit) } else { temperature(s, prefs.general.temperatureUnit) }
+        case .gpu, .battery, .bluetooth:
             EmptyView()
         }
     }
@@ -169,6 +159,24 @@ struct CombinedPanel: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// Beside the disk: the CPU's temperature on a 0–100 °C bar in its zone's color, then the
+    /// GPU and the first fan.
+    @ViewBuilder private func temperature(_ s: Snapshot, _ unit: TemperatureUnit) -> some View {
+        let cpu = s.sensors.cpuAverage
+        let gpu = s.sensors.value(.gpu).map { Format.temperature($0, unit: unit) } ?? L10n.Common.dash
+        label(.sensors)
+        readout(cpu.map { Format.temperature($0, unit: unit) } ?? L10n.Common.dash, L10n.Module.cpu)
+        graphic { MeterBar(fraction: (cpu ?? 0) / 100, color: TempZone.color(cpu ?? 0)) }
+        if let fan = s.sensors.fans.first {
+            ViewThatFits(in: .horizontal) {
+                caption(L10n.Panel.sensorsCaption(gpu, Int(fan.rpm.rounded())))
+                caption(L10n.Panel.gpuTempShort(gpu))
+            }
+        } else {
+            caption(L10n.Panel.gpuTempShort(gpu))
+        }
+    }
+
     /// Four readings in two pairs, so the third starts under the sheet's second column.
     @ViewBuilder private func sensors(_ s: Snapshot, _ unit: TemperatureUnit) -> some View {
         label(.sensors)
@@ -202,7 +210,7 @@ struct CombinedPanel: View {
 
     // MARK: - Parts
 
-    /// Icon and name, quiet; a state on the right ("正常", "已接通电源") with its color dot.
+    /// Icon and name, quiet; a state on the right ("正常", "VPN"), with a color dot if it has one.
     private func label(_ m: Module, detail: String? = nil, color: Color? = nil) -> some View {
         HStack(spacing: 6) {
             LineIcon(d: Icons.module(m), size: 13, lineWidth: 1.3).foregroundStyle(Theme.faint)
@@ -227,7 +235,7 @@ struct CombinedPanel: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// The bars or meter, sat on a shared line so the captions of a pair line up.
+    /// The bars or bar, sat on a shared line so the captions of a pair line up.
     private func graphic<G: View>(height: CGFloat = 3, @ViewBuilder _ g: () -> G) -> some View {
         g().frame(height: height).frame(height: 14, alignment: .bottom).padding(.top, 6)
     }
@@ -237,14 +245,6 @@ struct CombinedPanel: View {
     }
 
     private func percentNumber(_ fraction: Double) -> String { "\(Int((fraction * 100).rounded()))" }
-
-    private func batteryLine(_ b: BatterySample) -> String {
-        var parts: [String] = []
-        if b.isCharging, let m = b.minutesToFull { parts.append(L10n.Battery.untilFull(Format.clockDuration(minutes: m))) }
-        else if !b.onAC, let m = b.minutesToEmpty { parts.append(L10n.Battery.remaining(Format.clockDuration(minutes: m))) }
-        if let h = b.health { parts.append(L10n.Panel.healthShort(Format.percent(h))) }
-        return parts.joined(separator: L10n.A11y.dotSeparator)
-    }
 }
 
 /// Grey text link with a small chevron, a soft box under the pointer.

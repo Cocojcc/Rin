@@ -199,10 +199,7 @@
 "panel.volumeAvailable" = "%@可用";
 "panel.updatedEvery" = "刚刚更新 · 每%d秒";
 "panel.ofTotal" = "/ %@";
-"panel.unitAvailable" = "%@可用";
 "panel.readWriteShort" = "读 %1$@ · 写 %2$@";
-"panel.healthShort" = "健康 %@";
-"panel.vramUsed" = "显存已用 %@";
 "panel.openActivityMonitor" = "打开活动监视器";
 
 "sensors.cpuPerformance" = "CPU 性能核";
@@ -959,3 +956,6 @@
 "panel.userSystemShort" = "用户 %1$@ · 系统 %2$@";
 "panel.memoryAppWired" = "App %1$@ · 联动 %2$@";
 "panel.memoryApp" = "App %@";
+"panel.unitAvailable" = "%@可用";
+"panel.sensorsCaption" = "GPU %1$@ · 风扇 %2$d rpm";
+"panel.gpuTempShort" = "GPU %@";

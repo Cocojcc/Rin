@@ -199,10 +199,7 @@
 "panel.volumeAvailable" = "%@ available";
 "panel.updatedEvery" = "Updated just now · every %d s";
 "panel.ofTotal" = "/ %@";
-"panel.unitAvailable" = "%@ free";
 "panel.readWriteShort" = "Read %1$@ · Write %2$@";
-"panel.healthShort" = "Health %@";
-"panel.vramUsed" = "GPU memory %@";
 "panel.openActivityMonitor" = "Open Activity Monitor";
 
 "sensors.cpuPerformance" = "CPU performance cores";
@@ -959,3 +956,6 @@
 "panel.userSystemShort" = "User %1$@ · System %2$@";
 "panel.memoryAppWired" = "App %1$@ · Wired %2$@";
 "panel.memoryApp" = "App %@";
+"panel.unitAvailable" = "%@ free";
+"panel.sensorsCaption" = "GPU %1$@ · Fan %2$d rpm";
+"panel.gpuTempShort" = "GPU %@";

@@ -356,10 +356,7 @@ enum L10n {
         static func volumeAvailable(_ v: String) -> String { tr("panel.volumeAvailable", v) }
         static func updatedEvery(_ s: Int) -> String { tr("panel.updatedEvery", s) }
         static func ofTotal(_ v: String) -> String { tr("panel.ofTotal", v) }
-        static func unitAvailable(_ u: String) -> String { tr("panel.unitAvailable", u) }
         static func readWriteShort(_ r: String, _ w: String) -> String { tr("panel.readWriteShort", r, w) }
-        static func healthShort(_ v: String) -> String { tr("panel.healthShort", v) }
-        static func vramUsed(_ v: String) -> String { tr("panel.vramUsed", v) }
         static var openActivityMonitor: String { tr("panel.openActivityMonitor") }
         static var health: String { tr("panel.health") }
         static func healthValue(_ a: String, _ b: String) -> String { tr("panel.healthValue", a, b) }
@@ -370,6 +367,9 @@ enum L10n {
         static func userSystemShort(_ a: String, _ b: String) -> String { tr("panel.userSystemShort", a, b) }
         static func memoryAppWired(_ a: String, _ b: String) -> String { tr("panel.memoryAppWired", a, b) }
         static func memoryApp(_ a: String) -> String { tr("panel.memoryApp", a) }
+        static func unitAvailable(_ a: String) -> String { tr("panel.unitAvailable", a) }
+        static func sensorsCaption(_ a: String, _ b: Int) -> String { tr("panel.sensorsCaption", a, b) }
+        static func gpuTempShort(_ a: String) -> String { tr("panel.gpuTempShort", a) }
     }
 
     enum Sensors {
