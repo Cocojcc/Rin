@@ -642,7 +642,7 @@
 "monitor.coreTip" = "Core %1$d · %2$@ (system %3$@)";
 "monitor.cyclesLimit" = " / %d";
 "settings.humSpacing" = "Space between modules";
-"settings.systemSpacing" = "Menu bar spacing for all apps";
+"settings.systemSpacing" = "Menu bar spacing";
 "settings.spacingStandard" = "Default";
 "settings.spacingCompact" = "Compact";
 "settings.spacingTightest" = "Tightest";
