@@ -31,6 +31,8 @@ final class Monitor {
     @ObservationIgnored private let sampler = Sampler()
     @ObservationIgnored private var consumers: Set<Consumer> = []
     @ObservationIgnored private var lastPublicIP = Date.distantPast
+    /// The interface the public address was looked up over; a VPN going on or off changes both.
+    @ObservationIgnored private var publicIPRoute = ""
     @ObservationIgnored var onSample: ((Snapshot) -> Void)?
 
     enum RestReason { case displaysAsleep, locked, sessionInactive }
@@ -189,13 +191,20 @@ final class Monitor {
     }
 
     private func refreshPublicIPIfNeeded() {
+        let route = snapshot.network.interface
         guard SettingsStore.shared.prefs.network.showPublicIP, snapshot.network.connected,
-              Date().timeIntervalSince(lastPublicIP) > 600,
+              Date().timeIntervalSince(lastPublicIP) > 600 || route != publicIPRoute,
               let url = URL(string: "https://api.ipify.org") else { return }
+        if route != publicIPRoute { publicIP = nil }
         lastPublicIP = Date()
+        publicIPRoute = route
         URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
             guard let data, let ip = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  !ip.isEmpty, ip.count < 64 else { return }
+                  !ip.isEmpty, ip.count < 64 else {
+                // Try again in a minute rather than ten.
+                DispatchQueue.main.async { self?.lastPublicIP = Date().addingTimeInterval(-540) }
+                return
+            }
             DispatchQueue.main.async { self?.publicIP = ip }
         }.resume()
     }

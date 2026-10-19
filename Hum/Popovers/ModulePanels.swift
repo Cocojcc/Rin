@@ -35,6 +35,12 @@ enum PanelText {
         return L10n.Panel.coreSplit(SystemInfo.performanceCores, SystemInfo.efficiencyCores)
     }
 
+    /// The Mac's address, with the adapter it's on when a VPN carries the traffic
+    /// ("192.168.3.5（Wi-Fi）").
+    static func localIP(_ n: NetworkSample) -> String {
+        n.adapterKind.map { L10n.Network.ipVia(n.localIP, kindName($0)) } ?? n.localIP
+    }
+
     static func pressure(_ p: MemoryPressure) -> (String, Color, Color) {
         switch p {
         case .normal: return (L10n.Panel.pressureNormal, Theme.ok, Theme.okBg)
@@ -396,7 +402,7 @@ struct NetworkPanel: View {
         Well {
             DividedRows {
                 if n.connected {
-                    KVRow(key: L10n.Network.localIP, value: n.localIP.isEmpty ? L10n.Common.dash : n.localIP)
+                    KVRow(key: L10n.Network.localIP, value: n.localIP.isEmpty ? L10n.Common.dash : PanelText.localIP(n))
                     if !n.router.isEmpty { KVRow(key: L10n.Network.router, value: n.router) }
                     if p.showPublicIP { KVRow(key: L10n.Network.publicIP, value: monitor.publicIP ?? L10n.Common.dash) }
                     if p.showLatency { KVRow(key: L10n.Monitor.latency, value: n.latencyMS.map { L10n.Monitor.milliseconds(Int($0.rounded())) } ?? L10n.Common.dash) }

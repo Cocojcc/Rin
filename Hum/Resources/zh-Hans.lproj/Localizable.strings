@@ -959,3 +959,6 @@
 "panel.unitAvailable" = "%@可用";
 "panel.sensorsCaption" = "GPU %1$@ · 风扇 %2$d rpm";
 "panel.gpuTempShort" = "GPU %@";
+"network.ipVia" = "%1$@（%2$@）";
+"monitor.publicIP" = "公网 IP %@";
+"panel.localPublicIP" = "本机 %1$@ · 公网 %2$@";

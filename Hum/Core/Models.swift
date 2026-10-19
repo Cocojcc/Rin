@@ -97,6 +97,9 @@ struct NetworkSample {
     var kind: InterfaceKind = .other
     var localIP: String = ""
     var router: String = ""
+    /// Behind a VPN: the Wi-Fi or Ethernet adapter whose address and router `localIP` and
+    /// `router` are, instead of the tunnel's made-up ones.
+    var adapterKind: InterfaceKind?
     var sessionDown: UInt64 = 0
     var sessionUp: UInt64 = 0
     var todayDown: UInt64 = 0
@@ -108,7 +111,9 @@ struct NetworkSample {
     var checks: [ConnectionCheck] = []
 }
 
-enum ConnectionCheck: Int, Codable { case ok, slow, failed }
+/// `unmeasured`: the reply came back too fast to have left the Mac (a VPN's tunnel answering
+/// for the resolver), so it says nothing about the connection.
+enum ConnectionCheck: Int, Codable { case ok, slow, failed, unmeasured }
 
 struct Volume: Identifiable, Equatable {
     var id: String { url.path }

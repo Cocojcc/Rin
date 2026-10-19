@@ -959,3 +959,6 @@
 "panel.unitAvailable" = "%@ free";
 "panel.sensorsCaption" = "GPU %1$@ · Fan %2$d rpm";
 "panel.gpuTempShort" = "GPU %@";
+"network.ipVia" = "%1$@ (%2$@)";
+"monitor.publicIP" = "Public IP %@";
+"panel.localPublicIP" = "Local %1$@ · Public %2$@";

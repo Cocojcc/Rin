@@ -147,6 +147,10 @@ struct CombinedPanel: View {
             .frame(height: 30)
             .padding(.top, 10)
             .accessibilityHidden(true)
+        if s.network.connected, !s.network.localIP.isEmpty {
+            let publicIP = prefs.network.showPublicIP ? monitor.publicIP : nil
+            caption(publicIP.map { L10n.Panel.localPublicIP(s.network.localIP, $0) } ?? L10n.Monitor.localIP(s.network.localIP))
+        }
     }
 
     private func rate(_ arrow: String, _ color: Color, _ parts: (String, String)?) -> some View {

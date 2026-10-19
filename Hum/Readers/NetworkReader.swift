@@ -10,6 +10,7 @@ final class NetworkReader {
     private var lastSave = Date.distantPast
     private var lastConnected: Date?
     private var kindCache: [String: InterfaceKind] = [:]
+    private var adapterCache: (date: Date, value: Adapter?)?
     private let store = SCDynamicStoreCreate(nil, "Hum" as CFString, nil, nil)
 
     private static let todayKey = "network.today"
@@ -46,6 +47,12 @@ final class NetworkReader {
             sample.kind = kind(of: name)
             sample.localIP = Self.ipv4(of: name) ?? ""
             sample.connected = !sample.localIP.isEmpty && primary != nil
+            // A VPN's tunnel has a made-up address; the Mac's own is the adapter's under it.
+            if sample.kind == .vpn, let adapter = adapter() {
+                sample.localIP = adapter.ip
+                sample.router = adapter.router
+                sample.adapterKind = kind(of: adapter.name)
+            }
             if let p = previous, p.interface == name {
                 let dt = now.timeIntervalSince(p.date)
                 let dRx = c.rx >= p.rx ? c.rx - p.rx : 0
@@ -82,6 +89,36 @@ final class NetworkReader {
             .filter { $0.hasPrefix("en") || $0.hasPrefix("utun") || $0.hasPrefix("bridge") }
             .sorted()
             .map { ($0, kind(of: $0)) }
+    }
+
+    private struct Adapter {
+        var name: String
+        var ip: String
+        var router: String
+    }
+
+    /// The adapter a VPN runs over: the first network service, in the user's service order, that
+    /// is up on an interface that isn't a tunnel. Looked up again every 15 s.
+    private func adapter() -> Adapter? {
+        let now = Date()
+        if let cached = adapterCache, now.timeIntervalSince(cached.date) < 15 { return cached.value }
+        var found: Adapter?
+        if let store {
+            let setup = SCDynamicStoreCopyValue(store, "Setup:/Network/Global/IPv4" as CFString) as? [String: Any]
+            let order = setup?["ServiceOrder"] as? [String] ?? []
+            let keys = SCDynamicStoreCopyKeyList(store, "State:/Network/Service/[^/]+/IPv4" as CFString) as? [String] ?? []
+            // "State:/Network/Service/<id>/IPv4"
+            let ids = keys.compactMap { $0.split(separator: "/").dropLast().last.map(String.init) }
+            for id in ids.sorted(by: { (order.firstIndex(of: $0) ?? .max) < (order.firstIndex(of: $1) ?? .max) }) {
+                guard let v = SCDynamicStoreCopyValue(store, "State:/Network/Service/\(id)/IPv4" as CFString) as? [String: Any],
+                      let name = v["InterfaceName"] as? String, kind(of: name) != .vpn,
+                      let ip = (v["Addresses"] as? [String])?.first else { continue }
+                found = Adapter(name: name, ip: ip, router: v["Router"] as? String ?? "")
+                break
+            }
+        }
+        adapterCache = (now, found)
+        return found
     }
 
     private func accumulateToday(_ down: UInt64, _ up: UInt64, now: Date) {
@@ -189,6 +226,8 @@ final class LatencyProbe {
     private var checks: [ConnectionCheck] = []
     private static let target = "1.1.1.1"
     private static let slowMS = 100.0
+    /// No reply from the internet comes back this fast; one that does was answered on the Mac.
+    private static let localMS = 1.0
 
     func tick(connected: Bool) {
         let now = Date()
@@ -205,8 +244,13 @@ final class LatencyProbe {
 
     private func record(_ ms: Double?) {
         lock.lock(); defer { lock.unlock() }
-        latest = ms
-        checks.append(ms.map { $0 < Self.slowMS ? .ok : .slow } ?? .failed)
+        if let ms, ms < Self.localMS {
+            latest = nil
+            checks.append(.unmeasured)
+        } else {
+            latest = ms
+            checks.append(ms.map { $0 < Self.slowMS ? .ok : .slow } ?? .failed)
+        }
         if checks.count > 48 { checks.removeFirst(checks.count - 48) }
     }
 

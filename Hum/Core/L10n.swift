@@ -370,6 +370,7 @@ enum L10n {
         static func unitAvailable(_ a: String) -> String { tr("panel.unitAvailable", a) }
         static func sensorsCaption(_ a: String, _ b: Int) -> String { tr("panel.sensorsCaption", a, b) }
         static func gpuTempShort(_ a: String) -> String { tr("panel.gpuTempShort", a) }
+        static func localPublicIP(_ a: String, _ b: String) -> String { tr("panel.localPublicIP", a, b) }
     }
 
     enum Sensors {
@@ -422,6 +423,7 @@ enum L10n {
         static var session: String { tr("network.session") }
         static var interface: String { tr("network.interface") }
         static func downUp(_ d: String, _ u: String) -> String { tr("network.downUp", d, u) }
+        static func ipVia(_ a: String, _ b: String) -> String { tr("network.ipVia", a, b) }
     }
 
     enum Disk {
@@ -550,6 +552,7 @@ enum L10n {
         static func eCoreTip(_ a: Int, _ b: String, _ c: String) -> String { tr("monitor.eCoreTip", a, b, c) }
         static func coreTip(_ a: Int, _ b: String, _ c: String) -> String { tr("monitor.coreTip", a, b, c) }
         static func cyclesLimit(_ a: Int) -> String { tr("monitor.cyclesLimit", a) }
+        static func publicIP(_ a: String) -> String { tr("monitor.publicIP", a) }
     }
 
     enum Settings {

@@ -1462,7 +1462,8 @@ struct NetworkPage: View {
 
     private func connection(_ n: NetworkSample) -> some View {
         let showLatency = settings.prefs.network.showLatency
-        let detail = [n.localIP.isEmpty ? nil : L10n.Monitor.localIP(n.localIP), n.router.isEmpty ? nil : L10n.Monitor.router(n.router)].compactMap { $0 }
+        let detail = [n.localIP.isEmpty ? nil : L10n.Monitor.localIP(PanelText.localIP(n)), n.router.isEmpty ? nil : L10n.Monitor.router(n.router)].compactMap { $0 }
+        let publicIP = settings.prefs.network.showPublicIP && n.connected ? L10n.Monitor.publicIP(monitor.publicIP ?? L10n.Common.dash) : nil
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
                 LineIcon(d: n.kind == .wifi ? Icons.wifi : Icons.network, size: 16, lineWidth: 1.5)
@@ -1481,6 +1482,9 @@ struct NetworkPage: View {
                     }
                     if !detail.isEmpty {
                         Text(detail.joined(separator: " · ")).ui(12).foregroundStyle(Theme.sub).lineLimit(1).truncationMode(.tail)
+                    }
+                    if let publicIP {
+                        Text(publicIP).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
                     }
                 }
                 Spacer(minLength: 0)
@@ -1535,7 +1539,7 @@ struct ConnectionLog: View {
         switch c {
         case .ok: return Theme.ok.opacity(0.7)
         case .slow: return Theme.sys
-        case .failed, nil: return Theme.track
+        case .failed, .unmeasured, nil: return Theme.track
         }
     }
 }
