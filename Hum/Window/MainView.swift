@@ -114,13 +114,15 @@ struct Sidebar: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Color.clear.frame(height: 32)   // traffic lights
+            // Clear of the traffic lights; the mark sits where the two-line title block used to
+            // center it, and the pages below keep their place.
+            Color.clear.frame(height: 42)
             HStack(spacing: 10) {
                 AppMark(size: 26)
                 Text(L10n.App.name).ui(20, 600).kerning(-0.2)
             }
             .padding(.horizontal, 10)
-            .padding(.bottom, 18)
+            .padding(.bottom, 26)
 
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(overviewPages, id: \.0) { item($0) }
@@ -227,15 +229,18 @@ private struct FooterButton: View {
     }
 }
 
-/// The app mark: three bars on an ink tile.
+/// The app mark: her face from the app icon on a rounded tile.
 struct AppMark: View {
     var size: CGFloat
 
     var body: some View {
-        LineIcon(d: Icons.appMark, size: size * 0.54, viewBox: 24, lineWidth: 2.6)
-            .foregroundStyle(Theme.onInk)
+        let shape = RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
+        Image("Avatar")
+            .resizable()
+            .interpolation(.high)
             .frame(width: size, height: size)
-            .background(RoundedRectangle(cornerRadius: size * 0.3, style: .continuous).fill(Theme.ink))
+            .clipShape(shape)
+            .overlay(shape.strokeBorder(Theme.line, lineWidth: 0.5))
             .accessibilityHidden(true)
     }
 }
