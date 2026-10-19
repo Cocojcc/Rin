@@ -268,7 +268,7 @@ struct OverviewPage: View {
             MirrorSparkline(down: monitor.history.latest(.netDown, seconds: 120), up: monitor.history.latest(.netUp, seconds: 120))
                 .frame(height: 22)
         } footer: {
-            processes(Array(s.processes.byNetwork.prefix(2))) { MenuBarText.downArrow + " " + Format.rate($0.netDown, unit: speed) }
+            addresses(n)
         }
     }
 
@@ -451,6 +451,31 @@ struct OverviewPage: View {
             }
             ForEach(0..<max(0, 2 - max(list.count, 1)), id: \.self) { _ in
                 Color.clear.frame(height: 18).accessibilityHidden(true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 8)
+        .overlay(alignment: .top) { Hairline() }
+    }
+
+    /// The network card's footer: the Mac's address, then the public one (or the router when
+    /// the public address isn't looked up), as two rows like the other cards' processes.
+    private func addresses(_ n: NetworkSample) -> some View {
+        let dash = L10n.Common.dash
+        let local = n.connected && !n.localIP.isEmpty ? n.localIP : dash
+        let second = settings.prefs.network.showPublicIP
+            ? (L10n.Overview.publicShort, n.connected ? monitor.publicIP ?? dash : dash)
+            : (L10n.Network.router, n.connected && !n.router.isEmpty ? n.router : dash)
+        return VStack(alignment: .leading, spacing: 4) {
+            ForEach([(L10n.Overview.localShort, local), second], id: \.0) { label, value in
+                HStack(spacing: 8) {
+                    Text(label).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
+                    Spacer(minLength: 4)
+                    Text(value).fontWeight(.medium).lineLimit(1).truncationMode(.middle)
+                }
+                .ui(12)
+                .frame(height: 18)
+                .accessibilityElement(children: .combine)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

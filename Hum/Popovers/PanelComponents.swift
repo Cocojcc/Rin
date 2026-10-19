@@ -7,6 +7,8 @@ import SwiftUI
 struct PanelHeader: View {
     var title: String
     var subtitle: String?
+    /// A status line instead of a plain subtitle: a dot and the words in this color.
+    var status: Color?
     var openLabel: String
     var open: () -> Void
     var settingsLabel: String
@@ -21,10 +23,11 @@ struct PanelHeader: View {
         settings = { MainWindowController.shared.show(.moduleSettings(module)) }
     }
 
-    init(title: String, subtitle: String?, openLabel: String, open: @escaping () -> Void,
+    init(title: String, subtitle: String?, status: Color? = nil, openLabel: String, open: @escaping () -> Void,
          settingsLabel: String, settings: @escaping () -> Void) {
         self.title = title
         self.subtitle = subtitle
+        self.status = status
         self.openLabel = openLabel
         self.open = open
         self.settingsLabel = settingsLabel
@@ -37,7 +40,12 @@ struct PanelHeader: View {
             VStack(spacing: 0) {
                 Text(title).ui(15, 500).frame(height: 20).accessibilityAddTraits(.isHeader)
                 if let subtitle {
-                    Text(subtitle).ui(12).foregroundStyle(Theme.sub).lineLimit(1).frame(height: 14)
+                    HStack(spacing: 5) {
+                        if let status { Circle().fill(status).frame(width: 6, height: 6) }
+                        Text(subtitle).ui(12).lineLimit(1)
+                    }
+                    .foregroundStyle(status ?? Theme.sub)
+                    .frame(height: 14)
                 }
             }
             .frame(maxWidth: .infinity)

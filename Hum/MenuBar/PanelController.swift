@@ -149,7 +149,7 @@ final class PanelController {
     }
 }
 
-/// Shared chrome for every dropdown: 320 wide (384 combined) at design size, drawn at UI scale.
+/// Shared chrome for every dropdown: 320 wide at design size, drawn at UI scale.
 struct PanelRoot: View {
     let kind: PanelKind
     var settings = SettingsStore.shared
@@ -163,7 +163,7 @@ struct PanelRoot: View {
                 }
             }
             .padding(16)
-            .frame(width: kind == .combined ? 384 : PanelController.width)
+            .frame(width: PanelController.width)
             .environment(\.accent, settings.prefs.general.accent.colors)
             .ui(13)
             .foregroundStyle(Theme.text)

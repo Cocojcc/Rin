@@ -197,10 +197,8 @@
 "panel.download" = "Download";
 "panel.upload" = "Upload";
 "panel.volumeAvailable" = "%@ available";
-"panel.updatedEvery" = "Updated just now · every %d s";
 "panel.ofTotal" = "/ %@";
 "panel.readWriteShort" = "Read %1$@ · Write %2$@";
-"panel.openActivityMonitor" = "Open Activity Monitor";
 
 "sensors.cpuPerformance" = "CPU performance cores";
 "sensors.cpuEfficiency" = "CPU efficiency cores";
@@ -424,7 +422,6 @@
 /* Glass redesign */
 "common.percentSign" = "%";
 "common.wattUnit" = "W";
-"common.rpmUnit" = "rpm";
 "common.watts" = "%d W";
 "a11y.dotSeparator" = " · ";
 "settings.celsius" = "°C";
@@ -953,12 +950,7 @@
 "settings.modulesOn" = "Modules turned on";
 "alerts.moduleOff" = "Module is off";
 "panel.openOverview" = "Open Overview";
-"panel.userSystemShort" = "User %1$@ · System %2$@";
-"panel.memoryAppWired" = "App %1$@ · Wired %2$@";
-"panel.memoryApp" = "App %@";
-"panel.unitAvailable" = "%@ free";
-"panel.sensorsCaption" = "GPU %1$@ · Fan %2$d rpm";
-"panel.gpuTempShort" = "GPU %@";
 "network.ipVia" = "%1$@ (%2$@)";
 "monitor.publicIP" = "Public IP %@";
-"panel.localPublicIP" = "Local %1$@ · Public %2$@";
+"overview.localShort" = "Local";
+"overview.publicShort" = "Public";

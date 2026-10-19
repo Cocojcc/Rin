@@ -98,7 +98,6 @@ enum L10n {
         static var restart: String { tr("common.restart") }
         static var percentSign: String { tr("common.percentSign") }
         static var wattUnit: String { tr("common.wattUnit") }
-        static var rpmUnit: String { tr("common.rpmUnit") }
         static func watts(_ n: Int) -> String { tr("common.watts", n) }
     }
 
@@ -138,6 +137,8 @@ enum L10n {
         static var editA11y: String { tr("overview.editA11y") }
         static func moduleSwitch(_ a: String) -> String { tr("overview.moduleSwitch", a) }
         static var allOff: String { tr("overview.allOff") }
+        static var localShort: String { tr("overview.localShort") }
+        static var publicShort: String { tr("overview.publicShort") }
     }
 
     enum Battery {
@@ -354,23 +355,14 @@ enum L10n {
         static var download: String { tr("panel.download") }
         static var upload: String { tr("panel.upload") }
         static func volumeAvailable(_ v: String) -> String { tr("panel.volumeAvailable", v) }
-        static func updatedEvery(_ s: Int) -> String { tr("panel.updatedEvery", s) }
         static func ofTotal(_ v: String) -> String { tr("panel.ofTotal", v) }
         static func readWriteShort(_ r: String, _ w: String) -> String { tr("panel.readWriteShort", r, w) }
-        static var openActivityMonitor: String { tr("panel.openActivityMonitor") }
         static var health: String { tr("panel.health") }
         static func healthValue(_ a: String, _ b: String) -> String { tr("panel.healthValue", a, b) }
         static func volumeUsedPurgeable(_ a: String, _ b: String, _ c: String) -> String { tr("panel.volumeUsedPurgeable", a, b, c) }
         static var passiveCooling: String { tr("panel.passiveCooling") }
         static func fanCount(_ n: Int) -> String { tr("panel.fanCount", n) }
         static var openOverview: String { tr("panel.openOverview") }
-        static func userSystemShort(_ a: String, _ b: String) -> String { tr("panel.userSystemShort", a, b) }
-        static func memoryAppWired(_ a: String, _ b: String) -> String { tr("panel.memoryAppWired", a, b) }
-        static func memoryApp(_ a: String) -> String { tr("panel.memoryApp", a) }
-        static func unitAvailable(_ a: String) -> String { tr("panel.unitAvailable", a) }
-        static func sensorsCaption(_ a: String, _ b: Int) -> String { tr("panel.sensorsCaption", a, b) }
-        static func gpuTempShort(_ a: String) -> String { tr("panel.gpuTempShort", a) }
-        static func localPublicIP(_ a: String, _ b: String) -> String { tr("panel.localPublicIP", a, b) }
     }
 
     enum Sensors {
