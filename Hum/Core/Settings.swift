@@ -18,7 +18,6 @@ enum NotificationStyle: String, Codable, CaseIterable { case banner, alert }
 
 struct GeneralPrefs: Codable, Equatable {
     var appearance: AppearanceMode = .system
-    var accent: AccentPalette = .graphite
     var temperatureUnit: TemperatureUnit = .celsius
     var language: LanguageChoice = .system
     var slowOnBattery = true
@@ -272,9 +271,7 @@ final class SettingsStore {
            let decoded = Self.decode(data) {
             prefs = decoded
         } else if let data = UserDefaults.standard.data(forKey: Self.legacyKey),
-                  var decoded = Self.decode(data) {
-            // v1 defaulted to orange; the glass design's default accent is graphite.
-            if decoded.general.accent == .orange { decoded.general.accent = .graphite }
+                  let decoded = Self.decode(data) {
             prefs = decoded
         } else {
             prefs = Preferences.fresh()

@@ -288,7 +288,6 @@
 "settings.loginItemNeedsApproval" = "Needs approval in System Settings";
 "settings.openLoginItems" = "Open Login Items…";
 "settings.appearance" = "Appearance";
-"settings.accent" = "Accent color";
 "settings.temperatureUnit" = "Temperature unit";
 "settings.language" = "Language";
 "settings.restartToApply" = "Restart to apply";
@@ -386,12 +385,6 @@
 "settings.thisMac" = "This Mac";
 "settings.chip" = "Chip";
 "settings.macOS" = "macOS";
-"settings.palette.system" = "System";
-"settings.palette.green" = "Green";
-"settings.palette.teal" = "Teal";
-"settings.palette.indigo" = "Indigo";
-"settings.palette.orange" = "Orange";
-"settings.palette.graphite" = "Graphite";
 
 "style.graph" = "Mini graph";
 "style.bar" = "Bar";

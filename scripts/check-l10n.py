@@ -6,7 +6,6 @@ used = set(re.findall(r'tr\("([^"]+)"', (root / "Hum/Core/L10n.swift").read_text
 # Interpolated keys ("widget.name.\\(kind.rawValue)") cover every key with that prefix.
 prefixes = {k.split("\\(")[0] for k in used if "\\(" in k}
 used = {k for k in used if not k.endswith(".") and "\\(" not in k}
-used |= {f"settings.palette.{p}" for p in ["system", "green", "teal", "indigo", "orange", "graphite"]}
 ok = True
 for lang in ["zh-Hans", "en"]:
     text = (root / f"Hum/Resources/{lang}.lproj/Localizable.strings").read_text()

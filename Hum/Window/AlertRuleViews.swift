@@ -100,7 +100,6 @@ struct AlertRuleRow: View {
     /// Pointed out after arriving from a chart or a module's settings.
     var highlighted = false
     var settings = SettingsStore.shared
-    @Environment(\.accent) private var accent
 
     var body: some View {
         HStack(spacing: 12) {
@@ -121,7 +120,7 @@ struct AlertRuleRow: View {
         .frame(minHeight: minHeight)
         .background {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(accent.accent.opacity(highlighted ? 0.12 : 0))
+                .fill(Theme.accent.opacity(highlighted ? 0.12 : 0))
                 .padding(.horizontal, -8)
                 .padding(.vertical, 2)
         }

@@ -553,7 +553,6 @@ enum L10n {
         static var loginItemNeedsApproval: String { tr("settings.loginItemNeedsApproval") }
         static var openLoginItems: String { tr("settings.openLoginItems") }
         static var appearance: String { tr("settings.appearance") }
-        static var accent: String { tr("settings.accent") }
         static var temperatureUnit: String { tr("settings.temperatureUnit") }
         static var language: String { tr("settings.language") }
         static var restartToApply: String { tr("settings.restartToApply") }
@@ -651,7 +650,6 @@ enum L10n {
         static var thisMac: String { tr("settings.thisMac") }
         static var chip: String { tr("settings.chip") }
         static var macOS: String { tr("settings.macOS") }
-        static func palette(_ p: AccentPalette) -> String { tr("settings.palette." + p.rawValue) }
         static var celsius: String { tr("settings.celsius") }
         static var fahrenheit: String { tr("settings.fahrenheit") }
         static var updates: String { tr("settings.updates") }

@@ -276,15 +276,14 @@ struct SettingsRow<Control: View>: View {
 struct HumSwitch: View {
     @Binding var isOn: Bool
     var label: String
-    @Environment(\.accent) private var accent
 
     var body: some View {
         Button {
             withAnimation(.easeOut(duration: 0.15)) { isOn.toggle() }
         } label: {
             ZStack(alignment: isOn ? .trailing : .leading) {
-                Capsule().fill(isOn ? accent.accent : Theme.track)
-                Circle().fill(isOn ? accent.onAccent : Theme.raised)
+                Capsule().fill(isOn ? Theme.accent : Theme.track)
+                Circle().fill(isOn ? Theme.onAccent : Theme.raised)
                     .raisedShadow(!isOn)
                     .frame(width: 16, height: 16)
                     .padding(2)
@@ -503,17 +502,16 @@ struct PrimaryButton: View {
     var radius: CGFloat = 12
     var fontSize: CGFloat = 13
     var action: () -> Void
-    @Environment(\.accent) private var accent
 
     var body: some View {
         Button(action: action) {
             Text(title).ui(fontSize, 500)
                 .lineLimit(1)
-                .foregroundStyle(accent.onAccent)
+                .foregroundStyle(Theme.onAccent)
                 .padding(.horizontal, 10)
                 .frame(maxWidth: .infinity)
                 .frame(height: height)
-                .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(accent.accent))
+                .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Theme.accent))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

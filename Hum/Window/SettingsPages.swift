@@ -50,12 +50,6 @@ struct SettingsPage: View {
                                   Appearance.apply()
                               }))
                 }
-                SettingsRow(title: L10n.Settings.accent) {
-                    HStack(spacing: 10) {
-                        Text(L10n.Settings.palette(g.accent)).ui(12).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
-                        AccentPicker(selection: pref(\.general.accent))
-                    }
-                }
                 SettingsRow(title: L10n.Settings.temperatureUnit) {
                     Segmented(label: L10n.Settings.temperatureUnit,
                               options: [(TemperatureUnit.celsius, L10n.Settings.celsius), (.fahrenheit, L10n.Settings.fahrenheit)],
@@ -187,35 +181,7 @@ struct SettingsPage: View {
 }
 
 /// Swatches in a well; the chosen one sits on a raised tile.
-struct AccentPicker: View {
-    @Binding var selection: AccentPalette
-
-    var body: some View {
-        HStack(spacing: 2) {
-            ForEach(AccentPalette.allCases) { p in
-                let on = p == selection
-                Button {
-                    selection = p
-                } label: {
-                    Circle().fill(p.swatch).frame(width: 11, height: 11)
-                        .frame(width: 28, height: 24)
-                        .thumbAnchor(on)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(L10n.Settings.palette(p))
-                .accessibilityAddTraits(on ? [.isSelected] : [])
-            }
-        }
-        .slidingThumb(selection) { GlassThumb() }
-        .padding(2)
-        .background(GlassTrack())
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(L10n.Settings.accent)
-    }
-}
-
-/// The combined item's icon, picked on a glass track like the accent colors.
+/// The combined item's icon, picked on a glass track.
 struct CombinedIconPicker: View {
     @Binding var selection: CombinedIcon
 
@@ -250,7 +216,6 @@ struct CombinedIconPicker: View {
 /// "2 个模块被刘海挡住 [合并成一项]" above the menu bar preview.
 struct NotchBanner: View {
     var count: Int
-    @Environment(\.accent) private var accent
 
     var body: some View {
         HStack(spacing: 10) {
@@ -261,10 +226,10 @@ struct NotchBanner: View {
                 SettingsStore.shared.prefs.menubar.displayMode = .combined
             } label: {
                 Text(L10n.Notch.merge).ui(12, 500)
-                    .foregroundStyle(accent.onAccent)
+                    .foregroundStyle(Theme.onAccent)
                     .padding(.horizontal, 12)
                     .frame(height: 26)
-                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(accent.accent))
+                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.accent))
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)

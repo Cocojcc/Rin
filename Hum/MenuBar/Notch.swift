@@ -68,8 +68,7 @@ final class NotchAlertController {
     func show() {
         close()
         let panel = NotchPanel()
-        let host = NSHostingView(rootView: NotchAlertRoot()
-            .environment(\.accent, SettingsStore.shared.prefs.general.accent.colors))
+        let host = NSHostingView(rootView: NotchAlertRoot())
         panel.contentView = host
         let size = host.fittingSize
         let screen = NSScreen.screens.first { $0.auxiliaryTopRightArea != nil } ?? NSScreen.main

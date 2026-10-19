@@ -18,7 +18,6 @@ struct MainView: View {
         // The hosting controller sets the window's minimum from this, overriding contentMinSize.
         .frame(minWidth: MainView.minSize.width, minHeight: MainView.minSize.height)
         .background(GlassBackground(radius: UIScale.of(18), tint: Theme.windowGlass, material: .underWindowBackground))
-        .environment(\.accent, settings.prefs.general.accent.colors)
         .environment(\.textScale, Fonts.windowTextScale)
         .environment(\.pageGlass, pageGlass)
         .ui(13)

@@ -135,8 +135,7 @@ enum Snapshots {
     private static func save<V: View>(_ view: V, _ appearance: NSAppearance, _ url: URL) {
         appearance.performAsCurrentDrawingAppearance {
             let renderer = ImageRenderer(content: view
-                .environment(\.colorScheme, appearance.isDark ? .dark : .light)
-                .environment(\.accent, SettingsStore.shared.prefs.general.accent.colors))
+                .environment(\.colorScheme, appearance.isDark ? .dark : .light))
             // Draw straight into an 8-bit sRGB context; the default bitmap follows the (HDR) main display.
             var output: Data?
             renderer.render { size, draw in

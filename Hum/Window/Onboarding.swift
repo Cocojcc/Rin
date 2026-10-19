@@ -100,7 +100,6 @@ struct OnboardingView: View {
         }
         .padding(EdgeInsets(top: 18, leading: 22, bottom: 22, trailing: 22))
         .frame(width: 480)
-        .environment(\.accent, prefs.general.accent.colors)
         .ui(13)
         .foregroundStyle(Theme.text)
         .focusEffectDisabled()

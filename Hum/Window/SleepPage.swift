@@ -215,14 +215,13 @@ private struct BlockerRow<Icon: View>: View {
 private struct AccentPillButton: View {
     var title: String
     var action: () -> Void
-    @Environment(\.accent) private var accent
 
     var body: some View {
         Button(action: action) {
-            Text(title).ui(12, 500).foregroundStyle(accent.onAccent)
+            Text(title).ui(12, 500).foregroundStyle(Theme.onAccent)
                 .padding(.horizontal, 14)
                 .frame(height: 28)
-                .background(Capsule().fill(accent.accent))
+                .background(Capsule().fill(Theme.accent))
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)

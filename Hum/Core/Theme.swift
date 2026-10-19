@@ -92,6 +92,9 @@ enum Theme {
 
     static let ink = Color.dyn(RGBA(0x1D1D1D), RGBA(0xF2F2F2))
     static let onInk = Color.dyn(RGBA(0xFFFFFF), RGBA(0x1D1D1D))
+    /// Filled controls (a switch that is on, the main button): ink, so the window stays grey.
+    static let accent = ink
+    static let onAccent = onInk
     /// The design canvas's mint wallpaper, on the About page's laptop when the desktop picture can't be read.
     static let wall = Color.dyn(RGBA(0xCDE5CE), RGBA(0x1F3527))
 
@@ -188,42 +191,6 @@ extension View {
 }
 
 /// The user-selectable accent. Graphite (ink) is the default; "system" follows the macOS accent.
-enum AccentPalette: String, Codable, CaseIterable, Identifiable {
-    case system, green, teal, indigo, orange, graphite
-
-    var id: String { rawValue }
-
-    var colors: AccentColors {
-        switch self {
-        case .system: return AccentColors(accent: Color(nsColor: .controlAccentColor), onAccent: .white)
-        case .green: return AccentColors(accent: .dyn(RGBA(0x22A45D), RGBA(0x30D158)), onAccent: .white)
-        case .teal: return AccentColors(accent: .dyn(RGBA(0x0F9D8A), RGBA(0x2CC5AE)), onAccent: .white)
-        case .indigo: return AccentColors(accent: .dyn(RGBA(0x5856D6), RGBA(0x7D7AFF)), onAccent: .white)
-        case .orange: return AccentColors(accent: .dyn(RGBA(0xF7821B), RGBA(0xFF9F2E)), onAccent: .white)
-        case .graphite: return AccentColors(accent: Theme.ink, onAccent: Theme.onInk)
-        }
-    }
-
-    /// Swatch shown in the accent picker.
-    var swatch: Color { colors.accent }
-}
-
-struct AccentColors {
-    var accent: Color
-    var onAccent: Color
-}
-
-private struct AccentKey: EnvironmentKey {
-    static let defaultValue = AccentPalette.graphite.colors
-}
-
-extension EnvironmentValues {
-    var accent: AccentColors {
-        get { self[AccentKey.self] }
-        set { self[AccentKey.self] = newValue }
-    }
-}
-
 /// Space Grotesk for the window and panels (bundled, OFL); the menu bar keeps the system font.
 enum Fonts {
     private static var registered = false

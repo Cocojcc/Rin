@@ -288,7 +288,6 @@
 "settings.loginItemNeedsApproval" = "需要在系统设置中允许";
 "settings.openLoginItems" = "打开登录项…";
 "settings.appearance" = "外观";
-"settings.accent" = "强调色";
 "settings.temperatureUnit" = "温度单位";
 "settings.language" = "语言";
 "settings.restartToApply" = "重新启动后生效";
@@ -386,12 +385,6 @@
 "settings.thisMac" = "这台 Mac";
 "settings.chip" = "芯片";
 "settings.macOS" = "系统版本";
-"settings.palette.system" = "跟随系统";
-"settings.palette.green" = "绿";
-"settings.palette.teal" = "青绿";
-"settings.palette.indigo" = "靛蓝";
-"settings.palette.orange" = "橙";
-"settings.palette.graphite" = "石墨";
 
 "style.graph" = "迷你图形";
 "style.bar" = "条形";

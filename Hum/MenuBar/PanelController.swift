@@ -91,7 +91,6 @@ final class PanelController {
         let panel = DropdownPanel()
         let root = AnyView(
             PanelRoot(kind: kind)
-                .environment(\.accent, SettingsStore.shared.prefs.general.accent.colors)
         )
         let host = SizingHostingView(rootView: root)
         host.onSizeChange = { [weak self] in self?.layout() }
@@ -164,7 +163,6 @@ struct PanelRoot: View {
             }
             .padding(16)
             .frame(width: PanelController.width)
-            .environment(\.accent, settings.prefs.general.accent.colors)
             .ui(13)
             .foregroundStyle(Theme.text)
         }
