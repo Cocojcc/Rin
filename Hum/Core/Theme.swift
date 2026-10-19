@@ -73,8 +73,11 @@ enum Theme {
     static let line = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(255, 255, 255, 0.1))
 
     static let text = Color.dyn(RGBA(0x1D1D1D), RGBA(0xF2F2F2))
-    static let sub = Color.dyn(RGBA(0x5C5C5C), RGBA(0xABABAB))
-    static let faint = Color.dyn(RGBA(0x8C8C8C), RGBA(0x7E7E7E))
+    /// Secondary text, a step darker than the design's #5C5C5C / #ABABAB: small grey labels on
+    /// glass read too faintly at the window's scale.
+    static let sub = Color.dyn(RGBA(0x4D4D4D), RGBA(0xB8B8B8))
+    /// The quietest text (empty states, hints), dark enough for about 4.5 : 1 on the panels.
+    static let faint = Color.dyn(RGBA(0x707070), RGBA(0x929292))
     static let track = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.1))
     static let grid = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.08))
     static let cache = Color.dyn(RGBA(0, 0, 0, 0.18), RGBA(255, 255, 255, 0.22))
@@ -238,8 +241,11 @@ enum Fonts {
     static let windowTextScale: CGFloat = 1.08
 
     /// Interface text at a design size, enlarged by the surface's text scale (half points).
+    /// Big readouts sit 40 units lighter: with the system's font smoothing on they would
+    /// otherwise read heavier than the design's numbers.
     static func text(_ size: CGFloat, _ weight: CGFloat = 400, scale: CGFloat = 1) -> Font {
-        scale == 1 ? ui(size, weight) : ui((size * scale * 2).rounded() / 2, weight)
+        let weight = size >= 24 && weight >= 500 ? weight - 40 : weight
+        return scale == 1 ? ui(size, weight) : ui((size * scale * 2).rounded() / 2, weight)
     }
 
     /// Space Grotesk at an exact weight (variable font, 300...700), tabular figures. Menu bar

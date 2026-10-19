@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - Typography
 
 extension View {
-    /// Space Grotesk at a design size and weight (the type ramp: 11 / 12 / 13 / 15 / 18 / 24 / 44),
+    /// Space Grotesk at a design size and weight (the type ramp: 12 / 13 / 15 / 18 / 24 / 44; nothing smaller),
     /// enlarged by the surface's `textScale`.
     func ui(_ size: CGFloat, _ weight: CGFloat = 400) -> some View { modifier(UIFont(size: size, weight: weight)) }
 }
@@ -373,7 +373,7 @@ struct Segmented<Value: Hashable>: View {
     }
 
     private var glass: Bool { style != .tab }
-    private var fontSize: CGFloat { style == .tab ? 11 : 12 }
+    private var fontSize: CGFloat { 12 }
 }
 
 /// "− 12 pt +" on a glass track.
@@ -689,8 +689,8 @@ struct StatusPill: View {
     var fg: Color
     var bg: Color
     var dot = false
-    var fontSize: CGFloat = 11
-    var height: CGFloat = 18
+    var fontSize: CGFloat = 12
+    var height: CGFloat = 20
     var radius: CGFloat = 6
 
     var body: some View {

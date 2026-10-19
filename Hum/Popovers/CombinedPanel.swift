@@ -16,7 +16,7 @@ struct CombinedPanel: View {
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(L10n.Overview.title).ui(17, 500).kerning(-0.17).accessibilityAddTraits(.isHeader)
-                    Text(L10n.Panel.updatedEvery(Int(prefs.refresh(.cpu)))).ui(11).foregroundStyle(Theme.sub)
+                    Text(L10n.Panel.updatedEvery(Int(prefs.refresh(.cpu)))).ui(12).foregroundStyle(Theme.sub)
                 }
                 Spacer(minLength: 0)
                 IconButton(d: Icons.general, size: 28, iconSize: 16, viewBox: 16, lineWidth: 1.5, fill: .clear, tint: Theme.sub, label: L10n.Menu.settings) {
@@ -47,7 +47,7 @@ struct CombinedPanel: View {
                         Spacer(minLength: 4)
                         MemoryComposition(m: s.memory)
                         Text(L10n.Panel.memoryBreakdown(Format.memory(s.memory.app), Format.memory(s.memory.wired), Format.memory(s.memory.compressed)))
-                            .ui(11).foregroundStyle(Theme.sub).lineLimit(1).padding(.top, 8)
+                            .ui(12).foregroundStyle(Theme.sub).lineLimit(1).padding(.top, 8)
                     }
                 }
                 GridRow {
@@ -99,7 +99,7 @@ struct CombinedPanel: View {
                         Spacer(minLength: 4)
                         MeterBar(fraction: root?.usedFraction ?? 0, color: Theme.disk)
                         Text(L10n.Panel.readWriteShort(Format.rate(s.disk.read), Format.rate(s.disk.write)))
-                            .ui(11).foregroundStyle(Theme.sub).lineLimit(1).padding(.top, 8)
+                            .ui(12).foregroundStyle(Theme.sub).lineLimit(1).padding(.top, 8)
                     }
                     if s.battery.hasBattery {
                         tile(.battery, height: 136) {
@@ -108,7 +108,7 @@ struct CombinedPanel: View {
                             bigValue(percentNumber(s.battery.level), L10n.Common.percentSign)
                             Spacer(minLength: 4)
                             MeterBar(fraction: s.battery.level, color: s.battery.level <= 0.2 && !s.battery.onAC ? Theme.danger : Theme.bat)
-                            Text(batteryLine(s.battery)).ui(11).foregroundStyle(Theme.sub).lineLimit(1).padding(.top, 8)
+                            Text(batteryLine(s.battery)).ui(12).foregroundStyle(Theme.sub).lineLimit(1).padding(.top, 8)
                         }
                     } else {
                         tile(.gpu, height: 136) {
@@ -117,7 +117,7 @@ struct CombinedPanel: View {
                             bigValue(percentNumber(s.gpu.utilization), L10n.Common.percentSign)
                             Spacer(minLength: 4)
                             MeterBar(fraction: s.gpu.utilization, color: Theme.gpu)
-                            Text(L10n.Panel.vramUsed(Format.memory(s.gpu.memoryUsed))).ui(11).foregroundStyle(Theme.sub).padding(.top, 8)
+                            Text(L10n.Panel.vramUsed(Format.memory(s.gpu.memoryUsed))).ui(12).foregroundStyle(Theme.sub).padding(.top, 8)
                         }
                     }
                 }
@@ -204,16 +204,16 @@ struct CombinedPanel: View {
         HStack(spacing: 8) {
             tileTitle(m)
             Spacer(minLength: 4)
-            Text(right).ui(11).foregroundStyle(Theme.sub).lineLimit(1)
+            Text(right).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
         }
     }
 
     private func sensorStat(_ label: String, _ value: String, _ unit: String?) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label).ui(11).foregroundStyle(Theme.sub).lineLimit(1)
+            Text(label).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text(value).ui(20, 500).kerning(-0.4)
-                if let unit { Text(unit).ui(11).foregroundStyle(Theme.sub) }
+                if let unit { Text(unit).ui(12).foregroundStyle(Theme.sub) }
             }
             .lineLimit(1)
             .minimumScaleFactor(0.6)

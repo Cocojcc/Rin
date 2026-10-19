@@ -613,7 +613,7 @@ struct PanelDeviceRow: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 6) {
                     Text(name).lineLimit(1)
-                    if low { StatusPill(text: L10n.Battery.low, fg: Theme.danger, bg: Theme.dangerBg, fontSize: 10, height: 16, radius: 5) }
+                    if low { StatusPill(text: L10n.Battery.low, fg: Theme.danger, bg: Theme.dangerBg, fontSize: 12, height: 18, radius: 5) }
                 }
                 if let detail { Text(detail).ui(12).foregroundStyle(Theme.sub).lineLimit(1) }
             }

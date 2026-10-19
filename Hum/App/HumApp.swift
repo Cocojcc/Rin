@@ -4,9 +4,6 @@ import SwiftUI
 @main
 enum HumMain {
     static func main() {
-        // Draw text the way the design does (WebKit's "antialiased"): macOS font smoothing
-        // thickens every stroke, which made the glass UI read noticeably heavier than the canvas.
-        UserDefaults.standard.register(defaults: ["AppleFontSmoothing": 0])
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate
@@ -50,6 +47,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if CommandLine.arguments.contains("--open-window") {
             MainWindowController.shared.show(.overview)
         }
+        #if DEBUG
+        // `--open-page settings|alerts|cpu`: opens the window on that page (screenshots).
+        if let i = CommandLine.arguments.firstIndex(of: "--open-page"), i + 1 < CommandLine.arguments.count {
+            let pages: [String: Page] = ["settings": .settings, "alerts": .alerts, "cpu": .monitor(.cpu), "overview": .overview]
+            if let page = pages[CommandLine.arguments[i + 1]] { MainWindowController.shared.show(page) }
+        }
+        #endif
     }
 
     func applicationWillTerminate(_ notification: Notification) {
