@@ -20,6 +20,9 @@ final class StatusBarController: NSObject {
         observeSettings()
         Monitor.shared.onSample = { [weak self] _ in
             Alerts.shared.evaluate()
+            // Nobody sees the menu bar while the screen is off or locked; the items catch up on
+            // the full read when it comes back.
+            guard !Monitor.shared.isResting else { return }
             self?.rebuildIfNeeded()
             self?.refresh()
             if let self { NotchWatcher.shared.check(self.items) }

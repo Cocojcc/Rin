@@ -20,6 +20,9 @@ final class Monitor {
     private(set) var interfaces: [(name: String, kind: InterfaceKind)] = []
     /// Sampling stopped from the sidebar's pause button; everything keeps its last values.
     private(set) var isPaused = false
+    /// The screen is off or locked, or another user's session is in front: nobody sees the menu
+    /// bar or a window, so only what alert rules need is read, slowly.
+    private(set) var isResting = false
 
     @ObservationIgnored let history = History()
     /// Recent CPU and memory per process group, for the Processes page's inspector sparklines.
@@ -30,12 +33,26 @@ final class Monitor {
     @ObservationIgnored private var lastPublicIP = Date.distantPast
     @ObservationIgnored var onSample: ((Snapshot) -> Void)?
 
+    enum RestReason { case displaysAsleep, locked, sessionInactive }
+    @ObservationIgnored private var restReasons: Set<RestReason> = []
+
     private init() {}
 
     func start() {
         let center = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.didMountNotification, NSWorkspace.didUnmountNotification] {
             center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in self?.sampler.volumesChanged() }
+        }
+        let restEvents: [(NotificationCenter, String, RestReason, Bool)] = [
+            (center, NSWorkspace.screensDidSleepNotification.rawValue, .displaysAsleep, true),
+            (center, NSWorkspace.screensDidWakeNotification.rawValue, .displaysAsleep, false),
+            (center, NSWorkspace.sessionDidResignActiveNotification.rawValue, .sessionInactive, true),
+            (center, NSWorkspace.sessionDidBecomeActiveNotification.rawValue, .sessionInactive, false),
+            (DistributedNotificationCenter.default(), "com.apple.screenIsLocked", .locked, true),
+            (DistributedNotificationCenter.default(), "com.apple.screenIsUnlocked", .locked, false),
+        ]
+        for (nc, name, reason, on) in restEvents {
+            nc.addObserver(forName: Notification.Name(name), object: nil, queue: .main) { [weak self] _ in self?.setRest(reason, on) }
         }
         sampler.onSnapshot = { [weak self] snapshot in
             DispatchQueue.main.async { self?.apply(snapshot) }
@@ -54,6 +71,16 @@ final class Monitor {
         if isPaused { sampler.pause() } else { sampler.resume() }
     }
 
+    func setRest(_ reason: RestReason, _ on: Bool) {
+        if on { restReasons.insert(reason) } else { restReasons.remove(reason) }
+        let resting = !restReasons.isEmpty
+        guard resting != isResting else { return }
+        isResting = resting
+        applyConfiguration()
+        // Back in front: read everything at once rather than waiting for the next tick.
+        if !resting { sampler.sampleNow() }
+    }
+
     func setVisible(_ consumer: Consumer, _ visible: Bool) {
         let changed = visible ? consumers.insert(consumer).inserted : consumers.remove(consumer) != nil
         if changed {
@@ -66,6 +93,18 @@ final class Monitor {
     func applyConfiguration() {
         let prefs = SettingsStore.shared.prefs
         var config = Sampler.Config()
+        config.slowOnBattery = prefs.general.slowOnBattery
+        config.interface = prefs.network.interface
+        if isResting {
+            // Only the modules alert rules watch, every 15 s or slower; processes every 30 s for
+            // the culprit names; no per-app traffic, frequencies or latency pings.
+            config.monitored = prefs.alertedModules
+            for m in Module.allCases { config.intervals[m] = max(prefs.refresh(m), Self.restInterval) }
+            config.processInterval = Self.restProcessInterval
+            config.processes.limit = 8
+            sampler.configure(config)
+            return
+        }
         // A module is read only while something uses it: its menu bar item, an alert rule, or a
         // view showing it. The overview and the combined panel show the whole machine.
         var shown = Set(Module.allCases.filter(prefs.showsInMenubar))
@@ -95,8 +134,6 @@ final class Monitor {
         config.processInterval = anyUI ? min(prefs.cpu.processRefresh, prefs.memory.processRefresh) : Self.backgroundProcessInterval
         config.cpuFrequency = consumers.contains(.window(.monitor(.cpu)))
         config.latency = prefs.network.showLatency
-        config.slowOnBattery = prefs.general.slowOnBattery
-        config.interface = prefs.network.interface
         config.processes.includeOtherUsers = anyUI
         // Per-app traffic is a difference between two nettop reads (a subprocess, about 15 ms of
         // CPU each). While the network is read a slow baseline is kept, so a list that opens has
@@ -118,6 +155,9 @@ final class Monitor {
     private static let alertOnlyInterval: Double = 5
     /// Seconds between process scans while no window or dropdown is open.
     private static let backgroundProcessInterval: Double = 10
+    /// Seconds between reads, and between process scans, while the screen is off or locked.
+    private static let restInterval: Double = 15
+    private static let restProcessInterval: Double = 30
 
     private func apply(_ s: Snapshot) {
         snapshot = s

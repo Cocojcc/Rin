@@ -38,6 +38,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #if DEBUG
         ToggleCheck.runIfRequested()
         LiveDump.scheduleIfRequested()
+        // `--rest-after <s> [<s> awake again]`: acts as if the screen locked, to measure resting.
+        if let i = CommandLine.arguments.firstIndex(of: "--rest-after"), i + 1 < CommandLine.arguments.count,
+           let delay = Double(CommandLine.arguments[i + 1]) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { Monitor.shared.setRest(.locked, true) }
+            if i + 2 < CommandLine.arguments.count, let wake = Double(CommandLine.arguments[i + 2]) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + wake) { Monitor.shared.setRest(.locked, false) }
+            }
+        }
         #endif
         if CommandLine.arguments.contains("--open-window") {
             MainWindowController.shared.show(.overview)
