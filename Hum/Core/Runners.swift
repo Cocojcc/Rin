@@ -22,8 +22,9 @@ struct Runner: Codable, Equatable, Identifiable {
     var isBuiltIn: Bool { id.hasPrefix(RunnerLibrary.builtInPrefix) }
 }
 
-/// The built-in characters and the imported ones, kept in Application Support/Hum/Runners as
-/// ready-made frames: 1x and 2x, a light set and, when it differs, a dark one.
+/// The built-in characters and the imported ones. Imported frames are kept in Application
+/// Support/Hum/Runners, ready-made: 1x and 2x, a light set and, when it differs, a dark one.
+/// The equalizer is drawn in code; her and the cat ship in the app as the same kind of frames.
 @Observable
 final class RunnerLibrary {
     static let shared = RunnerLibrary()
@@ -34,11 +35,16 @@ final class RunnerLibrary {
     static let maxFrames = 60
 
     private(set) var imported: [Runner] = []
-    var all: [Runner] { [Self.equalizer] + imported }
+    var all: [Runner] { Self.builtIns + imported }
 
     @ObservationIgnored private var cache: [String: [CGImage]] = [:]
 
     static let equalizer = Runner(id: defaultID, name: "", frameCount: 8, aspect: 14.0 / 18.0)
+    /// Frames in the app bundle as `runner-<name>-<1x|2x>-<i>.png`.
+    /// One loop cut from a short image-to-video clip each, so every frame follows from the last.
+    static let girl = Runner(id: builtInPrefix + "girl", name: "", frameCount: 21, aspect: 333.0 / 424.0)
+    static let cat = Runner(id: builtInPrefix + "cat", name: "", frameCount: 23, aspect: 491.0 / 370.0)
+    static let builtIns = [equalizer, girl, cat]
 
     private init() {
         imported = Self.loadIndex()
@@ -46,14 +52,23 @@ final class RunnerLibrary {
 
     func runner(_ id: String) -> Runner { all.first { $0.id == id } ?? Self.equalizer }
 
-    func name(_ r: Runner) -> String { r.id == Self.defaultID ? L10n.Runner.equalizer : r.name }
+    func name(_ r: Runner) -> String {
+        switch r.id {
+        case Self.defaultID: return L10n.Runner.equalizer
+        case Self.girl.id: return L10n.Runner.girl
+        case Self.cat.id: return L10n.Runner.cat
+        default: return r.name
+        }
+    }
 
     /// The frames at a pixel scale (1 or 2) for a light or a dark menu bar.
     func frames(_ r: Runner, scale: Int, dark: Bool) -> [CGImage] {
         let set = r.hasDarkSet && dark ? "dark" : "light"
         let key = "\(r.id)|\(scale)|\(set)"
         if let cached = cache[key] { return cached }
-        let frames = r.id == Self.defaultID ? Self.equalizerFrames(scale: scale) : Self.load(r, scale: scale, set: set)
+        let frames = r.id == Self.defaultID ? Self.equalizerFrames(scale: scale)
+            : r.isBuiltIn ? Self.bundled(r, scale: scale)
+            : Self.load(r, scale: scale, set: set)
         cache[key] = frames
         return frames
     }
@@ -125,6 +140,15 @@ final class RunnerLibrary {
         return (0..<r.frameCount).compactMap { i in
             let url = dir.appendingPathComponent("\(set)@\(scale)x-\(i).png")
             guard let src = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+            return CGImageSourceCreateImageAtIndex(src, 0, nil)
+        }
+    }
+
+    private static func bundled(_ r: Runner, scale: Int) -> [CGImage] {
+        let name = r.id.dropFirst(builtInPrefix.count)
+        return (0..<r.frameCount).compactMap { i in
+            guard let url = Bundle.main.url(forResource: "runner-\(name)-\(scale)x-\(i)", withExtension: "png"),
+                  let src = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
             return CGImageSourceCreateImageAtIndex(src, 0, nil)
         }
     }
@@ -423,10 +447,12 @@ enum RunnerPrep {
 
 // MARK: - Pace
 
-/// How fast a module's character moves, in frames per second; 0 holds the first frame.
+/// How fast a module's character moves, in frames per second; 0 holds the first frame. The
+/// fastest is the pace the built-in runs were filmed at; below about 8 a run turns into a
+/// slide show.
 enum RunnerPace {
-    static let slowest = 4.0
-    static let fastest = 20.0
+    static let slowest = 8.0
+    static let fastest = 24.0
 
     static func fps(_ m: Module, _ s: Snapshot) -> Double {
         switch m {
@@ -436,7 +462,7 @@ enum RunnerPace {
             // Pressure, not usage: macOS keeps most memory busy as cache.
             switch s.memory.pressure {
             case .normal: return slowest
-            case .warning: return 10
+            case .warning: return 15
             case .critical: return fastest
             }
         case .network:

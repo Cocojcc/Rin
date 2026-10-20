@@ -966,3 +966,5 @@
 "runner.error.unreadable" = "这个文件读不出来";
 "settings.icon.runner" = "动画";
 "widget.name.runner" = "动画";
+"runner.girl" = "她";
+"runner.cat" = "猫";

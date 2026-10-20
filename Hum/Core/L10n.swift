@@ -784,6 +784,8 @@ enum L10n {
         static var noImages: String { tr("runner.error.noImages") }
         static func tooManyFrames(_ a: Int) -> String { tr("runner.error.tooManyFrames", a) }
         static var unreadable: String { tr("runner.error.unreadable") }
+        static var girl: String { tr("runner.girl") }
+        static var cat: String { tr("runner.cat") }
     }
 
     enum Widget {
