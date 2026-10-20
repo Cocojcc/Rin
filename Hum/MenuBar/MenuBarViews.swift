@@ -1215,7 +1215,10 @@ enum MenuBarText {
         }
     }
 
+    /// The app's name, then each module's reading; just the name while the item shows an icon,
+    /// since those modules aren't read for the bar then.
     static func combinedAccessibility(_ modules: [Module], _ s: Snapshot, _ prefs: Preferences) -> String {
-        ([L10n.App.name] + modules.map { accessibility($0, s, prefs) }).joined(separator: L10n.A11y.separator)
+        guard prefs.barShowsWidgets else { return L10n.App.name }
+        return ([L10n.App.name] + modules.map { accessibility($0, s, prefs) }).joined(separator: L10n.A11y.separator)
     }
 }
