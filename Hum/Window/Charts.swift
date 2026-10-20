@@ -37,6 +37,31 @@ struct MonitorChart: View {
     var bandColor: Color = Theme.bat
     @State private var hoverDate: Date?
 
+    /// Longest step between two points that still reads as one line: a little over the
+    /// slowest reading pace (15 s at rest) for the raw ranges, a few buckets for the others.
+    private var maxGap: TimeInterval {
+        switch range {
+        case .m5: return 30
+        case .m30: return 60
+        case .h1: return 120
+        case .h24: return 180
+        case .d7: return 900
+        }
+    }
+
+    /// The points split wherever the gap between neighbours is longer than `maxGap`.
+    private func runs(_ points: [ChartPoint]) -> [[ChartPoint]] {
+        var out: [[ChartPoint]] = []
+        for p in points {
+            if let last = out.last?.last, p.date.timeIntervalSince(last.date) <= maxGap {
+                out[out.count - 1].append(p)
+            } else {
+                out.append([p])
+            }
+        }
+        return out
+    }
+
     var body: some View {
         let end = Date()
         let start = end.addingTimeInterval(-range.seconds)
@@ -49,17 +74,21 @@ struct MonitorChart: View {
                     .foregroundStyle(bandColor.opacity(0.1))
             }
             ForEach(series) { s in
-                ForEach(s.points) { p in
-                    let v = min(max(p.value, floor), peak)
-                    if s.fill > 0 {
-                        AreaMark(x: .value("t", p.date), yStart: .value("v0", 0), yEnd: .value("v", v), series: .value("s", s.id))
-                            .foregroundStyle(s.color.opacity(s.fill))
+                // Each unbroken run is its own line, so time nothing was read stays empty.
+                ForEach(Array(runs(s.points).enumerated()), id: \.offset) { k, run in
+                    ForEach(run) { p in
+                        let v = min(max(p.value, floor), peak)
+                        let key = "\(s.id)#\(k)"
+                        if s.fill > 0 {
+                            AreaMark(x: .value("t", p.date), yStart: .value("v0", 0), yEnd: .value("v", v), series: .value("s", key))
+                                .foregroundStyle(s.color.opacity(s.fill))
+                                .interpolationMethod(.linear)
+                        }
+                        LineMark(x: .value("t", p.date), y: .value("v", v), series: .value("s", key))
+                            .foregroundStyle(s.color.opacity(s.opacity))
+                            .lineStyle(StrokeStyle(lineWidth: s.lineWidth, lineCap: s.dash.isEmpty ? .round : .butt, lineJoin: .round, dash: s.dash))
                             .interpolationMethod(.linear)
                     }
-                    LineMark(x: .value("t", p.date), y: .value("v", v), series: .value("s", s.id))
-                        .foregroundStyle(s.color.opacity(s.opacity))
-                        .lineStyle(StrokeStyle(lineWidth: s.lineWidth, lineCap: s.dash.isEmpty ? .round : .butt, lineJoin: .round, dash: s.dash))
-                        .interpolationMethod(.linear)
                 }
             }
             if centerLine {

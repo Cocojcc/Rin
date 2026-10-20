@@ -905,7 +905,7 @@ struct CPUPage: View {
 
     private func hoverLines(_ date: Date) -> [String] {
         let history = monitor.history
-        if range == .h24 || range == .d7, let b = history.bucket(near: date) {
+        if range == .h24 || range == .d7, let b = history.bucket(near: date), !b.max[Metric.cpu.rawValue].isNaN {
             let cpu = Double(b.max[Metric.cpu.rawValue])
             return [Format.dayAndTime(Date(timeIntervalSince1970: b.start)) + "\t" + Format.percent(cpu / 100)]
                 + b.top.prefix(3).map { "\($0.name)\t\(Format.percent($0.cpu / 100))" }

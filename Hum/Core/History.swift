@@ -75,7 +75,11 @@ final class History {
     private struct Accumulator {
         let span: TimeInterval
         var start: TimeInterval = 0
+        /// Samples in the bucket, and per metric how many were read: a module that wasn't read
+        /// for part of the bucket (switched off, or only watched while a view was open) leaves
+        /// those samples out instead of counting them as zero.
         var count = 0
+        var counts: [Int] = []
         var sum: [Double] = []
         var max: [Float] = []
         var topCPU: Float = -1
@@ -84,16 +88,18 @@ final class History {
         mutating func reset(at start: TimeInterval, metrics: Int) {
             self.start = start
             count = 0
+            counts = [Int](repeating: 0, count: metrics)
             sum = [Double](repeating: 0, count: metrics)
             max = [Float](repeating: -.greatestFiniteMagnitude, count: metrics)
             topCPU = -1
             top = []
         }
 
+        /// A metric with no reading in the bucket is NaN in both, a gap in the charts.
         func bucket() -> HistoryBucket {
             HistoryBucket(start: start,
-                          avg: sum.map { Float($0 / Double(Swift.max(count, 1))) },
-                          max: max.map { $0 == -.greatestFiniteMagnitude ? 0 : $0 },
+                          avg: sum.indices.map { counts[$0] > 0 ? Float(sum[$0] / Double(counts[$0])) : .nan },
+                          max: max.indices.map { counts[$0] > 0 ? max[$0] : .nan },
                           top: top)
         }
     }
@@ -186,6 +192,7 @@ final class History {
         }
         acc.count += 1
         for i in 0..<metricCount where !values[i].isNaN {
+            acc.counts[i] += 1
             acc.sum[i] += Double(values[i])
             acc.max[i] = Swift.max(acc.max[i], values[i])
         }
@@ -221,7 +228,7 @@ final class History {
         case .h24, .d7:
             let list = range == .h24 ? minutes + [minuteAcc.bucket()].filter { _ in minuteAcc.count > 0 }
                                      : fives + [fiveAcc.bucket()].filter { _ in fiveAcc.count > 0 }
-            return list.filter { $0.start >= from.timeIntervalSince1970 }.map {
+            return list.filter { $0.start >= from.timeIntervalSince1970 && !$0.avg[metric.rawValue].isNaN }.map {
                 ChartPoint(date: Date(timeIntervalSince1970: $0.start), value: Double($0.avg[metric.rawValue]))
             }
         }
@@ -229,13 +236,14 @@ final class History {
 
     /// The most recent `count` samples, oldest first.
     func last(_ metric: Metric, count: Int) -> [Double] {
-        raw[metric.rawValue].suffix(count).map { $0.isNaN ? 0 : Double($0) }
+        raw[metric.rawValue].suffix(count).filter { !$0.isNaN }.map(Double.init)
     }
 
     func latest(_ metric: Metric, seconds: TimeInterval, now: Date = Date()) -> [Double] {
         let from = now.addingTimeInterval(-seconds)
         guard let first = rawDates.firstIndex(where: { $0 >= from }) else { return [] }
-        return raw[metric.rawValue][first...].map { $0.isNaN ? 0 : Double($0) }
+        // Unread samples are left out, so a sparkline starts where the readings do.
+        return raw[metric.rawValue][first...].filter { !$0.isNaN }.map(Double.init)
     }
 
     /// Highest point inside a range (raw or bucketed), for "峰值" summaries.
@@ -248,10 +256,11 @@ final class History {
         let from = now.timeIntervalSince1970 - 86_400
         var candidates = minutes.filter { $0.start >= from }
         if minuteAcc.count > 0 { candidates.append(minuteAcc.bucket()) }
-        let sorted = candidates.sorted { $0.max[Metric.cpu.rawValue] > $1.max[Metric.cpu.rawValue] }
+        let cpu = Metric.cpu.rawValue
+        let sorted = candidates.filter { !$0.max[cpu].isNaN }.sorted { $0.max[cpu] > $1.max[cpu] }
         var picked: [PeakMarker] = []
         for b in sorted {
-            let v = Double(b.max[Metric.cpu.rawValue])
+            let v = Double(b.max[cpu])
             guard v >= minimum else { break }
             if picked.contains(where: { abs($0.date.timeIntervalSince1970 - b.start) < separation }) { continue }
             picked.append(PeakMarker(date: Date(timeIntervalSince1970: b.start), value: v, top: b.top))
@@ -289,8 +298,8 @@ final class History {
         let fit: (HistoryBucket) -> HistoryBucket? = { b in
             guard b.avg.count <= count, b.max.count == b.avg.count else { return nil }
             var b = b
-            b.avg += [Float](repeating: 0, count: count - b.avg.count)
-            b.max += [Float](repeating: 0, count: count - b.max.count)
+            b.avg += [Float](repeating: .nan, count: count - b.avg.count)
+            b.max += [Float](repeating: .nan, count: count - b.max.count)
             return b
         }
         minutes = stored.minutes.compactMap(fit).filter { $0.start >= now - 86_400 }
