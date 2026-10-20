@@ -92,7 +92,7 @@ final class RunnerPlayer {
         layer.actions = still
         frameLayer.actions = still
         frameLayer.contentsGravity = .resize
-        frameLayer.speed = 0
+        layer.speed = 0
         layer.mask = frameLayer
     }
 
@@ -148,10 +148,13 @@ final class RunnerPlayer {
         fps = target
         let speed = Float(target / Self.baseFPS)
         let now = CACurrentMediaTime()
-        // Carry on from the frame on screen at the new pace; a stop goes back to the first.
-        let local = speed == 0 ? 0 : frameLayer.convertTime(now, from: nil)
-        frameLayer.speed = speed
-        frameLayer.timeOffset = local
-        frameLayer.beginTime = now
+        // The pace is set on the host, which the frames inherit their time from: timing set on
+        // a mask layer itself doesn't reliably reach the render server, and a character that
+        // had stopped once never moved again. Carry on from the frame on screen at the new
+        // pace; a stop goes back to the first.
+        let local = speed == 0 ? 0 : layer.convertTime(now, from: nil)
+        layer.speed = speed
+        layer.timeOffset = local
+        layer.beginTime = now
     }
 }
