@@ -48,15 +48,20 @@ final class NetworkReader {
             sample.localIP = Self.ipv4(of: name) ?? ""
             sample.connected = !sample.localIP.isEmpty && primary != nil
             // A VPN's tunnel has a made-up address; the Mac's own is the adapter's under it.
+            // The tunnel also only carries what it captures, while everything, tunnelled or
+            // sent direct, leaves through the adapter: unless an interface was picked in
+            // settings, the rates are read there.
+            var counted = (name: name, rx: c.rx, tx: c.tx)
             if sample.kind == .vpn, let adapter = adapter() {
                 sample.localIP = adapter.ip
                 sample.router = adapter.router
                 sample.adapterKind = kind(of: adapter.name)
+                if preferred.isEmpty, let a = counters[adapter.name] { counted = (adapter.name, a.rx, a.tx) }
             }
-            if let p = previous, p.interface == name {
+            if let p = previous, p.interface == counted.name {
                 let dt = now.timeIntervalSince(p.date)
-                let dRx = c.rx >= p.rx ? c.rx - p.rx : 0
-                let dTx = c.tx >= p.tx ? c.tx - p.tx : 0
+                let dRx = counted.rx >= p.rx ? counted.rx - p.rx : 0
+                let dTx = counted.tx >= p.tx ? counted.tx - p.tx : 0
                 if dt > 0 {
                     sample.down = Double(dRx) / dt
                     sample.up = Double(dTx) / dt
@@ -65,7 +70,7 @@ final class NetworkReader {
                 sessionUp += dTx
                 accumulateToday(dRx, dTx, now: now)
             }
-            previous = (now, name, c.rx, c.tx)
+            previous = (now, counted.name, counted.rx, counted.tx)
         } else {
             previous = nil
         }
