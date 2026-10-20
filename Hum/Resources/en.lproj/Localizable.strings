@@ -954,3 +954,15 @@
 "settings.icon.pulse" = "Pulse";
 "settings.icon.chart" = "Chart";
 "settings.icon.chip" = "Chip";
+"runner.equalizer" = "Equalizer";
+"runner.character" = "Character";
+"runner.library" = "Animated characters";
+"runner.import" = "Import…";
+"runner.delete" = "Delete";
+"runner.importA11y" = "Import an animated character";
+"runner.importFailed" = "Couldn't import";
+"runner.error.noImages" = "No usable images found";
+"runner.error.tooManyFrames" = "Too many frames (%d); 60 at most";
+"runner.error.unreadable" = "This file can't be read";
+"settings.icon.runner" = "Animation";
+"widget.name.runner" = "Animation";

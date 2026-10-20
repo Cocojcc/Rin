@@ -725,6 +725,7 @@ enum L10n {
         static var iconPulse: String { tr("settings.icon.pulse") }
         static var iconChart: String { tr("settings.icon.chart") }
         static var iconChip: String { tr("settings.icon.chip") }
+        static var iconRunner: String { tr("settings.icon.runner") }
     }
 
     enum Notch {
@@ -770,6 +771,19 @@ enum L10n {
         static var window: String { tr("mainMenu.window") }
         static var minimize: String { tr("mainMenu.minimize") }
         static var close: String { tr("mainMenu.close") }
+    }
+
+    enum Runner {
+        static var equalizer: String { tr("runner.equalizer") }
+        static var character: String { tr("runner.character") }
+        static var library: String { tr("runner.library") }
+        static var importEllipsis: String { tr("runner.import") }
+        static var delete: String { tr("runner.delete") }
+        static var importA11y: String { tr("runner.importA11y") }
+        static var importFailed: String { tr("runner.importFailed") }
+        static var noImages: String { tr("runner.error.noImages") }
+        static func tooManyFrames(_ a: Int) -> String { tr("runner.error.tooManyFrames", a) }
+        static var unreadable: String { tr("runner.error.unreadable") }
     }
 
     enum Widget {

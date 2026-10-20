@@ -6,6 +6,8 @@ import Foundation
 enum WidgetKind: String, Codable, CaseIterable, Identifiable {
     // Icons and graphics
     case icon, label, line, bar, pie, tacho, ring, pill, dot, battery, chart, state
+    /// An animated character whose pace follows the module's reading.
+    case runner
     // Numbers
     case value, mini, memory, speed, details, time, fan, stack, pair, inside
     /// Bluetooth: chosen devices' batteries, and the lowest one.
@@ -21,10 +23,10 @@ extension Module {
     var widgetKinds: [WidgetKind] {
         switch self {
         // The icon and the number first, then the graphics, then the other readings.
-        case .cpu: return [.icon, .value, .line, .bar, .pie, .tacho, .pill, .label, .mini]
+        case .cpu: return [.icon, .value, .runner, .line, .bar, .pie, .tacho, .pill, .label, .mini]
         case .gpu: return [.icon, .value, .line, .bar, .ring, .tacho, .pair, .label, .mini]
-        case .memory: return [.icon, .value, .bar, .ring, .dot, .line, .memory, .label, .mini]
-        case .network: return [.icon, .speed, .chart, .state, .label]
+        case .memory: return [.icon, .value, .runner, .bar, .ring, .dot, .line, .memory, .label, .mini]
+        case .network: return [.icon, .speed, .runner, .chart, .state, .label]
         case .disk: return [.icon, .value, .bar, .pie, .chart, .speed, .label, .mini]
         case .battery: return [.icon, .value, .battery, .inside, .time, .details, .ring, .bar, .label, .mini]
         case .bluetooth: return [.devices, .stack, .lowest, .icon, .label]
@@ -109,6 +111,8 @@ struct WidgetOptions: Codable, Equatable {
     var deviceIDs: [String] = []
     /// Bluetooth "lowest": nothing while every device is above the low level.
     var hideWhenFine = false
+    /// The animation widget's character.
+    var runner = RunnerLibrary.defaultID
 
 
     init() {}
@@ -151,6 +155,7 @@ struct WidgetOptions: Codable, Equatable {
         if let v = try c.decodeIfPresent(type(of: numberFixed), forKey: .numberFixed) { numberFixed = v }
         if let v = try c.decodeIfPresent(type(of: deviceIDs), forKey: .deviceIDs) { deviceIDs = v }
         if let v = try c.decodeIfPresent(type(of: hideWhenFine), forKey: .hideWhenFine) { hideWhenFine = v }
+        if let v = try c.decodeIfPresent(type(of: runner), forKey: .runner) { runner = v }
     }
 
     static func defaults(_ module: Module, _ kind: WidgetKind) -> WidgetOptions {

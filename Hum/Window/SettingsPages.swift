@@ -108,7 +108,10 @@ struct SettingsPage: View {
                         }
                         if prefs.menubar.combinedIconOnly {
                             SettingsRow(title: L10n.Settings.combinedIcon) {
-                                CombinedIconPicker(selection: pref(\.menubar.combinedIcon))
+                                CombinedIconPicker(selection: pref(\.menubar.combinedIcon), runnerID: prefs.menubar.combinedRunner)
+                            }
+                            if prefs.menubar.combinedIcon == .runner {
+                                SettingsRow(title: L10n.Runner.character) { RunnerPicker(selection: pref(\.menubar.combinedRunner)) }
                             }
                         }
                     }
@@ -135,6 +138,7 @@ struct SettingsPage: View {
                     SettingsRow(title: L10n.Settings.colorOnHighLoad) {
                         HumSwitch(isOn: pref(\.menubar.colorOnHighLoad), label: L10n.Settings.colorOnHighLoad)
                     }
+                    RunnerLibraryRow()
                 }
             }
 
@@ -184,6 +188,8 @@ struct SettingsPage: View {
 /// The combined item's icon, picked on a glass track.
 struct CombinedIconPicker: View {
     @Binding var selection: CombinedIcon
+    /// The character the animated choice shows.
+    var runnerID = RunnerLibrary.defaultID
 
     var body: some View {
         HStack(spacing: 2) {
@@ -193,7 +199,7 @@ struct CombinedIconPicker: View {
                 Button {
                     selection = icon
                 } label: {
-                    CombinedIconView(icon: icon, size: 14)
+                    CombinedIconView(icon: icon, runnerID: runnerID, size: 14)
                         .foregroundStyle(on ? Theme.text : Theme.sub)
                         .frame(width: 32, height: 24)
                         .thumbAnchor(on)
@@ -992,6 +998,8 @@ struct WidgetOptionsGroup: View {
                 colorRow()
             case .pie, .tacho:
                 toggle(L10n.Widget.monochrome, \.monochrome)
+            case .runner:
+                SettingsRow(title: L10n.Runner.character) { RunnerPicker(selection: bind(\.runner)) }
             case .icon where module == .bluetooth:
                 toggle(L10n.Widget.iconRedWhenLow, \.colorWhenLow)
             case .devices:

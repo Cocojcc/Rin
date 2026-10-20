@@ -7,6 +7,16 @@ import SwiftUI
 enum Snapshots {
     static func runIfRequested() -> Bool {
         let args = CommandLine.arguments
+        // `Hum --import-runner <folder or file>` adds a character to the library and quits.
+        if let i = args.firstIndex(of: "--import-runner"), i + 1 < args.count {
+            do {
+                let r = try RunnerLibrary.shared.importRunner(from: URL(fileURLWithPath: args[i + 1]))
+                print("imported", r.id, r.name, "frames", r.frameCount, "aspect", r.aspect, "colored", r.colored, "dark set", r.hasDarkSet)
+            } catch {
+                print("import failed", error)
+            }
+            exit(0)
+        }
         guard let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count else { return false }
         let dir = URL(fileURLWithPath: args[i + 1], isDirectory: true)
         let only = i + 2 < args.count ? args[i + 2] : nil

@@ -954,3 +954,15 @@
 "settings.icon.pulse" = "脉搏";
 "settings.icon.chart" = "图表";
 "settings.icon.chip" = "芯片";
+"runner.equalizer" = "均衡器";
+"runner.character" = "角色";
+"runner.library" = "动画角色";
+"runner.import" = "导入…";
+"runner.delete" = "删除";
+"runner.importA11y" = "导入动画角色";
+"runner.importFailed" = "导入失败";
+"runner.error.noImages" = "没有找到可用的图片";
+"runner.error.tooManyFrames" = "帧数太多（%d 帧），最多 60 帧";
+"runner.error.unreadable" = "这个文件读不出来";
+"settings.icon.runner" = "动画";
+"widget.name.runner" = "动画";

@@ -21,8 +21,11 @@ final class StatusBarController: NSObject {
         Monitor.shared.onSample = { [weak self] _ in
             Alerts.shared.evaluate()
             // Nobody sees the menu bar while the screen is off or locked; the items catch up on
-            // the full read when it comes back.
-            guard !Monitor.shared.isResting else { return }
+            // the full read when it comes back, and the characters stand still meanwhile.
+            guard !Monitor.shared.isResting else {
+                self?.pauseRunners()
+                return
+            }
             self?.rebuildIfNeeded()
             self?.refresh()
             if let self { NotchWatcher.shared.check(self.items) }
@@ -146,8 +149,31 @@ final class StatusBarController: NSObject {
             // Hum's items have no spacing of their own; half the spacing on each side stands in.
             let frame = NSRect(x: pad, y: ((button.bounds.height - size.height) / 2).rounded(), width: size.width, height: size.height)
             if content.frame != frame { content.frame = frame }
+            let still = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            content.updateRunners(runners(for: entry.module, prefs, s).compactMap { r in
+                renderer.slots.rects[r.key].map { (r.key, RunnerLibrary.shared.runner(r.runner), $0, still ? 0 : RunnerPace.fps(r.driver, s)) }
+            }, dark: dark, scale: button.window?.backingScaleFactor ?? 2)
             if abs(entry.item.length - (size.width + pad * 2)) > 0.5 { entry.item.length = size.width + pad * 2 }
             if button.accessibilityLabel() != label { button.setAccessibilityLabel(label) }
+        }
+    }
+
+    /// The characters an item plays: its module's animation widget, or the combined item's
+    /// icon (paced by the CPU) or its modules' widgets.
+    private func runners(for module: Module?, _ prefs: Preferences, _ s: Snapshot) -> [(key: String, runner: String, driver: Module)] {
+        if let m = module {
+            return prefs.widgets(m).contains(.runner) ? [(m.rawValue, prefs.options(m, .runner).runner, m)] : []
+        }
+        let modules = prefs.menubar.order.filter { prefs.showsInMenubar($0) && MenuBarText.available($0, s) }
+        if prefs.menubar.combinedIconOnly || modules.isEmpty {
+            return prefs.menubar.combinedIcon == .runner ? [("icon", prefs.menubar.combinedRunner, .cpu)] : []
+        }
+        return modules.filter { prefs.widgets($0).contains(.runner) }.map { ($0.rawValue, prefs.options($0, .runner).runner, $0) }
+    }
+
+    private func pauseRunners() {
+        for entry in items {
+            entry.item.button?.subviews.compactMap { $0 as? StatusContentView }.forEach { $0.pauseRunners() }
         }
     }
 
@@ -201,6 +227,8 @@ final class StatusBarController: NSObject {
 /// than building a new one every tick.
 final class StatusImage {
     private let renderer: ImageRenderer<AnyView>
+    /// Where the item's characters sit, noted as it is laid out.
+    let slots: RunnerSlots
     private let template: Bool
     private let appearance: NSAppearance
     private let scale: CGFloat
@@ -211,10 +239,14 @@ final class StatusImage {
         // the system's (light text on a dark bar comes out heavier).
         appearance = NSAppearance(named: dark ? .darkAqua : .aqua)!
         scale = NSScreen.screens.map(\.backingScaleFactor).max() ?? 2
+        let sink = RunnerSlots()
+        slots = sink
         let view: AnyView = module.map { AnyView(MenuBarItemView(module: $0)) } ?? AnyView(CombinedMenuBarView())
         renderer = MainActor.assumeIsolated {
             let r = ImageRenderer(content: AnyView(view
                 .frame(height: height)
+                .coordinateSpace(name: RunnerSlots.space)
+                .environment(\.runnerSlots, sink)
                 .environment(\.colorScheme, dark ? .dark : .light)))
             r.scale = NSScreen.screens.map(\.backingScaleFactor).max() ?? 2
             return r
@@ -254,6 +286,7 @@ final class StatusImage {
 final class StatusContentView: NSView {
     private var picture: CGImage?
     private var shape: CGImage?
+    private var players: [String: RunnerPlayer] = [:]
 
     func show(_ image: CGImage, asShape: Bool) {
         if asShape {
@@ -267,6 +300,49 @@ final class StatusContentView: NSView {
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    /// Plays each character at its spot (top-left points in the item's picture) at its pace;
+    /// players for characters no longer there are removed.
+    func updateRunners(_ runners: [(key: String, runner: Runner, rect: CGRect, fps: Double)], dark: Bool, scale: CGFloat) {
+        if runners.isEmpty && players.isEmpty { return }
+        wantsLayer = true
+        guard let host = layer else { return }
+        let color = barColor
+        let pixelScale = scale >= 1.5 ? 2 : 1
+        for r in runners {
+            let player = players[r.key] ?? {
+                let p = RunnerPlayer()
+                host.addSublayer(p.layer)
+                players[r.key] = p
+                return p
+            }()
+            let rect = CGRect(x: r.rect.minX, y: bounds.height - r.rect.maxY, width: r.rect.width, height: r.rect.height)
+            player.show(r.runner, frames: RunnerLibrary.shared.frames(r.runner, scale: pixelScale, dark: dark), rect: rect, color: color, scale: scale)
+            player.setFPS(r.fps)
+        }
+        let keep = Set(runners.map(\.key))
+        for (key, player) in players where !keep.contains(key) {
+            player.layer.removeFromSuperlayer()
+            players[key] = nil
+        }
+    }
+
+    func pauseRunners() {
+        for player in players.values { player.setFPS(0) }
+    }
+
+    /// The menu bar's text color for this item's appearance, as the shapes are filled.
+    private var barColor: CGColor {
+        var color = NSColor.textColor.cgColor
+        effectiveAppearance.performAsCurrentDrawingAppearance { color = NSColor.textColor.cgColor }
+        return color
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        let color = barColor
+        for player in players.values { player.setColor(color) }
+    }
 
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }

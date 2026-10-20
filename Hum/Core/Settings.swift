@@ -140,11 +140,13 @@ struct MenubarPrefs: Codable, Equatable {
     /// Combined mode: one icon in the bar instead of the modules' widgets.
     var combinedIconOnly = false
     var combinedIcon: CombinedIcon = .mark
+    /// The character the combined item plays when its icon is `.runner`, paced by the CPU.
+    var combinedRunner = RunnerLibrary.defaultID
 }
 
 /// What the combined item shows when it shows an icon.
 enum CombinedIcon: String, Codable, CaseIterable, Identifiable {
-    case mark, avatar, gauge, pulse, chart, chip
+    case mark, avatar, gauge, pulse, chart, chip, runner
 
     var id: String { rawValue }
 }

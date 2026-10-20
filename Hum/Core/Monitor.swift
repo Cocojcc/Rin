@@ -109,7 +109,9 @@ final class Monitor {
         }
         // A module is read only while something uses it: its menu bar item, an alert rule, or a
         // view showing it. The overview shows the whole machine.
-        var shown = prefs.barShowsWidgets ? Set(Module.allCases.filter(prefs.showsInMenubar)) : []
+        // An animated icon keeps the CPU read for its pace.
+        var shown: Set<Module> = prefs.barShowsWidgets ? Set(Module.allCases.filter(prefs.showsInMenubar))
+            : prefs.menubar.combinedIcon == .runner ? [.cpu] : []
         for consumer in consumers {
             switch consumer {
             case .popover(let m), .window(.monitor(let m)), .window(.moduleSettings(let m)): shown.insert(m)

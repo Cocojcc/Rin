@@ -675,6 +675,7 @@ struct WidgetView: View {
         case .battery: battery
         case .chart: chart
         case .state: state
+        case .runner: RunnerSlotView(runnerID: o.runner, key: module.rawValue)
         // Numbers
         case .value, .temp, .iconValue: number
         case .mini: mini
@@ -1033,7 +1034,7 @@ struct CombinedMenuBarView: View {
         let modules = prefs.menubar.order.filter { prefs.showsInMenubar($0) && MenuBarText.available($0, s) }
         HStack(spacing: CGFloat(MenuBarSpacing.hum(prefs))) {
             if prefs.menubar.combinedIconOnly || modules.isEmpty {
-                CombinedIconView(icon: prefs.menubar.combinedIcon)
+                CombinedIconView(icon: prefs.menubar.combinedIcon, runnerID: prefs.menubar.combinedRunner)
             } else {
                 ForEach(modules) { ModuleWidgetRow(module: $0, prefs: prefs, snapshot: s) }
             }
@@ -1049,6 +1050,7 @@ struct CombinedMenuBarView: View {
 /// The combined item's icon: a line glyph in the bar's ink, or her avatar on a small tile.
 struct CombinedIconView: View {
     var icon: CombinedIcon
+    var runnerID = RunnerLibrary.defaultID
     var size: CGFloat = 16
 
     var body: some View {
@@ -1069,6 +1071,8 @@ struct CombinedIconView: View {
             LineIcon(d: Icons.monitorWindow, size: size, lineWidth: 1.5)
         case .chip:
             LineIcon(d: Icons.cpuMenubar, size: size, lineWidth: 1.5)
+        case .runner:
+            RunnerSlotView(runnerID: runnerID, key: "icon", height: size + 2)
         }
     }
 
@@ -1080,6 +1084,7 @@ struct CombinedIconView: View {
         case .pulse: return L10n.Settings.iconPulse
         case .chart: return L10n.Settings.iconChart
         case .chip: return L10n.Settings.iconChip
+        case .runner: return L10n.Settings.iconRunner
         }
     }
 }
@@ -1185,7 +1190,8 @@ enum MenuBarText {
                 if o.colorWhenLow && b.level <= 0.2 && !b.isCharging && !b.onAC { return true }
             case .devices, .lowest, .stack, .icon where m == .bluetooth:
                 if o.colorWhenLow && !lowDevices(s, prefs).isEmpty { return true }
-            case .label, .icon, .chart, .value, .details, .fan, .stack: continue
+            // A character is played on its own layer, in its own colors or the bar's.
+            case .label, .icon, .chart, .value, .details, .fan, .stack, .runner: continue
             default: if o.color != .mono { return true }
             }
         }
