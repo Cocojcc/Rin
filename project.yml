@@ -1,4 +1,4 @@
-name: Hum
+name: Rin
 options:
   bundleIdPrefix: com.zoro
   deploymentTarget:
@@ -13,21 +13,21 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
 targets:
-  Hum:
+  Rin:
     type: application
     platform: macOS
     sources:
-      - path: Hum
+      - path: Rin
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.zoro.hum
-        PRODUCT_NAME: Hum
-        INFOPLIST_FILE: Hum/Support/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Hum/Support/Hum.entitlements
+        PRODUCT_BUNDLE_IDENTIFIER: com.zoro.rin
+        PRODUCT_NAME: Rin
+        INFOPLIST_FILE: Rin/Support/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Rin/Support/Rin.entitlements
         CODE_SIGN_IDENTITY: "-"
         CODE_SIGN_STYLE: Manual
         ENABLE_HARDENED_RUNTIME: YES
-        SWIFT_OBJC_BRIDGING_HEADER: Hum/Support/Hum-Bridging-Header.h
+        SWIFT_OBJC_BRIDGING_HEADER: Rin/Support/Rin-Bridging-Header.h
         OTHER_LDFLAGS: ["-lIOReport"]
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor

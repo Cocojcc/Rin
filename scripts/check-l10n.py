@@ -2,13 +2,13 @@
 """Every key used in L10n.swift must exist in each Localizable.strings, and vice versa."""
 import re, sys, pathlib
 root = pathlib.Path(__file__).resolve().parent.parent
-used = set(re.findall(r'tr\("([^"]+)"', (root / "Hum/Core/L10n.swift").read_text()))
+used = set(re.findall(r'tr\("([^"]+)"', (root / "Rin/Core/L10n.swift").read_text()))
 # Interpolated keys ("widget.name.\\(kind.rawValue)") cover every key with that prefix.
 prefixes = {k.split("\\(")[0] for k in used if "\\(" in k}
 used = {k for k in used if not k.endswith(".") and "\\(" not in k}
 ok = True
 for lang in ["zh-Hans", "en"]:
-    text = (root / f"Hum/Resources/{lang}.lproj/Localizable.strings").read_text()
+    text = (root / f"Rin/Resources/{lang}.lproj/Localizable.strings").read_text()
     have = set(re.findall(r'^"([^"]+)"\s*=', text, re.M))
     dynamic = {k for k in have if any(k.startswith(p) for p in prefixes)}
     for p in sorted(prefixes):

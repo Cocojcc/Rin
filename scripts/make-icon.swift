@@ -1,5 +1,5 @@
 // Renders the app icon (accent tile with three bars) into the asset catalog.
-// Usage: swift scripts/make-icon.swift Hum/Resources/Assets.xcassets/AppIcon.appiconset
+// Usage: swift scripts/make-icon.swift Rin/Resources/Assets.xcassets/AppIcon.appiconset
 import AppKit
 
 let out = URL(fileURLWithPath: CommandLine.arguments[1])
@@ -22,7 +22,7 @@ func render(_ px: Int) -> Data {
     NSColor(srgbRed: 0xF7 / 255, green: 0x82 / 255, blue: 0x1B / 255, alpha: 1).setFill()
     NSBezierPath(roundedRect: tile, xRadius: 185 * s, yRadius: 185 * s).fill()
     NSGraphicsContext.restoreGraphicsState()
-    // Three bars (the Hum mark), white, round caps. Mark path in a 24 grid: x 7/12/17, heights 3/9/6 ending at y 16.5.
+    // Three bars (the Rin mark), white, round caps. Mark path in a 24 grid: x 7/12/17, heights 3/9/6 ending at y 16.5.
     let unit = 824 * s / 24
     let origin = NSPoint(x: tile.minX, y: tile.minY)
     NSColor.white.setStroke()
