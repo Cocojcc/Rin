@@ -2,8 +2,8 @@
 // IOHIDEventSystemClient: Apple Silicon temperature sensors (same approach as Stats).
 // IOReport: per-block energy and GPU frequency residency (same approach as powermetrics / macmon).
 
-#ifndef Hum_Bridging_Header_h
-#define Hum_Bridging_Header_h
+#ifndef Rin_Bridging_Header_h
+#define Rin_Bridging_Header_h
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <IOKit/IOKitLib.h>

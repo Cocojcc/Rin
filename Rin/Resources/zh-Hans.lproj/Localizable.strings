@@ -634,7 +634,7 @@
 "monitor.eCoreTip" = "能效核 %1$d · %2$@（系统 %3$@）";
 "monitor.coreTip" = "核心 %1$d · %2$@（系统 %3$@）";
 "monitor.cyclesLimit" = " / %d";
-"settings.humSpacing" = "模块间距";
+"settings.moduleSpacing" = "模块间距";
 "settings.systemSpacing" = "菜单栏间距";
 "settings.spacingStandard" = "默认";
 "settings.spacingCompact" = "紧凑";

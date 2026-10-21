@@ -135,7 +135,7 @@ struct MenubarPrefs: Codable, Equatable {
     /// "不再提醒" on the notch card.
     var notchAlertDismissed = false
     /// Space between Rin's own items in points; nil keeps the system's spacing.
-    var humSpacing: Int? = nil
+    var moduleSpacing: Int? = nil
     var typeface: BarTypeface = .system
     /// Combined mode: one icon in the bar instead of the modules' widgets.
     var combinedIconOnly = false
@@ -292,10 +292,15 @@ final class SettingsStore {
     /// Decodes saved prefs on top of the defaults, so fields added in later versions get their
     /// default value instead of failing the whole decode.
     static func decode(_ data: Data) -> Preferences? {
-        guard let stored = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+        guard var stored = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let defaultsData = try? JSONEncoder().encode(Preferences()),
-              let defaults = try? JSONSerialization.jsonObject(with: defaultsData) as? [String: Any],
-              let merged = try? JSONSerialization.data(withJSONObject: merge(defaults, stored)) else { return nil }
+              let defaults = try? JSONSerialization.jsonObject(with: defaultsData) as? [String: Any] else { return nil }
+        // The spacing between modules was saved as "humSpacing" before the app was Rin.
+        if var bar = stored["menubar"] as? [String: Any], let old = bar.removeValue(forKey: "humSpacing") {
+            if bar["moduleSpacing"] == nil { bar["moduleSpacing"] = old }
+            stored["menubar"] = bar
+        }
+        guard let merged = try? JSONSerialization.data(withJSONObject: merge(defaults, stored)) else { return nil }
         return try? JSONDecoder().decode(Preferences.self, from: merged)
     }
 

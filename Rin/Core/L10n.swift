@@ -692,7 +692,7 @@ enum L10n {
         static var noWidgets: String { tr("settings.noWidgets") }
         static var modulesInMenubar: String { tr("settings.modulesInMenubar") }
         static func blockedChip(_ a: String) -> String { tr("settings.blockedChip", a) }
-        static var humSpacing: String { tr("settings.humSpacing") }
+        static var moduleSpacing: String { tr("settings.moduleSpacing") }
         static var systemSpacing: String { tr("settings.systemSpacing") }
         static var spacingStandard: String { tr("settings.spacingStandard") }
         static var spacingCompact: String { tr("settings.spacingCompact") }

@@ -34,8 +34,8 @@ enum Snapshots {
         return true
     }
 
-    /// Window width for page snapshots; `HUM_SNAPSHOT_WIDTH=720` checks the narrowest window.
-    private static let pageWidth = UIScale.of(CGFloat(Double(ProcessInfo.processInfo.environment["HUM_SNAPSHOT_WIDTH"] ?? "") ?? 800))
+    /// Window width for page snapshots; `RIN_SNAPSHOT_WIDTH=720` checks the narrowest window.
+    private static let pageWidth = UIScale.of(CGFloat(Double(ProcessInfo.processInfo.environment["RIN_SNAPSHOT_WIDTH"] ?? "") ?? 800))
 
     private static func render(to dir: URL, only: String?) {
         for dark in [false, true] {

@@ -115,10 +115,10 @@ struct SettingsPage: View {
                             }
                         }
                     }
-                    SettingsRow(title: L10n.Settings.humSpacing) {
-                        GlassStepper(label: L10n.Settings.humSpacing,
-                                     value: Binding(get: { MenuBarSpacing.hum(settings.prefs) }, set: { settings.prefs.menubar.humSpacing = $0 }),
-                                     range: MenuBarSpacing.humRange, step: MenuBarSpacing.humStep)
+                    SettingsRow(title: L10n.Settings.moduleSpacing) {
+                        GlassStepper(label: L10n.Settings.moduleSpacing,
+                                     value: Binding(get: { MenuBarSpacing.moduleGap(settings.prefs) }, set: { settings.prefs.menubar.moduleSpacing = $0 }),
+                                     range: MenuBarSpacing.moduleGapRange, step: MenuBarSpacing.moduleGapStep)
                     }
                     SettingsRow(title: L10n.Settings.systemSpacing) {
                         Segmented(label: L10n.Settings.systemSpacing,
@@ -430,7 +430,7 @@ struct MenubarPreview: View {
         let system = CGFloat(systemSpacing.spacing ?? MenuBarSpacing.systemDefault)
         HStack(spacing: system) {
             Spacer(minLength: 0)
-            HStack(spacing: CGFloat(MenuBarSpacing.hum(prefs))) {
+            HStack(spacing: CGFloat(MenuBarSpacing.moduleGap(prefs))) {
                 if prefs.menubar.displayMode == .combined {
                     CombinedMenuBarView()
                 } else {

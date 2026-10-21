@@ -1032,7 +1032,7 @@ struct CombinedMenuBarView: View {
         let prefs = preview ?? settings.prefs
         let s = monitor.snapshot
         let modules = prefs.menubar.order.filter { prefs.showsInMenubar($0) && MenuBarText.available($0, s) }
-        HStack(spacing: CGFloat(MenuBarSpacing.hum(prefs))) {
+        HStack(spacing: CGFloat(MenuBarSpacing.moduleGap(prefs))) {
             if prefs.menubar.combinedIconOnly || modules.isEmpty {
                 CombinedIconView(icon: prefs.menubar.combinedIcon, runnerID: prefs.menubar.combinedRunner)
             } else {

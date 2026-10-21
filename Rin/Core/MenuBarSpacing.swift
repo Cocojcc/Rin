@@ -8,8 +8,8 @@ import AppKit
 enum MenuBarSpacing {
     /// macOS's spacing when nothing is set.
     static let systemDefault = 16
-    static let humRange = 4...20
-    static let humStep = 2
+    static let moduleGapRange = 4...20
+    static let moduleGapStep = 2
 
     enum Preset: Int, CaseIterable {
         case standard, compact, tightest
@@ -56,10 +56,10 @@ enum MenuBarSpacing {
     }
 
     /// Spacing between Rin's items; without a choice, the system's.
-    static func hum(_ prefs: Preferences) -> Int { prefs.menubar.humSpacing ?? system }
+    static func moduleGap(_ prefs: Preferences) -> Int { prefs.menubar.moduleSpacing ?? system }
 
     /// Room on each side of a Rin item.
-    static func itemPadding(_ prefs: Preferences) -> CGFloat { CGFloat(hum(prefs)) / 2 }
+    static func itemPadding(_ prefs: Preferences) -> CGFloat { CGFloat(moduleGap(prefs)) / 2 }
 
     private static func write(_ key: String, _ value: Int?) {
         CFPreferencesSetValue(key as CFString, value.map { NSNumber(value: $0) }, kCFPreferencesAnyApplication,
