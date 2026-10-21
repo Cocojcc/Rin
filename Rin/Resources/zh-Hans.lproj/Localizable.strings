@@ -1,6 +1,7 @@
 /* Rin — 简体中文 */
 
 "app.name" = "Rin";
+"app.seal" = "凜";
 
 "module.cpu" = "CPU";
 "module.gpu" = "GPU";
@@ -50,8 +51,8 @@
 "overview.uptime.days" = "已运行%1$d天%2$d小时";
 "overview.uptime.hours" = "已运行%1$d小时%2$d分钟";
 "overview.uptime.minutes" = "已运行%d分钟";
-"overview.allGood" = "一切正常";
-"overview.issues" = "%d项需要注意";
+"overview.allGood" = "一切如常。";
+"overview.issues" = "有 %d 处不太对。";
 "overview.cpu.detail" = "用户 %1$@ · 系统 %2$@";
 "overview.gpu.detail" = "显存 %1$@ · %2$@";
 "overview.gpu.detailNoTemp" = "显存 %@";
@@ -111,23 +112,16 @@
 "a11y.temperature" = "温度 %@ 度";
 
 "alerts.quitAction" = "退出";
-"alerts.cpu.title" = "CPU 使用率过高";
 "alerts.cpu.body" = "CPU %1$@ 已持续%2$@";
 "alerts.cpu.culprit" = "，主要是%1$@ %2$@";
-"alerts.gpu.title" = "GPU 使用率过高";
 "alerts.gpu.body" = "GPU %1$@ 已持续%2$@";
 "alerts.gpu.culprit" = "，主要是%1$@ %2$@";
-"alerts.memory.title" = "内存紧张";
-"alerts.memory.body" = "内存压力升高，Mac 可能会变慢。";
+"alerts.memory.body" = "Mac 可能会变慢。";
 "alerts.memory.culprit" = "，占用最多的是%1$@（%2$@）";
-"alerts.disk.title" = "磁盘空间不足";
-"alerts.disk.body" = "%1$@只剩%2$@可用。";
-"alerts.battery.title" = "电池电量低";
-"alerts.battery.body" = "电量只剩%@，请接上电源。";
-"alerts.temp.title" = "CPU 温度过高";
-"alerts.temp.body" = "CPU 温度已达%@。";
-"alerts.network.title" = "网络已断开";
-"alerts.network.body" = "当前没有网络连接。";
+"alerts.disk.body" = "该清理一下了。";
+"alerts.battery.body" = "该插电了。";
+"alerts.temp.body" = "让它歇一会儿吧。";
+"alerts.network.body" = "检查一下 Wi-Fi 或网线。";
 "alerts.seconds" = "%d秒";
 "alerts.minutes" = "%d分钟";
 
@@ -447,8 +441,9 @@
 "notch.openSettings" = "菜单栏设置";
 "notch.blocked" = "被挡住";
 "onboarding.title" = "欢迎使用 Rin";
-"onboarding.subtitle" = "选择要在菜单栏显示的模块";
 "onboarding.done" = "完成";
+"onboarding.greeting" = "初次见面，我是凛。";
+"onboarding.intro" = "以后这台 Mac 由我来看着。先挑几样放进菜单栏吧。";
 "panel.untilFullLabel" = "后充满";
 "panel.timeLeftLabel" = "剩余";
 "network.downUpCompact" = "↓%1$@ ↑%2$@";
@@ -786,9 +781,8 @@
 "widget.hideWhenFine" = "电量都充足时隐藏";
 "widget.iconRedWhenLow" = "有设备电量低时变红";
 "alerts.bluetooth.lowTitle" = "%@电量低";
-"alerts.bluetooth.lowBody" = "电量只剩%@。";
+"alerts.bluetooth.lowBody" = "该充电了。";
 "alerts.bluetooth.disconnectTitle" = "%@已断开连接";
-"alerts.bluetooth.disconnectBody" = "蓝牙设备已断开。";
 "widget.name.devices" = "设备电量";
 "widget.name.lowest" = "最低电量";
 "widget.name.bluetooth.stack" = "两行";
@@ -890,13 +884,12 @@
 "alerts.view" = "查看";
 "alerts.snooze" = "1 小时内不再提醒";
 "alerts.sentenceGap" = "";
-"alerts.overFor" = "%1$@，已超过 %2$@ %3$@。";
-"alerts.culpritSentence" = "%1$@ 占用最多（%2$@）。";
+"alerts.culpritSentence" = "主要是 %1$@（%2$@）。";
 "alerts.culpritDetail" = "%1$@ 占用最多 · %2$@";
 "alerts.cpuHeadline" = "CPU 使用率 %1$@，超过 %2$@ 已 %3$@";
 "alerts.gpuHeadline" = "GPU 使用率 %1$@，超过 %2$@ 已 %3$@";
-"alerts.cpuBanner" = "CPU 使用率 %1$@，已超过 %2$@ %3$@";
-"alerts.gpuBanner" = "GPU 使用率 %1$@，已超过 %2$@ %3$@";
+"alerts.cpuBanner" = "CPU 已经 %1$@ %2$@了。";
+"alerts.gpuBanner" = "GPU 已经 %1$@ %2$@了。";
 "alerts.memoryHeadline" = "内存压力变为%@";
 "alerts.diskHeadline" = "%1$@ 剩余 %2$@，少于 %3$@";
 "alerts.batteryHeadline" = "电池电量 %1$@，低于 %2$@";
@@ -942,13 +935,21 @@
 "settings.modulesGroup" = "模块";
 "settings.modulesOn" = "已开启的模块";
 "alerts.moduleOff" = "模块已关闭";
+"alerts.memoryBanner" = "内存有点紧了。";
+"alerts.memoryBannerRed" = "内存已经很紧了。";
+"alerts.diskBanner" = "%1$@ 只剩 %2$@ 了。";
+"alerts.batteryBanner" = "电量只剩 %@ 了。";
+"alerts.tempBanner" = "CPU 已经 %@ 了，有点烫。";
+"alerts.networkBanner" = "网断了。";
+"alerts.bluetoothLowBanner" = "%1$@ 只剩 %2$@ 电了。";
+"alerts.bluetoothDisconnectBanner" = "%@ 断开了。";
+"alerts.overYourLimit" = "超过你设的 %@ 了。";
 "network.ipVia" = "%1$@（%2$@）";
 "monitor.publicIP" = "公网 IP %@";
 "overview.localShort" = "本机";
 "overview.publicShort" = "公网";
 "settings.combinedIconOnly" = "显示图标而非小组件";
 "settings.combinedIcon" = "图标";
-"settings.icon.mark" = "标志";
 "settings.icon.avatar" = "头像";
 "settings.icon.gauge" = "仪表";
 "settings.icon.pulse" = "脉搏";
@@ -968,3 +969,11 @@
 "widget.name.runner" = "动画";
 "runner.girl" = "凛";
 "runner.cat" = "猫";
+"mood.cpu" = "CPU 有点忙。";
+"mood.gpu" = "GPU 有点忙。";
+"mood.memory" = "内存有点紧了。";
+"mood.network" = "网断了。";
+"mood.disk" = "磁盘快满了。";
+"mood.battery" = "电量不多了。";
+"mood.bluetooth" = "蓝牙设备快没电了。";
+"mood.sensors" = "有点热了。";

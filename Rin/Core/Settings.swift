@@ -139,14 +139,14 @@ struct MenubarPrefs: Codable, Equatable {
     var typeface: BarTypeface = .system
     /// Combined mode: one icon in the bar instead of the modules' widgets.
     var combinedIconOnly = false
-    var combinedIcon: CombinedIcon = .mark
+    var combinedIcon: CombinedIcon = .avatar
     /// The character the combined item plays when its icon is `.runner`, paced by the CPU.
     var combinedRunner = RunnerLibrary.defaultID
 }
 
 /// What the combined item shows when it shows an icon.
 enum CombinedIcon: String, Codable, CaseIterable, Identifiable {
-    case mark, avatar, gauge, pulse, chart, chip, runner
+    case avatar, gauge, pulse, chart, chip, runner
 
     var id: String { rawValue }
 }
@@ -298,6 +298,13 @@ final class SettingsStore {
         // The spacing between modules was saved as "humSpacing" before the app was Rin.
         if var bar = stored["menubar"] as? [String: Any], let old = bar.removeValue(forKey: "humSpacing") {
             if bar["moduleSpacing"] == nil { bar["moduleSpacing"] = old }
+            stored["menubar"] = bar
+        }
+        // The three-bar logo, left over from Hum, gave way to her avatar. While it was the icon,
+        // the character for the animated one was never picked, so that goes to her as well.
+        if var bar = stored["menubar"] as? [String: Any], bar["combinedIcon"] as? String == "mark" {
+            bar["combinedIcon"] = CombinedIcon.avatar.rawValue
+            if bar["combinedRunner"] as? String == RunnerLibrary.equalizerID { bar["combinedRunner"] = RunnerLibrary.defaultID }
             stored["menubar"] = bar
         }
         guard let merged = try? JSONSerialization.data(withJSONObject: merge(defaults, stored)) else { return nil }

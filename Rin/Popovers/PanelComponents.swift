@@ -3,13 +3,11 @@ import SwiftUI
 
 // MARK: - Chrome
 
-/// Dropdown header: a module's open-in-window button, centered title and subtitle, its
-/// settings button. The combined panel's has the title alone.
+/// A module dropdown's header: its open-in-window button, centered title and subtitle, its
+/// settings button.
 struct PanelHeader: View {
     var title: String
     var subtitle: String?
-    /// A status line instead of a plain subtitle: a dot and the words in this color.
-    var status: Color?
     var buttons: (openLabel: String, open: () -> Void, settingsLabel: String, settings: () -> Void)?
 
     init(module: Module, subtitle: String? = nil) {
@@ -19,24 +17,15 @@ struct PanelHeader: View {
                    L10n.Panel.moduleSettings(module.title), { MainWindowController.shared.show(.moduleSettings(module)) })
     }
 
-    init(title: String, subtitle: String?, status: Color? = nil) {
-        self.title = title
-        self.subtitle = subtitle
-        self.status = status
-    }
-
     var body: some View {
         HStack(spacing: 0) {
             if let buttons { HeaderButton(d: Icons.monitorWindow, label: buttons.openLabel, action: buttons.open) }
             VStack(spacing: 0) {
                 Text(title).ui(15, 500).frame(height: 20).accessibilityAddTraits(.isHeader)
                 if let subtitle {
-                    HStack(spacing: 5) {
-                        if let status { Circle().fill(status).frame(width: 6, height: 6) }
-                        Text(subtitle).ui(12).lineLimit(1)
-                    }
-                    .foregroundStyle(status ?? Theme.sub)
-                    .frame(height: 14)
+                    Text(subtitle).ui(12).lineLimit(1)
+                        .foregroundStyle(Theme.sub)
+                        .frame(height: 14)
                 }
             }
             .frame(maxWidth: .infinity)

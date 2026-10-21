@@ -34,6 +34,7 @@ enum L10n {
 
     enum App {
         static var name: String { tr("app.name") }
+        static var seal: String { tr("app.seal") }
     }
 
     enum Module {
@@ -214,39 +215,39 @@ enum L10n {
 
     enum Alerts {
         static var quitAction: String { tr("alerts.quitAction") }
-        static var cpuTitle: String { tr("alerts.cpu.title") }
         static func cpuBody(_ v: String, _ duration: String) -> String { tr("alerts.cpu.body", v, duration) }
         static func cpuCulprit(_ name: String, _ v: String) -> String { tr("alerts.cpu.culprit", name, v) }
-        static var gpuTitle: String { tr("alerts.gpu.title") }
         static func gpuBody(_ v: String, _ duration: String) -> String { tr("alerts.gpu.body", v, duration) }
         static func gpuCulprit(_ name: String, _ v: String) -> String { tr("alerts.gpu.culprit", name, v) }
-        static var memoryTitle: String { tr("alerts.memory.title") }
         static var memoryBody: String { tr("alerts.memory.body") }
         static func memoryCulprit(_ name: String, _ v: String) -> String { tr("alerts.memory.culprit", name, v) }
-        static var diskTitle: String { tr("alerts.disk.title") }
-        static func diskBody(_ name: String, _ v: String) -> String { tr("alerts.disk.body", name, v) }
-        static var batteryTitle: String { tr("alerts.battery.title") }
-        static func batteryBody(_ v: String) -> String { tr("alerts.battery.body", v) }
-        static var tempTitle: String { tr("alerts.temp.title") }
-        static func tempBody(_ v: String) -> String { tr("alerts.temp.body", v) }
-        static var networkTitle: String { tr("alerts.network.title") }
+        static var diskBody: String { tr("alerts.disk.body") }
+        static var batteryBody: String { tr("alerts.battery.body") }
+        static var tempBody: String { tr("alerts.temp.body") }
         static var networkBody: String { tr("alerts.network.body") }
         static func seconds(_ n: Int) -> String { tr("alerts.seconds", n) }
         static func minutes(_ n: Int) -> String { tr("alerts.minutes", n) }
         static func bluetoothLowTitle(_ a: String) -> String { tr("alerts.bluetooth.lowTitle", a) }
-        static func bluetoothLowBody(_ a: String) -> String { tr("alerts.bluetooth.lowBody", a) }
+        static var bluetoothLowBody: String { tr("alerts.bluetooth.lowBody") }
         static func bluetoothDisconnectTitle(_ a: String) -> String { tr("alerts.bluetooth.disconnectTitle", a) }
-        static var bluetoothDisconnectBody: String { tr("alerts.bluetooth.disconnectBody") }
         static var view: String { tr("alerts.view") }
         static var snooze: String { tr("alerts.snooze") }
         static var sentenceGap: String { tr("alerts.sentenceGap") }
-        static func overFor(_ a: String, _ b: String, _ c: String) -> String { tr("alerts.overFor", a, b, c) }
         static func culpritSentence(_ a: String, _ b: String) -> String { tr("alerts.culpritSentence", a, b) }
         static func culpritDetail(_ a: String, _ b: String) -> String { tr("alerts.culpritDetail", a, b) }
         static func cpuHeadline(_ a: String, _ b: String, _ c: String) -> String { tr("alerts.cpuHeadline", a, b, c) }
         static func gpuHeadline(_ a: String, _ b: String, _ c: String) -> String { tr("alerts.gpuHeadline", a, b, c) }
-        static func cpuBanner(_ a: String, _ b: String, _ c: String) -> String { tr("alerts.cpuBanner", a, b, c) }
-        static func gpuBanner(_ a: String, _ b: String, _ c: String) -> String { tr("alerts.gpuBanner", a, b, c) }
+        static func cpuBanner(_ v: String, _ duration: String) -> String { tr("alerts.cpuBanner", v, duration) }
+        static func gpuBanner(_ v: String, _ duration: String) -> String { tr("alerts.gpuBanner", v, duration) }
+        static var memoryBanner: String { tr("alerts.memoryBanner") }
+        static var memoryBannerRed: String { tr("alerts.memoryBannerRed") }
+        static func diskBanner(_ name: String, _ v: String) -> String { tr("alerts.diskBanner", name, v) }
+        static func batteryBanner(_ v: String) -> String { tr("alerts.batteryBanner", v) }
+        static func tempBanner(_ v: String) -> String { tr("alerts.tempBanner", v) }
+        static var networkBanner: String { tr("alerts.networkBanner") }
+        static func bluetoothLowBanner(_ name: String, _ v: String) -> String { tr("alerts.bluetoothLowBanner", name, v) }
+        static func bluetoothDisconnectBanner(_ name: String) -> String { tr("alerts.bluetoothDisconnectBanner", name) }
+        static func overYourLimit(_ v: String) -> String { tr("alerts.overYourLimit", v) }
         static func memoryHeadline(_ a: String) -> String { tr("alerts.memoryHeadline", a) }
         static func diskHeadline(_ a: String, _ b: String, _ c: String) -> String { tr("alerts.diskHeadline", a, b, c) }
         static func batteryHeadline(_ a: String, _ b: String) -> String { tr("alerts.batteryHeadline", a, b) }
@@ -719,7 +720,6 @@ enum L10n {
         static var modulesOn: String { tr("settings.modulesOn") }
         static var combinedIconOnly: String { tr("settings.combinedIconOnly") }
         static var combinedIcon: String { tr("settings.combinedIcon") }
-        static var iconMark: String { tr("settings.icon.mark") }
         static var iconAvatar: String { tr("settings.icon.avatar") }
         static var iconGauge: String { tr("settings.icon.gauge") }
         static var iconPulse: String { tr("settings.icon.pulse") }
@@ -737,9 +737,22 @@ enum L10n {
         static var blocked: String { tr("notch.blocked") }
     }
 
+    /// What she says while something runs high.
+    enum Mood {
+        static var cpu: String { tr("mood.cpu") }
+        static var gpu: String { tr("mood.gpu") }
+        static var memory: String { tr("mood.memory") }
+        static var network: String { tr("mood.network") }
+        static var disk: String { tr("mood.disk") }
+        static var battery: String { tr("mood.battery") }
+        static var bluetooth: String { tr("mood.bluetooth") }
+        static var sensors: String { tr("mood.sensors") }
+    }
+
     enum Onboarding {
         static var title: String { tr("onboarding.title") }
-        static var subtitle: String { tr("onboarding.subtitle") }
+        static var greeting: String { tr("onboarding.greeting") }
+        static var intro: String { tr("onboarding.intro") }
         static var done: String { tr("onboarding.done") }
     }
 

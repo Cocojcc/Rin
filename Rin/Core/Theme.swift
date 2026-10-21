@@ -2,8 +2,10 @@ import AppKit
 import CoreText
 import SwiftUI
 
-/// Design tokens from the Rin canvas (light / dark pairs). Surfaces are neutral and
-/// translucent; color is reserved for data, so a value reads the same everywhere.
+/// Design tokens (light / dark pairs), in the night-sakura palette (夜樱): plum-ink text on faintly
+/// pink glass, sakura rose and plum for data with slate blue for traffic, jade for all is well,
+/// vermilion only for alerts and her seal. Color is reserved for data and state, so a value reads
+/// the same everywhere.
 struct RGBA {
     let r: CGFloat, g: CGFloat, b: CGFloat, a: CGFloat
 
@@ -42,14 +44,14 @@ extension Color {
 
 enum Theme {
     // Glass surfaces
-    static let glass = Color.dyn(RGBA(255, 255, 255, 0.62), RGBA(38, 38, 40, 0.6))
+    static let glass = Color.dyn(RGBA(252, 248, 249, 0.64), RGBA(42, 36, 40, 0.62))
     /// The main window's tint: more solid than the dropdowns' glass, so dense pages read the same
     /// over any wallpaper or window behind them.
-    static let windowGlass = Color.dyn(RGBA(255, 255, 255, 0.82), RGBA(38, 38, 40, 0.8))
+    static let windowGlass = Color.dyn(RGBA(252, 248, 249, 0.84), RGBA(42, 36, 40, 0.82))
     static let side = Color.dyn(RGBA(255, 255, 255, 0.28), RGBA(20, 20, 22, 0.25))
     static let glassRim = Color.dyn(RGBA(255, 255, 255, 0.8), RGBA(255, 255, 255, 0.14))
     static let glassEdge = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(0, 0, 0, 0.5))
-    static let menu = Color.dyn(RGBA(250, 250, 250, 0.82), RGBA(48, 48, 50, 0.85))
+    static let menu = Color.dyn(RGBA(250, 246, 247, 0.84), RGBA(52, 45, 50, 0.86))
 
     // Raised controls (selected segments, sidebar selection, inline values)
     static let raised = Color.dyn(RGBA(0xFFFFFF), RGBA(255, 255, 255, 0.2))
@@ -72,12 +74,12 @@ enum Theme {
     static let panel = Color.dyn(RGBA(0, 0, 0, 0.035), RGBA(255, 255, 255, 0.05))
     static let line = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(255, 255, 255, 0.1))
 
-    static let text = Color.dyn(RGBA(0x1D1D1D), RGBA(0xF2F2F2))
+    static let text = Color.dyn(RGBA(0x221C1F), RGBA(0xF6F1F3))
     /// Secondary text, a step darker than the design's #5C5C5C / #ABABAB: small grey labels on
     /// glass read too faintly at the window's scale.
-    static let sub = Color.dyn(RGBA(0x4D4D4D), RGBA(0xB8B8B8))
+    static let sub = Color.dyn(RGBA(0x54494E), RGBA(0xBDB1B6))
     /// The quietest text (empty states, hints), dark enough for about 4.5 : 1 on the panels.
-    static let faint = Color.dyn(RGBA(0x707070), RGBA(0x929292))
+    static let faint = Color.dyn(RGBA(0x76696F), RGBA(0x988B91))
     static let track = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.1))
     static let grid = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.08))
     static let cache = Color.dyn(RGBA(0, 0, 0, 0.18), RGBA(255, 255, 255, 0.22))
@@ -85,41 +87,44 @@ enum Theme {
     static let rim = Color.dyn(RGBA(29, 29, 31, 0.4), RGBA(245, 245, 247, 0.45))
     static let tile = Color.dyn(RGBA(29, 29, 31, 0.08), RGBA(245, 245, 247, 0.1))
     static let bar = Color.dyn(RGBA(255, 255, 255, 0.5), RGBA(30, 30, 32, 0.5))
-    static let barFg = Color.dyn(RGBA(0x1D1D1D), RGBA(0xF2F2F2))
+    static let barFg = Color.dyn(RGBA(0x221C1F), RGBA(0xF6F1F3))
     /// Menu bar ink: opaque black or white like the system's own menu bar text (`.primary` is
     /// 85% opaque, which rendered the items grey).
     static let barInk = Color.dyn(RGBA(0x000000), RGBA(0xFFFFFF))
 
-    static let ink = Color.dyn(RGBA(0x1D1D1D), RGBA(0xF2F2F2))
-    static let onInk = Color.dyn(RGBA(0xFFFFFF), RGBA(0x1D1D1D))
+    static let ink = Color.dyn(RGBA(0x221C1F), RGBA(0xF6F1F3))
+    static let onInk = Color.dyn(RGBA(0xFCF8F9), RGBA(0x221C1F))
     /// Filled controls (a switch that is on, the main button): ink, so the window stays grey.
     static let accent = ink
     static let onAccent = onInk
-    /// The design canvas's mint wallpaper, on the About page's laptop when the desktop picture can't be read.
-    static let wall = Color.dyn(RGBA(0xCDE5CE), RGBA(0x1F3527))
+    /// Her seal's vermilion (朱), a touch brighter on dark so it doesn't sink.
+    static let seal = Color.dyn(RGBA(0xC8402E), RGBA(0xD9533F))
+    static let onSeal = Color.dyn(RGBA(0xFFF9F2), RGBA(0xFFF9F2))
+    /// A soft wallpaper for the About page's laptop when the desktop picture can't be read.
+    static let wall = Color.dyn(RGBA(0xEBDDE2), RGBA(0x2B2228))
 
     // Status
-    static let ok = Color.dyn(RGBA(0x316A3C), RGBA(0x8FD09C))
-    static let okBg = Color.dyn(RGBA(79, 143, 92, 0.15), RGBA(127, 192, 140, 0.18))
-    static let warn = Color.dyn(RGBA(0x85541A), RGBA(0xF0C080))
-    static let warnBg = Color.dyn(RGBA(201, 138, 62, 0.18), RGBA(226, 168, 98, 0.2))
-    static let danger = Color.dyn(RGBA(0xB23F2C), RGBA(0xF09A88))
-    static let dangerBg = Color.dyn(RGBA(196, 80, 60, 0.12), RGBA(238, 138, 120, 0.16))
-    static let dangerFill = Color.dyn(RGBA(0xB23F2C), RGBA(0xE07A66))
-    static let onDanger = Color.dyn(RGBA(0xFFFFFF), RGBA(0x1D1D1D))
+    static let ok = Color.dyn(RGBA(0x3F7A6A), RGBA(0x8CCBB8))
+    static let okBg = Color.dyn(RGBA(63, 122, 106, 0.14), RGBA(140, 203, 184, 0.18))
+    static let warn = Color.dyn(RGBA(0x8A6420), RGBA(0xE6C27E))
+    static let warnBg = Color.dyn(RGBA(190, 150, 70, 0.18), RGBA(230, 194, 126, 0.18))
+    static let danger = Color.dyn(RGBA(0xC8402E), RGBA(0xF08A74))
+    static let dangerBg = Color.dyn(RGBA(200, 64, 46, 0.12), RGBA(240, 138, 116, 0.16))
+    static let dangerFill = Color.dyn(RGBA(0xC8402E), RGBA(0xE0624C))
+    static let onDanger = Color.dyn(RGBA(0xFFF9F2), RGBA(0x1B1D22))
 
-    // Data
-    static let cpu = Color.dyn(RGBA(0x4F8F5C), RGBA(0x7FC08C))
-    static let sys = Color.dyn(RGBA(0xC98A3E), RGBA(0xE2A862))
-    static let gpu = Color.dyn(RGBA(0xC05A7C), RGBA(0xE890AC))
-    static let mem = Color.dyn(RGBA(0x6A64A8), RGBA(0xA49EDB))
-    static let down = Color.dyn(RGBA(0x4F7FB0), RGBA(0x86AEDB))
-    static let up = Color.dyn(RGBA(0xC98A3E), RGBA(0xE2A862))
-    static let read = Color.dyn(RGBA(0x4F7FB0), RGBA(0x86AEDB))
-    static let write = Color.dyn(RGBA(0x9A6AA8), RGBA(0xC9A0D6))
-    static let disk = Color.dyn(RGBA(0x3D8C88), RGBA(0x73C2BC))
-    static let temp = Color.dyn(RGBA(0xC4683F), RGBA(0xE69470))
-    static let bat = Color.dyn(RGBA(0x4F8F5C), RGBA(0x7FC08C))
+    // Data: CPU's system share is the paler sakura beside its user rose.
+    static let cpu = Color.dyn(RGBA(0xC4607A), RGBA(0xEE9BB0))
+    static let sys = Color.dyn(RGBA(0xE6B3C0), RGBA(0x8E5A6A))
+    static let gpu = Color.dyn(RGBA(0x9A7BC0), RGBA(0xC6B0E8))
+    static let mem = Color.dyn(RGBA(0x7D4E8C), RGBA(0xC39AD6))
+    static let down = Color.dyn(RGBA(0x5E7C9C), RGBA(0x9DB8D6))
+    static let up = Color.dyn(RGBA(0xC4607A), RGBA(0xEE9BB0))
+    static let read = Color.dyn(RGBA(0x5E7C9C), RGBA(0x9DB8D6))
+    static let write = Color.dyn(RGBA(0x7D4E8C), RGBA(0xC39AD6))
+    static let disk = Color.dyn(RGBA(0x5E8E8A), RGBA(0x96C6C0))
+    static let temp = Color.dyn(RGBA(0xB88A5A), RGBA(0xE2BA8C))
+    static let bat = Color.dyn(RGBA(0x6E9A72), RGBA(0xA6D0A8))
 
     // Menu bar items keep Apple's vivid colors: they sit on the system menu bar, not on glass.
     static let barCPU = Color.dyn(RGBA(0x34C759), RGBA(0x34C759))
@@ -190,7 +195,6 @@ extension View {
     func raisedShadow(_ on: Bool = true) -> some View { modifier(RaisedShadow(on: on)) }
 }
 
-/// The user-selectable accent. Graphite (ink) is the default; "system" follows the macOS accent.
 /// Space Grotesk for the window and panels (bundled, OFL); the menu bar keeps the system font.
 enum Fonts {
     private static var registered = false

@@ -78,13 +78,17 @@ struct OnboardingView: View {
         let modules = Module.allCases.filter { monitor.tick == 0 || MenuBarText.available($0, monitor.snapshot) }
         VStack(alignment: .leading, spacing: 0) {
             Color.clear.frame(height: 12)   // traffic lights
-            AppMark(size: 40)
+            AppMark(size: 56)
                 .padding(.top, 18)
-            Text(L10n.Onboarding.title).ui(24, 500).kerning(-0.48)
-                .padding(.top, 14)
-                .accessibilityAddTraits(.isHeader)
-            Text(L10n.Onboarding.subtitle).ui(13).foregroundStyle(Theme.sub)
-                .padding(.top, 4)
+            HStack(spacing: 10) {
+                Text(L10n.Onboarding.greeting).ui(24, 500).kerning(-0.48)
+                    .accessibilityAddTraits(.isHeader)
+                Seal(size: 22)
+            }
+            .padding(.top, 16)
+            Text(L10n.Onboarding.intro).ui(13).foregroundStyle(Theme.sub)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 6)
             VStack(spacing: 0) {
                 DividedRows {
                     ForEach(modules) { m in

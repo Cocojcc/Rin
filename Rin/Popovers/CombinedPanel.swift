@@ -6,7 +6,6 @@ import SwiftUI
 struct CombinedPanel: View {
     var monitor = Monitor.shared
     var settings = SettingsStore.shared
-    var alerts = Alerts.shared
     @State private var sortByMemory = false
     @State private var hovered: String?
 
@@ -17,10 +16,10 @@ struct CombinedPanel: View {
         let s = monitor.snapshot
         let prefs = settings.prefs
         let _ = monitor.tick
-        let status = self.status
+        let status = Status.now(s, prefs)
         VStack(alignment: .leading, spacing: 16) {
-            // The footer opens the overview and settings.
-            PanelHeader(title: L10n.Overview.title, subtitle: status.0, status: status.1)
+            // Her face and what she says about how things stand; the footer opens the overview.
+            header(status)
 
             let gauges = self.gauges(s, prefs)
             // Bluetooth only shows while a device with a battery is connected.
@@ -52,11 +51,23 @@ struct CombinedPanel: View {
         }
     }
 
-    /// As the overview's strip says it: the firing alert, else how many rules are over, else all good.
-    private var status: (String, Color) {
-        if let e = alerts.current { return (AlertText.banner(e), Theme.danger) }
-        let issues = alerts.active.count
-        return issues == 0 ? (L10n.Overview.allGood, Theme.ok) : (L10n.Overview.issues(issues), Theme.warn)
+    private func header(_ status: Status) -> some View {
+        HStack(spacing: 10) {
+            AppMark(size: 34, mood: status.mood)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(L10n.App.name).ui(15, 600).accessibilityAddTraits(.isHeader)
+                    Seal(size: 14)
+                }
+                .frame(height: 18)
+                Text(status.line).ui(12).foregroundStyle(status.color).lineLimit(1)
+                    .frame(height: 15)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 6)
+        .padding(.top, -2)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Gauges

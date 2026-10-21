@@ -126,7 +126,7 @@ struct AboutPage: View {
     }
 }
 
-/// A laptop: ink lid with the desktop picture (or a mint wall) on the screen, notch, faint base.
+/// A laptop: ink lid with the desktop picture (or a plain wall) on the screen, notch, faint base.
 private struct LaptopDrawing: View {
     var wallpaper: NSImage?
 

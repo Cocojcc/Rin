@@ -1034,7 +1034,8 @@ struct CombinedMenuBarView: View {
         let modules = prefs.menubar.order.filter { prefs.showsInMenubar($0) && MenuBarText.available($0, s) }
         HStack(spacing: CGFloat(MenuBarSpacing.moduleGap(prefs))) {
             if prefs.menubar.combinedIconOnly || modules.isEmpty {
-                CombinedIconView(icon: prefs.menubar.combinedIcon, runnerID: prefs.menubar.combinedRunner)
+                CombinedIconView(icon: prefs.menubar.combinedIcon, runnerID: prefs.menubar.combinedRunner,
+                                 mood: prefs.menubar.combinedIcon == .avatar ? Status.now(s, prefs).mood : .calm)
             } else {
                 ForEach(modules) { ModuleWidgetRow(module: $0, prefs: prefs, snapshot: s) }
             }
@@ -1047,22 +1048,21 @@ struct CombinedMenuBarView: View {
     }
 }
 
-/// The combined item's icon: a line glyph in the bar's ink, or her avatar on a small tile.
+/// The combined item's icon: her avatar on a small tile (in the mood things are in), a line
+/// glyph in the bar's ink, or a running character.
 struct CombinedIconView: View {
     var icon: CombinedIcon
     var runnerID = RunnerLibrary.defaultID
+    var mood: Mood = .calm
     var size: CGFloat = 16
 
     var body: some View {
         switch icon {
         case .avatar:
             let side = size + 2
-            Image("Avatar").resizable().interpolation(.high)
+            Image(mood.avatar).resizable().interpolation(.high)
                 .frame(width: side, height: side)
                 .clipShape(RoundedRectangle(cornerRadius: side * 0.28, style: .continuous))
-        case .mark:
-            // Its bars fill less of their box than the other glyphs do.
-            LineIcon(d: Icons.appMark, size: size * 1.25, viewBox: 24, lineWidth: 2.4)
         case .gauge:
             LineIcon(d: Icons.gauge, size: size, lineWidth: 1.5)
         case .pulse:
@@ -1078,7 +1078,6 @@ struct CombinedIconView: View {
 
     static func name(_ icon: CombinedIcon) -> String {
         switch icon {
-        case .mark: return L10n.Settings.iconMark
         case .avatar: return L10n.Settings.iconAvatar
         case .gauge: return L10n.Settings.iconGauge
         case .pulse: return L10n.Settings.iconPulse
@@ -1160,6 +1159,12 @@ enum MenuBarText {
         let alerts = Alerts.shared.active
         if prefs.alerts.enabled && prefs.alerts.colorMenubar, let level = alerts[m] { return level }
         guard prefs.menubar.colorOnHighLoad else { return .normal }
+        return load(m, s, prefs)
+    }
+
+    /// How hard a module is running, by fixed levels: busy CPU or GPU, memory pressure, heat, a
+    /// nearly full disk.
+    static func load(_ m: Module, _ s: Snapshot, _ prefs: Preferences) -> BarTone {
         switch m {
         case .cpu: return s.cpu.total >= 0.9 ? .warn : .normal
         case .gpu: return s.gpu.utilization >= 0.95 ? .warn : .normal

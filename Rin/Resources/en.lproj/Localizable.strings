@@ -1,6 +1,7 @@
 /* Rin — English */
 
 "app.name" = "Rin";
+"app.seal" = "凜";
 
 "module.cpu" = "CPU";
 "module.gpu" = "GPU";
@@ -50,8 +51,8 @@
 "overview.uptime.days" = "Up %1$d d %2$d h";
 "overview.uptime.hours" = "Up %1$d h %2$d min";
 "overview.uptime.minutes" = "Up %d min";
-"overview.allGood" = "All good";
-"overview.issues" = "%d need attention";
+"overview.allGood" = "All quiet.";
+"overview.issues" = "%d things look off.";
 "overview.cpu.detail" = "User %1$@ · System %2$@";
 "overview.gpu.detail" = "VRAM %1$@ · %2$@";
 "overview.gpu.detailNoTemp" = "VRAM %@";
@@ -111,23 +112,16 @@
 "a11y.temperature" = "Temperature %@ degrees";
 
 "alerts.quitAction" = "Quit";
-"alerts.cpu.title" = "High CPU usage";
 "alerts.cpu.body" = "CPU at %1$@ for %2$@";
 "alerts.cpu.culprit" = ", mostly %1$@ %2$@";
-"alerts.gpu.title" = "High GPU usage";
 "alerts.gpu.body" = "GPU at %1$@ for %2$@";
 "alerts.gpu.culprit" = ", mostly %1$@ %2$@";
-"alerts.memory.title" = "Memory is tight";
-"alerts.memory.body" = "Memory pressure is up; your Mac may slow down.";
+"alerts.memory.body" = "Your Mac may slow down.";
 "alerts.memory.culprit" = ". Largest: %1$@ (%2$@)";
-"alerts.disk.title" = "Low disk space";
-"alerts.disk.body" = "%1$@ has only %2$@ free.";
-"alerts.battery.title" = "Low battery";
-"alerts.battery.body" = "%@ left. Plug in your Mac.";
-"alerts.temp.title" = "CPU is hot";
-"alerts.temp.body" = "CPU temperature reached %@.";
-"alerts.network.title" = "Network disconnected";
-"alerts.network.body" = "There is no network connection.";
+"alerts.disk.body" = "Time to clear some space.";
+"alerts.battery.body" = "Time to plug in.";
+"alerts.temp.body" = "Give it a break.";
+"alerts.network.body" = "Check Wi-Fi or the cable.";
 "alerts.seconds" = "%d s";
 "alerts.minutes" = "%d min";
 
@@ -447,8 +441,9 @@
 "notch.openSettings" = "Menu Bar Settings";
 "notch.blocked" = "Hidden";
 "onboarding.title" = "Welcome to Rin";
-"onboarding.subtitle" = "Choose the modules to show in the menu bar";
 "onboarding.done" = "Done";
+"onboarding.greeting" = "Hi. I'm Rin.";
+"onboarding.intro" = "I'll keep an eye on this Mac from now on. First, pick what goes in the menu bar.";
 "panel.untilFullLabel" = "until full";
 "panel.timeLeftLabel" = "remaining";
 "network.downUpCompact" = "↓%1$@ ↑%2$@";
@@ -786,9 +781,8 @@
 "widget.hideWhenFine" = "Hide while all are charged";
 "widget.iconRedWhenLow" = "Red when a device is low";
 "alerts.bluetooth.lowTitle" = "%@ battery low";
-"alerts.bluetooth.lowBody" = "Only %@ left.";
+"alerts.bluetooth.lowBody" = "Time to charge it.";
 "alerts.bluetooth.disconnectTitle" = "%@ disconnected";
-"alerts.bluetooth.disconnectBody" = "The Bluetooth device disconnected.";
 "widget.name.devices" = "Device batteries";
 "widget.name.lowest" = "Lowest battery";
 "widget.name.bluetooth.stack" = "Two rows";
@@ -890,13 +884,12 @@
 "alerts.view" = "View";
 "alerts.snooze" = "Mute for 1 hour";
 "alerts.sentenceGap" = " ";
-"alerts.overFor" = "%1$@, above %2$@ for %3$@.";
-"alerts.culpritSentence" = "%1$@ is using the most (%2$@).";
+"alerts.culpritSentence" = "Mostly %1$@ (%2$@).";
 "alerts.culpritDetail" = "%1$@ uses the most · %2$@";
 "alerts.cpuHeadline" = "CPU at %1$@, above %2$@ for %3$@";
 "alerts.gpuHeadline" = "GPU at %1$@, above %2$@ for %3$@";
-"alerts.cpuBanner" = "CPU at %1$@, above %2$@ for %3$@";
-"alerts.gpuBanner" = "GPU at %1$@, above %2$@ for %3$@";
+"alerts.cpuBanner" = "The CPU's been at %1$@ for %2$@.";
+"alerts.gpuBanner" = "The GPU's been at %1$@ for %2$@.";
 "alerts.memoryHeadline" = "Memory pressure turned %@";
 "alerts.diskHeadline" = "%1$@ has %2$@ free, under %3$@";
 "alerts.batteryHeadline" = "Battery at %1$@, below %2$@";
@@ -942,13 +935,21 @@
 "settings.modulesGroup" = "Modules";
 "settings.modulesOn" = "Modules turned on";
 "alerts.moduleOff" = "Module is off";
+"alerts.memoryBanner" = "Memory's getting tight.";
+"alerts.memoryBannerRed" = "Memory's really tight now.";
+"alerts.diskBanner" = "%1$@ is down to %2$@.";
+"alerts.batteryBanner" = "Battery's down to %@.";
+"alerts.tempBanner" = "The CPU's at %@. That's hot.";
+"alerts.networkBanner" = "We're offline.";
+"alerts.bluetoothLowBanner" = "%1$@ is down to %2$@.";
+"alerts.bluetoothDisconnectBanner" = "%@ disconnected.";
+"alerts.overYourLimit" = "That's over your %@ limit.";
 "network.ipVia" = "%1$@ (%2$@)";
 "monitor.publicIP" = "Public IP %@";
 "overview.localShort" = "Local";
 "overview.publicShort" = "Public";
 "settings.combinedIconOnly" = "Show an icon instead of widgets";
 "settings.combinedIcon" = "Icon";
-"settings.icon.mark" = "Logo";
 "settings.icon.avatar" = "Avatar";
 "settings.icon.gauge" = "Gauge";
 "settings.icon.pulse" = "Pulse";
@@ -968,3 +969,11 @@
 "widget.name.runner" = "Animation";
 "runner.girl" = "Rin";
 "runner.cat" = "Cat";
+"mood.cpu" = "The CPU's busy.";
+"mood.gpu" = "The GPU's busy.";
+"mood.memory" = "Memory's getting tight.";
+"mood.network" = "We're offline.";
+"mood.disk" = "The disk's nearly full.";
+"mood.battery" = "Battery's running low.";
+"mood.bluetooth" = "A Bluetooth device is running low.";
+"mood.sensors" = "Running a little hot.";

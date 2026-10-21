@@ -72,41 +72,38 @@ enum AlertText {
         }
     }
 
-    /// The overview's banner: "CPU 使用率 94%，已超过 90% 1 分钟".
+    /// What she says while an episode is going: the overview's banner, the combined dropdown's
+    /// status line and the notification's title. "CPU 已经 94% 1 分钟了。"
     static func banner(_ e: AlertEvent) -> String {
         switch e.rule {
-        case .cpu: return L10n.Alerts.cpuBanner(percent(e.value), percent(e.limit), duration(e.held))
-        case .gpu: return L10n.Alerts.gpuBanner(percent(e.value), percent(e.limit), duration(e.held))
-        default: return headline(e)
+        case .cpu: return L10n.Alerts.cpuBanner(percent(e.value), duration(e.held))
+        case .gpu: return L10n.Alerts.gpuBanner(percent(e.value), duration(e.held))
+        case .memory:
+            return Int(e.value) >= MemoryPressure.critical.rawValue ? L10n.Alerts.memoryBannerRed : L10n.Alerts.memoryBanner
+        case .disk: return L10n.Alerts.diskBanner(e.subject ?? "", gigabytes(e.value))
+        case .battery: return L10n.Alerts.batteryBanner(percent(e.value))
+        case .temperature: return L10n.Alerts.tempBanner(Format.temperature(e.value, unit: unit, showUnit: true))
+        case .network: return L10n.Alerts.networkBanner
+        case .bluetoothLow: return L10n.Alerts.bluetoothLowBanner(e.subject ?? "", Format.percent(e.value))
+        case .bluetoothDisconnect: return L10n.Alerts.bluetoothDisconnectBanner(e.subject ?? "")
         }
     }
 
-    static func notificationTitle(_ e: AlertEvent) -> String {
-        switch e.rule {
-        case .cpu: return L10n.Alerts.cpuTitle
-        case .gpu: return L10n.Alerts.gpuTitle
-        case .memory: return L10n.Alerts.memoryTitle
-        case .disk: return L10n.Alerts.diskTitle
-        case .battery: return L10n.Alerts.batteryTitle
-        case .temperature: return L10n.Alerts.tempTitle
-        case .network: return L10n.Alerts.networkTitle
-        case .bluetoothLow: return L10n.Alerts.bluetoothLowTitle(e.subject ?? "")
-        case .bluetoothDisconnect: return L10n.Alerts.bluetoothDisconnectTitle(e.subject ?? "")
-        }
-    }
+    static func notificationTitle(_ e: AlertEvent) -> String { banner(e) }
 
-    /// "94%，已超过 90% 1 分钟。Xcode 占用最多（71%）。"
+    /// What the title leaves out: the limit or what to do, and who was busiest.
+    /// "超过你设的 90% 了。主要是 Xcode（71%）。"
     static func notificationBody(_ e: AlertEvent) -> String {
         var sentences: [String] = []
         switch e.rule {
-        case .cpu, .gpu: sentences.append(L10n.Alerts.overFor(percent(e.value), percent(e.limit), duration(e.held)))
+        case .cpu, .gpu: sentences.append(L10n.Alerts.overYourLimit(percent(e.limit)))
         case .memory: sentences.append(L10n.Alerts.memoryBody)
-        case .disk: sentences.append(L10n.Alerts.diskBody(e.subject ?? "", gigabytes(e.value)))
-        case .battery: sentences.append(L10n.Alerts.batteryBody(percent(e.value)))
-        case .temperature: sentences.append(L10n.Alerts.tempBody(Format.temperature(e.value, unit: unit, showUnit: true)))
+        case .disk: sentences.append(L10n.Alerts.diskBody)
+        case .battery: sentences.append(L10n.Alerts.batteryBody)
+        case .temperature: sentences.append(L10n.Alerts.tempBody)
         case .network: sentences.append(L10n.Alerts.networkBody)
-        case .bluetoothLow: sentences.append(L10n.Alerts.bluetoothLowBody(Format.percent(e.value)))
-        case .bluetoothDisconnect: sentences.append(L10n.Alerts.bluetoothDisconnectBody)
+        case .bluetoothLow: sentences.append(L10n.Alerts.bluetoothLowBody)
+        case .bluetoothDisconnect: break
         }
         if let name = e.culprit, let value = e.culpritValue { sentences.append(L10n.Alerts.culpritSentence(name, value)) }
         return sentences.joined(separator: L10n.Alerts.sentenceGap)

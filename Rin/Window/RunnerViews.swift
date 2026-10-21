@@ -73,7 +73,7 @@ struct RunnerLibraryRow: View {
         }
     }
 
-    /// Modules and the combined icon that played it go back to the equalizer.
+    /// Modules and the combined icon that played it go back to her.
     private func delete(_ r: Runner) {
         var prefs = settings.prefs
         for m in Module.allCases where prefs.options(m, .runner).runner == r.id {

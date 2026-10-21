@@ -29,7 +29,9 @@ struct Runner: Codable, Equatable, Identifiable {
 final class RunnerLibrary {
     static let shared = RunnerLibrary()
     static let builtInPrefix = "builtin."
-    static let defaultID = "builtin.equalizer"
+    static let equalizerID = "builtin.equalizer"
+    /// New widgets and the combined icon play her; also where a deleted character's places go.
+    static let defaultID = builtInPrefix + "girl"
     /// Points a frame is tall in the menu bar.
     static let height: CGFloat = 18
     static let maxFrames = 60
@@ -39,22 +41,22 @@ final class RunnerLibrary {
 
     @ObservationIgnored private var cache: [String: [CGImage]] = [:]
 
-    static let equalizer = Runner(id: defaultID, name: "", frameCount: 8, aspect: 14.0 / 18.0)
+    static let equalizer = Runner(id: equalizerID, name: "", frameCount: 8, aspect: 14.0 / 18.0)
     /// Frames in the app bundle as `runner-<name>-<1x|2x>-<i>.png`.
     /// One loop cut from a short image-to-video clip each, so every frame follows from the last.
-    static let girl = Runner(id: builtInPrefix + "girl", name: "", frameCount: 21, aspect: 333.0 / 424.0)
+    static let girl = Runner(id: defaultID, name: "", frameCount: 21, aspect: 333.0 / 424.0)
     static let cat = Runner(id: builtInPrefix + "cat", name: "", frameCount: 23, aspect: 491.0 / 370.0)
-    static let builtIns = [equalizer, girl, cat]
+    static let builtIns = [girl, cat, equalizer]
 
     private init() {
         imported = Self.loadIndex()
     }
 
-    func runner(_ id: String) -> Runner { all.first { $0.id == id } ?? Self.equalizer }
+    func runner(_ id: String) -> Runner { all.first { $0.id == id } ?? Self.girl }
 
     func name(_ r: Runner) -> String {
         switch r.id {
-        case Self.defaultID: return L10n.Runner.equalizer
+        case Self.equalizerID: return L10n.Runner.equalizer
         case Self.girl.id: return L10n.Runner.girl
         case Self.cat.id: return L10n.Runner.cat
         default: return r.name
@@ -66,7 +68,7 @@ final class RunnerLibrary {
         let set = r.hasDarkSet && dark ? "dark" : "light"
         let key = "\(r.id)|\(scale)|\(set)"
         if let cached = cache[key] { return cached }
-        let frames = r.id == Self.defaultID ? Self.equalizerFrames(scale: scale)
+        let frames = r.id == Self.equalizerID ? Self.equalizerFrames(scale: scale)
             : r.isBuiltIn ? Self.bundled(r, scale: scale)
             : Self.load(r, scale: scale, set: set)
         cache[key] = frames

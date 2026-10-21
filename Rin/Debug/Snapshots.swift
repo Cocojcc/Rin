@@ -41,8 +41,8 @@ enum Snapshots {
         for dark in [false, true] {
             let tag = dark ? "dark" : "light"
             let appearance = NSAppearance(named: dark ? .darkAqua : .aqua)!
-            // The canvas's mint wallpaper, so the glass reads as it does in the design.
-            let wall = dark ? Color(red: 0.122, green: 0.208, blue: 0.153) : Color(red: 0.804, green: 0.898, blue: 0.808)
+            // A soft wallpaper (Theme.wall's values), so the glass reads as it does on a desktop.
+            let wall = dark ? Color(red: 0.169, green: 0.133, blue: 0.157) : Color(red: 0.922, green: 0.867, blue: 0.886)
             func want(_ name: String) -> Bool { only == nil || name.hasPrefix(only!) }
             if want("menubar") { save(MenubarSheet(dark: dark), appearance, dir.appendingPathComponent("menubar-\(tag).png")) }
             for m in Module.allCases where want("panel") {

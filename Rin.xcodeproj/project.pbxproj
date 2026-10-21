@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		02A66FC11B5A7BA523CF29C1 /* Monitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04AC2CD0504185900824C619 /* Monitor.swift */; };
+		0B28B99B57EEAA65276D25DF /* Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39362989E1B562F1AE12714A /* Brand.swift */; };
 		0CD141EDCAFE2FD297B7899C /* runner-cat-2x-10.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BCE811B8495C9C7027E813D /* runner-cat-2x-10.png */; };
 		0EF70EF128B12AF05282E67F /* runner-girl-1x-3.png in Resources */ = {isa = PBXBuildFile; fileRef = 767FCD1C8474664519A8DDC9 /* runner-girl-1x-3.png */; };
 		11E894FD07034E3D9672592F /* runner-girl-2x-3.png in Resources */ = {isa = PBXBuildFile; fileRef = 5362551DC119E9CC3A237999 /* runner-girl-2x-3.png */; };
@@ -32,6 +33,7 @@
 		2BD959F3190BBAB6617A4174 /* StatusBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA29A42C062D81FA550E5C35 /* StatusBarController.swift */; };
 		2BF003BF04D73FB99208714A /* runner-girl-1x-0.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BB44CBB0072D79C19536590 /* runner-girl-1x-0.png */; };
 		38445EA5C6CCA6EB6750DFC1 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 582A09C1C325595C8DD0993E /* Settings.swift */; };
+		396D7E05F01D0AB6BCFD862E /* Mood.swift in Sources */ = {isa = PBXBuildFile; fileRef = 299C6AFA605F60D09DCFAAA1 /* Mood.swift */; };
 		39A8AB9AF94E064B5BD69840 /* NVMeSMART.c in Sources */ = {isa = PBXBuildFile; fileRef = EB7FC88ECEE7E884A34F5D10 /* NVMeSMART.c */; };
 		3C2F4BB90586474F4F470B18 /* MonitorPages.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEFF19C24EEC508AA0D9947C /* MonitorPages.swift */; };
 		3C379D1B79AAA2B648242F5A /* runner-girl-1x-12.png in Resources */ = {isa = PBXBuildFile; fileRef = E699B534797AEA52FA28AB9E /* runner-girl-1x-12.png */; };
@@ -193,11 +195,13 @@
 		225575C7144DA58DDF51A4F3 /* runner-girl-1x-19.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-1x-19.png"; sourceTree = "<group>"; };
 		2658CDA651427E19D7A49CC5 /* UpdateChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChecker.swift; sourceTree = "<group>"; };
 		28D0D50D2A04270E891B3F3A /* runner-cat-1x-16.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-1x-16.png"; sourceTree = "<group>"; };
+		299C6AFA605F60D09DCFAAA1 /* Mood.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mood.swift; sourceTree = "<group>"; };
 		2D44E164BAD1924EBE8B02F6 /* ProcessesPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessesPage.swift; sourceTree = "<group>"; };
 		30419E79DB90C83FAA79584A /* runner-cat-1x-13.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-1x-13.png"; sourceTree = "<group>"; };
 		30E19185F1DE404EBECC7903 /* SMC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMC.swift; sourceTree = "<group>"; };
 		326CAF088A6A09AEF50964AF /* AlertRuleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertRuleViews.swift; sourceTree = "<group>"; };
 		35CA60AAC81706851A5B0534 /* runner-cat-1x-3.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-1x-3.png"; sourceTree = "<group>"; };
+		39362989E1B562F1AE12714A /* Brand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Brand.swift; sourceTree = "<group>"; };
 		39705B8D08BFFDD3C62F3379 /* ProcessDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessDetails.swift; sourceTree = "<group>"; };
 		39F49ABD0586DA40DB1FA7DB /* MonitorComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonitorComponents.swift; sourceTree = "<group>"; };
 		3B1B4DF492FBC1EA18539558 /* RinApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RinApp.swift; sourceTree = "<group>"; };
@@ -371,6 +375,7 @@
 				326CAF088A6A09AEF50964AF /* AlertRuleViews.swift */,
 				3F76D881B0674CFF2DB3BD25 /* AlertsPage.swift */,
 				BD12D9C0588661B83F76FFB9 /* BluetoothViews.swift */,
+				39362989E1B562F1AE12714A /* Brand.swift */,
 				844141E9C2A7CCD22F2095F8 /* Charts.swift */,
 				683B616EF6FE582932090D2C /* Components.swift */,
 				D54AD06C5F3D1FFBC47E2EF0 /* MainView.swift */,
@@ -578,6 +583,7 @@
 				3E6E6FB70EBEF4F5F4B35FF9 /* MenuBarSpacing.swift */,
 				4B3CB028C149D46EDF287BD3 /* Models.swift */,
 				04AC2CD0504185900824C619 /* Monitor.swift */,
+				299C6AFA605F60D09DCFAAA1 /* Mood.swift */,
 				0EAF0F72966F37BFCF66719F /* ProcessActions.swift */,
 				143D058D8889BFAE06BD9A38 /* RenameMigration.swift */,
 				871AB22817B432A9710ADB65 /* Runners.swift */,
@@ -760,6 +766,7 @@
 				5336175D40C791A9CEA2EE9B /* BatteryReader.swift in Sources */,
 				E61025A2AF6929F86D027A97 /* BluetoothReader.swift in Sources */,
 				5079A79D7E17E37C09808C69 /* BluetoothViews.swift in Sources */,
+				0B28B99B57EEAA65276D25DF /* Brand.swift in Sources */,
 				733D19B49C123D4050615D67 /* CPUReader.swift in Sources */,
 				40E63C6575A1BF74157D0FCF /* Charts.swift in Sources */,
 				27C8CA0CA4EE2C388E080B61 /* CombinedPanel.swift in Sources */,
@@ -783,6 +790,7 @@
 				02A66FC11B5A7BA523CF29C1 /* Monitor.swift in Sources */,
 				89788BA39B517844D1D867B2 /* MonitorComponents.swift in Sources */,
 				3C2F4BB90586474F4F470B18 /* MonitorPages.swift in Sources */,
+				396D7E05F01D0AB6BCFD862E /* Mood.swift in Sources */,
 				39A8AB9AF94E064B5BD69840 /* NVMeSMART.c in Sources */,
 				211F8C1C204C0E03A5F79A44 /* NetworkReader.swift in Sources */,
 				5470B608999F5FD253387AED /* Notch.swift in Sources */,

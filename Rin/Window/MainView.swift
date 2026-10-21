@@ -117,8 +117,11 @@ struct Sidebar: View {
             // center it, and the pages below keep their place.
             Color.clear.frame(height: 42)
             HStack(spacing: 10) {
-                AppMark(size: 26)
-                Text(L10n.App.name).ui(20, 600).kerning(-0.2)
+                MoodMark(size: 26)
+                HStack(spacing: 7) {
+                    Text(L10n.App.name).ui(20, 600).kerning(-0.2)
+                    Seal(size: 17)
+                }
             }
             .padding(.horizontal, 10)
             .padding(.bottom, 26)
@@ -225,22 +228,6 @@ private struct FooterButton: View {
         .help(label)
         .accessibilityLabel(label)
         .accessibilityAddTraits(selected ? [.isSelected] : [])
-    }
-}
-
-/// The app mark: her face from the app icon on a rounded tile.
-struct AppMark: View {
-    var size: CGFloat
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
-        Image("Avatar")
-            .resizable()
-            .interpolation(.high)
-            .frame(width: size, height: size)
-            .clipShape(shape)
-            .overlay(shape.strokeBorder(Theme.line, lineWidth: 0.5))
-            .accessibilityHidden(true)
     }
 }
 

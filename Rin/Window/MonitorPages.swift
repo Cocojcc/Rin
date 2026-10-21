@@ -205,13 +205,13 @@ struct OverviewPage: View {
     }
 
     private var healthStrip: some View {
-        let issues = alerts.active.count
+        let status = Status.now()
         return HStack(spacing: 12) {
             HStack(spacing: 8) {
-                Circle().fill(issues == 0 ? Theme.ok : Theme.warn).frame(width: 8, height: 8)
-                Text(issues == 0 ? L10n.Overview.allGood : L10n.Overview.issues(issues)).ui(15, 500)
+                Circle().fill(status.color).frame(width: 8, height: 8)
+                Text(status.line).ui(15, 500)
             }
-            .foregroundStyle(issues == 0 ? Theme.ok : Theme.warn)
+            .foregroundStyle(status.color)
             Spacer(minLength: 0)
             Text(Format.uptime(since: SystemInfo.bootTime)).ui(12).foregroundStyle(Theme.sub)
         }
