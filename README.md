@@ -18,7 +18,15 @@ xcodebuild -project Rin.xcodeproj -scheme Rin -configuration Release -derivedDat
 open build/DerivedData/Build/Products/Release/Rin.app
 ```
 
-也可以直接用 Xcode 打开 `Rin.xcodeproj` 运行。最低系统版本 macOS 14，不用沙盒（要读 SMC、IOKit 和进程信息），本地构建用临时签名。
+也可以直接用 Xcode 打开 `Rin.xcodeproj` 运行。最低系统版本 macOS 14，只支持 Apple 芯片，不用沙盒（要读 SMC、IOKit 和进程信息），本地构建用临时签名。
+
+## 发布
+
+```bash
+scripts/release.sh
+```
+
+用 Developer ID 签名，app 和 DMG 都提交公证并钉上票据，结果在 `build/release/Rin-<版本>.dmg`。需要钥匙串里有「Developer ID Application」证书，以及用 `xcrun notarytool store-credentials rin-notary --apple-id … --team-id …` 保存的公证凭证。版本号在 `project.yml` 的 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`。不上 Mac App Store：上架要求沙盒，Rin 读硬件和进程的方式在沙盒里用不了。
 
 ## 目录
 
