@@ -80,12 +80,9 @@ struct OnboardingView: View {
             Color.clear.frame(height: 12)   // traffic lights
             AppMark(size: 56)
                 .padding(.top, 18)
-            HStack(spacing: 10) {
-                Text(L10n.Onboarding.greeting).ui(24, 500).kerning(-0.48)
-                    .accessibilityAddTraits(.isHeader)
-                Seal(size: 22)
-            }
-            .padding(.top, 16)
+            Text(L10n.Onboarding.greeting).ui(24, 500).kerning(-0.48)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.top, 16)
             Text(L10n.Onboarding.intro).ui(13).foregroundStyle(Theme.sub)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 6)

@@ -96,7 +96,7 @@ struct AlertRuleSentence: View {
 struct AlertRuleRow: View {
     var rule: Alerts.Rule
     var showsIcon = true
-    var minHeight: CGFloat = 44
+    var minHeight: CGFloat = 36
     /// Pointed out after arriving from a chart or a module's settings.
     var highlighted = false
     var settings = SettingsStore.shared

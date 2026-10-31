@@ -55,11 +55,8 @@ struct CombinedPanel: View {
         HStack(spacing: 10) {
             AppMark(size: 34, mood: status.mood)
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(L10n.App.name).ui(15, 600).accessibilityAddTraits(.isHeader)
-                    Seal(size: 14)
-                }
-                .frame(height: 18)
+                Text(L10n.App.name).ui(15, 600).accessibilityAddTraits(.isHeader)
+                    .frame(height: 18)
                 Text(status.line).ui(12).foregroundStyle(status.color).lineLimit(1)
                     .frame(height: 15)
             }

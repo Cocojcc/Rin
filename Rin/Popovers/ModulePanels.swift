@@ -7,7 +7,7 @@ struct ModulePanel: View {
     var quitCenter = QuitCenter.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             switch module {
             case .cpu: CPUPanel()
             case .gpu: GPUPanel()
@@ -104,17 +104,54 @@ enum PanelText {
     }
 }
 
-/// Bold value followed by a grey word, as one line ("2.8 GB 已用", "性能核 平均 42%").
-private func valueThenLabel(_ value: String, _ label: String, size: CGFloat = 15) -> Text {
-    Text(value).font(Fonts.ui(size, 500)).foregroundColor(Theme.text)
-        + Text(verbatim: " ")
-        + Text(label).font(Fonts.ui(12)).foregroundColor(Theme.sub)
+// MARK: - Shared pieces
+
+/// The last minute (or the network's chosen span) in a dropdown: no scale, "−60 秒 … 现在" under it.
+struct PanelChart: View {
+    var kind: ConsoleChart.Kind
+    var series: [ChartSeries]
+    var seconds: Double = 60
+    var maxValue: Double = 100
+    var bottomMax: Double = 1
+    var height: CGFloat = 64
+    var labels: [String]? = nil
+    var bands: [ClosedRange<Date>] = []
+
+    var body: some View {
+        ConsoleChart(kind: kind, series: series, span: seconds, maxValue: maxValue, bottomMax: bottomMax, height: height,
+                     xLabels: labels ?? [L10n.Chart.secondsAgo(Int(seconds)), L10n.Range.now], baseline: kind != .mirrored, bands: bands)
+    }
 }
 
-private func labelThenValue(_ label: String, _ value: String) -> Text {
-    Text(label).font(Fonts.ui(12)).foregroundColor(Theme.sub)
-        + Text(verbatim: " ")
-        + Text(value).font(Fonts.ui(12, 500)).foregroundColor(Theme.text)
+/// A big reading with a small grey label above it, or a key in front of the label.
+struct PanelStat<Value: View>: View {
+    var label: String
+    var key: Color? = nil
+    @ViewBuilder var value: Value
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                if let key { RoundedRectangle(cornerRadius: 2, style: .continuous).fill(key).frame(width: 8, height: 8) }
+                Text(label).ui(13).foregroundStyle(Theme.sub).lineLimit(1)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 4) { value }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Readings in a grid of equal columns (12 apart vertically, 14 across).
+struct PanelStatGrid<Content: View>: View {
+    var columns = 2
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14, alignment: .leading), count: columns), alignment: .leading, spacing: 12) {
+            content
+        }
+    }
 }
 
 // MARK: - CPU
@@ -128,58 +165,97 @@ struct CPUPanel: View {
         let p = settings.prefs.cpu
         let _ = monitor.tick
         PanelHeader(module: .cpu, subtitle: PanelText.cpuSubtitle())
-        HeroRow {
-            HeroItem(label: L10n.Panel.user) {
-                ValueRing(fraction: s.cpu.user, color: Theme.cpu, value: Format.percent(s.cpu.user), large: false)
+        HStack(alignment: .bottom) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L10n.Monitor.totalUsage).ui(12).foregroundStyle(Theme.sub)
+                BigValue(value: Format.percent(s.cpu.total), size: 40)
             }
-        } center: {
-            HeroItem(label: L10n.Monitor.totalUsage) {
-                ValueRing(segments: [Ring.Segment(fraction: s.cpu.user, color: Theme.cpu), Ring.Segment(fraction: s.cpu.system, color: Theme.sys)],
-                          value: Format.percent(s.cpu.total))
+            Spacer(minLength: 8)
+            VStack(alignment: .leading, spacing: 4) {
+                KeyValue(label: L10n.Panel.user, value: Format.percent(s.cpu.user), key: Theme.cpu)
+                KeyValue(label: L10n.Panel.system, value: Format.percent(s.cpu.system), key: Theme.sys)
             }
-        } trailing: {
-            HeroItem(label: L10n.Panel.system) {
-                ValueRing(fraction: s.cpu.system, color: Theme.sys, value: Format.percent(s.cpu.system), large: false)
-            }
+            .padding(.bottom, 4)
         }
-        Well {
-            WellChart(legend: [(Theme.sys, L10n.Panel.system), (Theme.cpu, L10n.Panel.user)], right: L10n.Range.last60s) {
-                MiniChart(series: [
-                    .init(values: monitor.history.latest(.cpu, seconds: 60).map { $0 / 100 }, color: Theme.cpu, fill: 0.16, lineWidth: 2),
-                    .init(values: monitor.history.latest(.cpuSystem, seconds: 60).map { $0 / 100 }, color: Theme.sys, fill: 0.24, lineWidth: 1.5),
-                ])
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(L10n.Panel.cpuChartA11y)
-            }
-        }
+        .accessibilityElement(children: .combine)
+        PanelChart(kind: .bars, series: [ChartSeries(id: "t", points: monitor.history.points(.cpu, range: .m5), color: Theme.cpu),
+                                         ChartSeries(id: "s", points: monitor.history.points(.cpuSystem, range: .m5), color: Theme.sys)])
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L10n.Panel.cpuChartA11y)
         if p.showCores, !s.cpu.perCore.isEmpty {
             let split = p.splitCoreKinds && SystemInfo.efficiencyCores > 0
-            PanelSection(title: L10n.Panel.cores, right: split ? PanelText.coreSplit() : L10n.Panel.coreCount(s.cpu.perCore.count)) {
-                Well(padding: EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12)) {
-                    CoreBars(cpu: s.cpu, split: split, height: 28)
-                    if split {
-                        let avg = CoreBars.averages(s.cpu)
-                        HStack {
-                            labelThenValue(L10n.Panel.perfAverage, Format.percent(avg.p))
-                            Spacer(minLength: 8)
-                            labelThenValue(L10n.Panel.effAverage, Format.percent(avg.e))
-                        }
-                        .padding(.top, 10)
+            ConsoleRule()
+            VStack(alignment: .leading, spacing: 0) {
+                PanelTitle(title: L10n.Panel.cores) { Text(split ? PanelText.coreSplit() ?? "" : L10n.Panel.coreCount(s.cpu.perCore.count)).ui(12) }
+                PanelCoreBars(cpu: s.cpu, split: split).frame(height: 26).padding(.top, 8).padding(.bottom, 6)
+                if split {
+                    let avg = PanelCoreBars.averages(s.cpu)
+                    HStack {
+                        KeyValue(label: L10n.Panel.perfAverage, value: Format.percent(avg.p))
+                        Spacer(minLength: 8)
+                        KeyValue(label: L10n.Panel.effAverage, value: Format.percent(avg.e))
                     }
                 }
             }
         }
         if p.showLoad {
-            PanelSection(title: L10n.Panel.loadAverage) {
-                CellStrip(cells: [(Format.load(s.cpu.load.0), L10n.Panel.load1),
-                                  (Format.load(s.cpu.load.1), L10n.Panel.load5),
-                                  (Format.load(s.cpu.load.2), L10n.Panel.load15)],
-                          fill: Theme.well, radius: 12, compact: true)
+            ConsoleRule()
+            HStack(spacing: 12) {
+                Text(L10n.Panel.loadAverage).ui(13).foregroundStyle(Theme.sub).fixedSize()
+                Spacer(minLength: 0)
+                KeyValue(label: L10n.Panel.load1, value: Format.load(s.cpu.load.0))
+                KeyValue(label: L10n.Panel.load5, value: Format.load(s.cpu.load.1))
+                KeyValue(label: L10n.Panel.load15, value: Format.load(s.cpu.load.2))
             }
+            .frame(height: 22)
         }
         if p.showProcesses {
+            ConsoleRule()
             PanelProcessList(title: L10n.Panel.topUsage, processes: Array(s.processes.byCPU.prefix(p.processCount)), metric: .cpu, color: Theme.cpu, link: .cpu)
         }
+    }
+}
+
+/// One bar per core filled from the bottom (system under user), efficiency cores set apart.
+struct PanelCoreBars: View {
+    var cpu: CPUSample
+    var split: Bool
+
+    static func averages(_ cpu: CPUSample) -> (p: Double, e: Double) {
+        var p: [Double] = [], e: [Double] = []
+        for (i, v) in cpu.perCore.enumerated() {
+            if i < cpu.coreKinds.count, cpu.coreKinds[i] == .efficiency { e.append(v) } else { p.append(v) }
+        }
+        let avg = { (a: [Double]) in a.isEmpty ? 0 : a.reduce(0, +) / Double(a.count) }
+        return (avg(p), avg(e))
+    }
+
+    var body: some View {
+        let isE = { (i: Int) in split && i < cpu.coreKinds.count && cpu.coreKinds[i] == .efficiency }
+        let perf = cpu.perCore.indices.filter { !isE($0) }
+        let eff = cpu.perCore.indices.filter { isE($0) }
+        HStack(spacing: 3) {
+            ForEach(perf, id: \.self) { bar($0) }
+            if !eff.isEmpty {
+                Color.clear.frame(width: 3)
+                ForEach(eff, id: \.self) { bar($0) }
+            }
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func bar(_ i: Int) -> some View {
+        let sys = min(1, max(0, i < cpu.perCoreSystem.count ? cpu.perCoreSystem[i] : 0))
+        let total = min(1, max(0, cpu.perCore[i]))
+        return GeometryReader { geo in
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+                Rectangle().fill(Theme.cpu).frame(height: geo.size.height * max(0, total - sys))
+                Rectangle().fill(Theme.sys).frame(height: geo.size.height * min(total, sys))
+            }
+        }
+        .background(Theme.track)
+        .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
     }
 }
 
@@ -196,91 +272,56 @@ struct GPUPanel: View {
         let _ = monitor.tick
         let vram = g.memoryLimit > 0 ? Double(g.memoryUsed) / Double(g.memoryLimit) : 0
         PanelHeader(module: .gpu, subtitle: L10n.Panel.chipCores(g.model, g.cores))
-        HeroRow {
-            HeroItem(label: L10n.Panel.vram) {
-                ValueRing(fraction: vram, color: Theme.gpu, value: Format.percent(vram), large: false)
+        HStack(alignment: .bottom) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L10n.Panel.utilization).ui(12).foregroundStyle(Theme.sub)
+                BigValue(value: Format.percent(g.utilization), size: 40)
             }
-        } center: {
-            HeroItem(label: L10n.Panel.utilization) {
-                ValueRing(fraction: g.utilization, color: Theme.gpu, value: Format.percent(g.utilization))
+            Spacer(minLength: 8)
+            VStack(alignment: .leading, spacing: 4) {
+                KeyValue(label: L10n.Panel.vram, value: Format.percent(vram))
+                KeyValue(label: L10n.Panel.temperature, value: g.temperature.map { Format.temperature($0, unit: unit) } ?? L10n.Common.dash)
             }
-        } trailing: {
-            HeroItem(label: L10n.Panel.temperature) {
-                ValueRing(fraction: (g.temperature ?? 0) / 100, color: Theme.temp,
-                          value: g.temperature.map { Format.temperature($0, unit: unit) } ?? L10n.Common.dash, large: false)
-            }
+            .padding(.bottom, 4)
         }
-        Well {
-            WellChart(legend: [(Theme.gpu, L10n.Panel.utilization)], right: L10n.Range.last60s) {
-                MiniChart(series: [.init(values: monitor.history.latest(.gpu, seconds: 60).map { $0 / 100 }, color: Theme.gpu)])
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(L10n.Panel.gpuChartA11y)
-            }
-        }
-        let stats = gpuStats(g, p, unit)
-        if p.showMemory {
-            PanelSection(title: L10n.Panel.vram, right: g.memoryLimit > 0 ? L10n.Panel.limit(Format.memory(g.memoryLimit)) : nil) {
-                Well {
-                    VStack(alignment: .leading, spacing: 0) {
-                        valueThenLabel(Format.memory(g.memoryUsed), L10n.Panel.used)
-                        MeterBar(fraction: vram, color: Theme.gpu).padding(.top, 10)
+        .accessibilityElement(children: .combine)
+        PanelChart(kind: .bars, series: [ChartSeries(id: "g", points: monitor.history.points(.gpu, range: .m5), color: Theme.gpu)])
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L10n.Panel.gpuChartA11y)
+        if p.showMemory || p.showFrequency || p.showVideo || p.showTempPower {
+            ConsoleRule()
+            PanelStatGrid {
+                if p.showMemory {
+                    PanelStat(label: g.memoryLimit > 0 ? L10n.Panel.vramLimit(Format.memory(g.memoryLimit)) : L10n.Panel.vram) {
+                        let used = Format.parts(Format.memory(g.memoryUsed))
+                        BigValue(value: used.0, unit: L10n.Panel.unitUsed(used.1), size: 20)
                     }
-                    .padding(12)
-                    if !stats.isEmpty {
-                        CellStrip(cells: stats, fill: .clear, radius: 0, compact: true)
-                            .overlay(alignment: .top) { Hairline() }
+                }
+                if p.showFrequency {
+                    PanelStat(label: L10n.Panel.frequency) {
+                        let f = Format.parts(g.frequencyMHz.map(Format.frequency) ?? L10n.Common.dash)
+                        BigValue(value: f.0, unit: f.1, size: 20)
+                    }
+                }
+                if p.showVideo {
+                    PanelStat(label: L10n.Monitor.videoDecode) { BigValue(value: MediaText.state(g.decodeWatts), size: 20) }
+                }
+                if p.showTempPower {
+                    PanelStat(label: L10n.Panel.power) {
+                        let w = Format.parts(g.power.map(Format.watts) ?? L10n.Common.dash)
+                        BigValue(value: w.0, unit: w.1, size: 20)
                     }
                 }
             }
-        } else if !stats.isEmpty {
-            CellStrip(cells: stats, fill: Theme.well, radius: 12, compact: true)
         }
         if p.showProcesses {
+            ConsoleRule()
             PanelProcessList(title: L10n.Panel.topUsage, processes: Array(monitor.snapshot.processes.byGPU.prefix(p.processCount)), metric: .gpu, color: Theme.gpu)
         }
-    }
-
-    private func gpuStats(_ g: GPUSample, _ p: GPUPrefs, _ unit: TemperatureUnit) -> [(String, String)] {
-        var out: [(String, String)] = []
-        if p.showFrequency, let f = g.frequencyMHz { out.append((Format.frequency(f), L10n.Panel.frequency)) }
-        if p.showVideo { out.append((MediaText.state(g.decodeWatts), L10n.Monitor.videoDecode)) }
-        if p.showTempPower, let w = g.power { out.append((Format.watts(w), L10n.Panel.power)) }
-        return out
     }
 }
 
 // MARK: - Memory
-
-/// Half-circle pressure dial: green / yellow / red bands, a needle at the current level.
-struct PressureGauge: View {
-    var level: Double
-    var pressure: MemoryPressure
-
-    var body: some View {
-        let pr = PanelText.pressure(pressure)
-        ZStack(alignment: .bottom) {
-            Canvas { ctx, _ in
-                let center = CGPoint(x: 44, y: 56)
-                func band(_ from: Double, _ to: Double, _ color: Color) {
-                    var p = Path()
-                    p.addArc(center: center, radius: 38, startAngle: .degrees(180 + 180 * from), endAngle: .degrees(180 + 180 * to), clockwise: false)
-                    ctx.stroke(p, with: .color(color), style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                }
-                band(0, 0.48, Theme.ok)
-                band(0.52, 0.78, Theme.sys)
-                band(0.82, 1, Theme.temp)
-                let angle = Angle.degrees(180 + 180 * min(1, max(0, level))).radians
-                var needle = Path()
-                needle.move(to: center)
-                needle.addLine(to: CGPoint(x: center.x + 26 * cos(angle), y: center.y + 26 * sin(angle)))
-                ctx.stroke(needle, with: .color(Theme.text), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                ctx.fill(Path(ellipseIn: CGRect(x: center.x - 3, y: center.y - 3, width: 6, height: 6)), with: .color(Theme.text))
-            }
-            Text(pr.0).ui(13, 500).foregroundStyle(pr.1).padding(.bottom, 4)
-        }
-        .frame(width: 88, height: 84)
-    }
-}
 
 struct MemoryPanel: View {
     var monitor = Monitor.shared
@@ -290,55 +331,45 @@ struct MemoryPanel: View {
         let m = monitor.snapshot.memory
         let p = settings.prefs.memory
         let _ = monitor.tick
-        let total = max(Double(m.total), 1)
         let pr = PanelText.pressure(m.pressure)
         PanelHeader(module: .memory, subtitle: L10n.Monitor.unifiedMemory)
-        HeroPair {
-            HeroItem(label: L10n.Panel.pressure) {
-                PressureGauge(level: m.pressureLevel, pressure: m.pressure)
+        HStack(alignment: .bottom) {
+            VStack(alignment: .leading, spacing: 4) {
+                BigValue(value: Format.percent(m.usedFraction), size: 40)
+                Text(L10n.Monitor.usedOfTotal(Format.memory(m.used), Format.memory(m.total))).ui(12).foregroundStyle(Theme.sub)
             }
-        } trailing: {
-            HeroItem(label: L10n.Panel.memoryUsedOf(Format.memory(m.used), Format.memory(m.total))) {
-                ValueRing(segments: [Ring.Segment(fraction: Double(m.app) / total, color: Theme.mem),
-                                     Ring.Segment(fraction: Double(m.wired) / total, color: Theme.mem, opacity: 0.6),
-                                     Ring.Segment(fraction: Double(m.compressed) / total, color: Theme.mem, opacity: 0.35)],
-                          value: Format.percent(m.usedFraction))
+            Spacer(minLength: 8)
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(L10n.Panel.pressure).ui(12).foregroundStyle(Theme.sub)
+                StatusText(text: pr.0, color: pr.1)
             }
         }
+        .accessibilityElement(children: .combine)
         if p.showComposition {
-            PanelSection(title: L10n.Panel.composition) {
-                Well(padding: EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12)) {
-                    MemoryComposition(m: m)
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible())], alignment: .leading, spacing: 6) {
-                        MemoryLegend(color: Theme.mem, label: L10n.Monitor.appMemory, bytes: m.app)
-                        MemoryLegend(color: Theme.mem.opacity(0.6), label: L10n.Memory.wired, bytes: m.wired)
-                        MemoryLegend(color: Theme.mem.opacity(0.35), label: L10n.Monitor.compressed, bytes: m.compressed)
-                        MemoryLegend(color: Theme.cache, label: L10n.Monitor.cache, bytes: m.cached)
-                        MemoryLegend(color: Theme.track, label: L10n.Memory.free, bytes: m.free, ring: true)
-                    }
-                    .padding(.top, 12)
-                }
+            VStack(alignment: .leading, spacing: 10) {
+                SegmentBar(parts: MemoryParts.of(m).map { ($0.bytes, $0.color) })
+                StackLegend(items: MemoryParts.of(m).map { .init(label: $0.label, value: Format.memory(UInt64($0.bytes)), color: $0.color) }, columns: 3)
             }
         }
         if p.showPressure {
-            PanelSection(title: L10n.Panel.pressure) {
-                Well {
-                    MiniChart(series: [.init(values: monitor.history.latest(.memoryPressure, seconds: 60).map { $0 / 100 }, color: pr.1)], gridLines: 2)
-                        .frame(height: 36)
-                        .padding(.top, 10)
-                        .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(L10n.Panel.pressureChartA11y)
-                    if p.showSwap {
-                        KVRow(key: L10n.Memory.swap, value: Format.memory(m.swapUsed))
-                            .overlay(alignment: .top) { Hairline() }
-                    }
+            ConsoleRule()
+            VStack(alignment: .leading, spacing: 8) {
+                PanelTitle(title: L10n.Panel.pressure) {
+                    if p.showSwap { KeyValue(label: L10n.Memory.swap, value: Format.memory(m.swapUsed)) }
                 }
+                PanelChart(kind: .area, series: [ChartSeries(id: "p", points: monitor.history.points(.memoryPressure, range: .m5), color: Theme.ok, fill: 0.18, lineWidth: 1.5)],
+                           height: 44)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(L10n.Panel.pressureChartA11y)
             }
         } else if p.showSwap {
-            Well { KVRow(key: L10n.Memory.swap, value: Format.memory(m.swapUsed)) }
+            ConsoleRule()
+            KVRow(key: L10n.Memory.swap, value: Format.memory(m.swapUsed))
         }
         if p.showProcesses {
-            PanelProcessList(title: L10n.Panel.topUsage, processes: Array(monitor.snapshot.processes.byMemory.prefix(p.processCount)), metric: .memory, color: Theme.mem, link: .memory)
+            ConsoleRule()
+            PanelProcessList(title: L10n.Panel.topUsage, processes: Array(monitor.snapshot.processes.byMemory.prefix(p.processCount)), metric: .memory, color: Theme.mem,
+                             valueWidth: 62, link: .memory)
         }
     }
 }
@@ -354,15 +385,16 @@ struct NetworkPanel: View {
         let p = settings.prefs.network
         let seconds = Double(p.graphSeconds)
         let _ = monitor.tick
-        let down = monitor.history.latest(.netDown, seconds: seconds)
-        let up = monitor.history.latest(.netUp, seconds: seconds)
-        let peak = max(down.max() ?? 0, up.max() ?? 0, 10_000) * 1.1
+        let down = monitor.history.points(.netDown, range: seconds > 300 ? .m30 : .m5)
+        let up = monitor.history.points(.netUp, range: seconds > 300 ? .m30 : .m5)
+        let from = Date().addingTimeInterval(-seconds)
+        let dMax = ConsoleChart.niceMax(max(down.filter { $0.date >= from }.map(\.value).max() ?? 0, 10_000) * 1.1)
+        let uMax = ConsoleChart.niceMax(max(up.filter { $0.date >= from }.map(\.value).max() ?? 0, 10_000) * 1.1)
         PanelHeader(module: .network, subtitle: PanelText.interface(n))
         if n.connected {
-            HeroPair {
-                HeroItem(label: L10n.Panel.download, dot: Theme.down, height: 44) { speed(MenuBarText.downArrow, n.down, p.speedUnit) }
-            } trailing: {
-                HeroItem(label: L10n.Panel.upload, dot: Theme.up, height: 44) { speed(MenuBarText.upArrow, n.up, p.speedUnit) }
+            HStack(alignment: .top, spacing: 14) {
+                PanelStat(label: MenuBarText.downArrow + " " + L10n.Panel.download, key: Theme.down) { speed(n.down, p.speedUnit) }
+                PanelStat(label: MenuBarText.upArrow + " " + L10n.Panel.upload, key: Theme.up) { speed(n.up, p.speedUnit) }
             }
         } else {
             VStack(spacing: 8) {
@@ -380,47 +412,40 @@ struct NetworkPanel: View {
                         .foregroundStyle(Theme.text)
                         .padding(.horizontal, 12)
                         .frame(height: 26)
-                        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.raised).raisedShadow())
+                        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.well))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
             .frame(maxWidth: .infinity)
             .frame(height: 100)
-            .padding(.top, 2)
         }
-        Well {
-            WellChart(legend: [(Theme.down, L10n.Panel.download), (Theme.up, L10n.Panel.upload)], right: L10n.Range.lastSeconds(p.graphSeconds)) {
-                MiniChart(series: [
-                    .init(values: down.map { $0 / peak }, color: Theme.down, fill: n.connected ? 0.13 : 0.1),
-                    .init(values: up.map { $0 / peak }, color: Theme.up, fill: 0, lineWidth: 1.25),
-                ], minCount: Int(seconds / max(settings.prefs.refresh(.network), 1)))
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(L10n.Panel.networkChartA11y)
+        PanelChart(kind: .mirrored, series: [ChartSeries(id: "d", points: down, color: Theme.down), ChartSeries(id: "u", points: up, color: Theme.up)],
+                   seconds: seconds, maxValue: dMax, bottomMax: uMax)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L10n.Panel.networkChartA11y)
+        ConsoleRule()
+        VStack(spacing: 0) {
+            if n.connected {
+                KVRow(key: L10n.Network.localIP, value: n.localIP.isEmpty ? L10n.Common.dash : PanelText.localIP(n))
+                if !n.router.isEmpty { KVRow(key: L10n.Network.router, value: n.router) }
+                if p.showPublicIP { KVRow(key: L10n.Network.publicIP, value: monitor.publicIP ?? L10n.Common.dash) }
+            } else if let last = n.lastConnected {
+                KVRow(key: L10n.Network.lastConnected, value: Format.time(last))
             }
-        }
-        Well {
-            DividedRows {
-                if n.connected {
-                    KVRow(key: L10n.Network.localIP, value: n.localIP.isEmpty ? L10n.Common.dash : PanelText.localIP(n))
-                    if !n.router.isEmpty { KVRow(key: L10n.Network.router, value: n.router) }
-                    if p.showPublicIP { KVRow(key: L10n.Network.publicIP, value: monitor.publicIP ?? L10n.Common.dash) }
-                } else if let last = n.lastConnected {
-                    KVRow(key: L10n.Network.lastConnected, value: Format.time(last))
-                }
-                KVRow(key: L10n.Network.today, value: L10n.Network.downUp(Format.storage(n.todayDown), Format.storage(n.todayUp)))
-            }
+            KVRow(key: L10n.Network.today, value: L10n.Network.downUp(Format.storage(n.todayDown), Format.storage(n.todayUp)))
         }
         if p.showProcesses && n.connected {
-            PanelSection(title: L10n.Panel.topTraffic) {
+            ConsoleRule()
+            PanelSection(title: L10n.Panel.topTraffic, link: .network) {
                 TrafficList(processes: Array(monitor.snapshot.processes.byNetwork.prefix(5)), unit: p.speedUnit)
             }
         }
     }
 
-    private func speed(_ arrow: String, _ v: Double, _ unit: SpeedUnit) -> some View {
+    private func speed(_ v: Double, _ unit: SpeedUnit) -> some View {
         let parts = Format.rateParts(v, unit: unit)
-        return BigReadout(value: [arrow, parts.0].joined(separator: " "), unit: parts.1)
+        return BigValue(value: parts.0, unit: parts.1)
     }
 }
 
@@ -436,85 +461,69 @@ struct DiskPanel: View {
         let volume = MenuBarText.volume(d, p.volume)
         let _ = monitor.tick
         PanelHeader(module: .disk, subtitle: volume?.name)
-        HeroRow {
-            HeroItem(label: L10n.Disk.read, dot: Theme.read) { rate(d.read) }
-        } center: {
-            HeroItem(label: L10n.Disk.used) {
-                ValueRing(fraction: volume?.usedFraction ?? 0, color: Theme.disk, value: volume.map { Format.percent($0.usedFraction) } ?? L10n.Common.dash)
-            }
-        } trailing: {
-            HeroItem(label: L10n.Disk.write, dot: Theme.write) { rate(d.write) }
+        HStack(alignment: .top, spacing: 12) {
+            PanelStat(label: L10n.Disk.read, key: Theme.read) { rate(d.read) }
+            PanelStat(label: L10n.Disk.write, key: Theme.write) { rate(d.write) }
+            PanelStat(label: L10n.Disk.used) { BigValue(value: volume.map { Format.percent($0.usedFraction) } ?? L10n.Common.dash) }
+        }
+        if p.showGraph {
+            let reads = monitor.history.points(.diskRead, range: .m5), writes = monitor.history.points(.diskWrite, range: .m5)
+            let from = Date().addingTimeInterval(-60)
+            PanelChart(kind: .mirrored, series: [ChartSeries(id: "r", points: reads, color: Theme.read), ChartSeries(id: "w", points: writes, color: Theme.write)],
+                       maxValue: ConsoleChart.niceMax(max(reads.filter { $0.date >= from }.map(\.value).max() ?? 0, 1_000_000) * 1.1),
+                       bottomMax: ConsoleChart.niceMax(max(writes.filter { $0.date >= from }.map(\.value).max() ?? 0, 1_000_000) * 1.1), height: 56)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(L10n.Panel.diskChartA11y)
         }
         let volumes = p.showAllDisks ? d.volumes : (volume.map { [$0] } ?? [])
         if !volumes.isEmpty {
-            Well {
-                DividedRows {
-                    ForEach(volumes) { VolumeBlock(volume: $0) }
-                }
+            ConsoleRule()
+            VStack(spacing: 12) {
+                ForEach(volumes) { VolumeBlock(volume: $0) }
             }
         }
-        if p.showGraph {
-            let read = monitor.history.latest(.diskRead, seconds: 60)
-            let write = monitor.history.latest(.diskWrite, seconds: 60)
-            let peak = max(read.max() ?? 0, write.max() ?? 0, 1_000_000) * 1.1
-            Well {
-                WellChart(legend: [(Theme.read, L10n.Disk.read), (Theme.write, L10n.Disk.write)], right: L10n.Range.last60s) {
-                    MiniChart(series: [
-                        .init(values: read.map { $0 / peak }, color: Theme.read),
-                        .init(values: write.map { $0 / peak }, color: Theme.write, fill: 0, lineWidth: 1.25),
-                    ])
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(L10n.Panel.diskChartA11y)
-                }
-            }
-        }
-        Well {
-            DividedRows {
-                KVRow(key: L10n.Disk.sinceBoot, value: L10n.Disk.readWriteTotals(Format.storage(d.totalRead), Format.storage(d.totalWritten)))
-                if p.showHealth, let h = d.health {
-                    KVRow(key: L10n.Panel.health, value: L10n.Panel.healthValue(Format.percent(h.lifeRemaining), h.ok ? L10n.Monitor.smartGood : L10n.Monitor.smartFailing),
-                          valueColor: h.ok ? Theme.ok : Theme.danger)
-                }
+        ConsoleRule()
+        VStack(spacing: 0) {
+            KVRow(key: L10n.Disk.sinceBoot, value: L10n.Disk.readWriteTotals(Format.storage(d.totalRead), Format.storage(d.totalWritten)))
+            if p.showHealth, let h = d.health {
+                KVRow(key: L10n.Panel.health, value: L10n.Panel.healthValue(Format.percent(h.lifeRemaining), h.ok ? L10n.Monitor.smartGood : L10n.Monitor.smartFailing),
+                      valueColor: h.ok ? Theme.ok : Theme.danger)
             }
         }
         if p.showProcesses {
+            ConsoleRule()
             PanelProcessList(title: L10n.Panel.topDisk, processes: Array(monitor.snapshot.processes.byDisk.prefix(5)), metric: .disk, color: Theme.disk,
-                             nameWidth: 84, valueWidth: 68)
+                             valueWidth: 68)
         }
     }
 
     private func rate(_ v: Double) -> some View {
         let parts = Format.rateParts(v)
-        return BigReadout(value: parts.0, unit: parts.1)
+        return BigValue(value: parts.0, unit: parts.1)
     }
 }
 
-/// A volume in the disk dropdown: name, free space, usage bar, used of total.
+/// A volume in the disk dropdown: name, tag, eject and free space; capacity as cells; the details.
 struct VolumeBlock: View {
     var volume: Volume
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Text(volume.name).ui(13, 500).lineLimit(1)
-                Text(volume.isInternal ? L10n.Disk.internalDrive : L10n.Disk.external).ui(12).foregroundStyle(Theme.sub)
-                    .padding(.horizontal, 6)
-                    .frame(height: 16)
-                    .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.raised))
-                if volume.isEjectable && !volume.isRoot { EjectButton(volume: volume, size: 24) }
+                Text(volume.name).ui(13, 600).lineLimit(1)
+                TagText(text: volume.isInternal ? L10n.Disk.internalDrive : L10n.Disk.external)
+                if volume.isEjectable && !volume.isRoot { EjectButton(volume: volume, size: 20) }
                 Spacer(minLength: 4)
-                Text(L10n.Disk.available(Format.storage(volume.available))).foregroundStyle(Theme.sub).lineLimit(1)
+                Text(L10n.Disk.available(Format.storage(volume.available))).ui(13, 500).lineLimit(1)
             }
             .frame(height: 20)
-            StackedBar(parts: [(Double(max(0, volume.used - volume.purgeable)), Theme.disk), (Double(volume.purgeable), Theme.disk.opacity(0.4)),
-                               (Double(volume.available), Theme.track)], height: 3)
-                .padding(.top, 8)
+            CapacityCells(used: Double(max(0, volume.used - volume.purgeable)), purgeable: Double(volume.purgeable), total: Double(max(volume.total, 1)), height: 6)
             Text(volume.purgeable > 0
                  ? L10n.Panel.volumeUsedPurgeable(Format.storage(volume.used), Format.storage(volume.purgeable), Format.storage(volume.total))
                  : L10n.Disk.usedOf(Format.storage(volume.used), Format.storage(volume.total)))
-                .ui(12).foregroundStyle(Theme.sub).lineLimit(1).padding(.top, 6)
+                .ui(12).foregroundStyle(Theme.sub).lineLimit(1)
         }
-        .padding(12)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -529,82 +538,65 @@ struct BatteryPanel: View {
         let p = settings.prefs.battery
         let _ = monitor.tick
         let low = b.level <= 0.2 && !b.onAC
+        let unit = settings.prefs.general.temperatureUnit
         PanelHeader(module: .battery, subtitle: b.onAC ? b.adapterWatts.map { L10n.Battery.adapter($0) } : nil)
         if b.hasBattery {
-            HeroRow {
-                timeItem(b)
-            } center: {
-                HeroItem(label: PanelText.batteryState(b)) {
-                    VStack(spacing: 6) {
-                        LargeBattery(level: b.level, charging: b.isCharging, color: low ? Theme.danger : Theme.bat).frame(width: 80, height: 37)
-                        Text(Format.percent(b.level)).ui(20, 500).kerning(-0.4)
-                    }
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 4) {
+                    BigValue(value: Format.percent(b.level), size: 40, color: low ? Theme.danger : Theme.text)
+                    StatusText(text: PanelText.batteryState(b), color: b.onAC ? Theme.ok : (low ? Theme.danger : Theme.sub))
                 }
-            } trailing: {
-                powerItem(b)
-            }
-            let cells = batteryCells(b, p)
-            if !cells.isEmpty {
-                CellStrip(cells: cells, fill: Theme.well, radius: 12, compact: true)
-            }
-            PanelSection(title: L10n.Battery.level, right: L10n.Range.last24h) {
-                Well {
-                    WellChart(labels: [L10n.Range.ago24h, L10n.Range.ago12h, L10n.Range.now]) {
-                        MonitorChart(series: [ChartSeries(id: "battery", points: monitor.history.points(.battery, range: .h24), color: Theme.bat, lineWidth: 1.5)],
-                                     range: .h24, maxValue: 100, bands: ChargingBands.of(.h24))
-                            .accessibilityElement(children: .ignore)
-                            .accessibilityLabel(L10n.Panel.batteryChartA11y)
-                    }
+                Spacer(minLength: 8)
+                if b.isCharging, let m = b.minutesToFull {
+                    BigValue(value: BatteryTime.text(m), unit: L10n.Panel.untilFullLabel)
+                } else if !b.onAC, let m = b.minutesToEmpty {
+                    BigValue(value: BatteryTime.text(m), unit: L10n.Panel.timeLeftLabel)
                 }
+            }
+            .accessibilityElement(children: .combine)
+            ConsoleRule()
+            PanelStatGrid {
+                let watts: Double? = b.isCharging ? b.power.flatMap { $0 > 0 ? $0 : nil } : (b.onAC ? b.systemPowerIn : b.power.map(abs))
+                PanelStat(label: b.isCharging ? L10n.Battery.chargingPower : L10n.Battery.power) {
+                    BigValue(value: watts.map { "\(Int($0.rounded()))" } ?? L10n.Common.dash, unit: watts == nil ? nil : L10n.Common.wattUnit, size: 20)
+                }
+                if p.showHealth, let h = b.health {
+                    PanelStat(label: L10n.Battery.health) { BigValue(value: Format.percent(h), size: 20) }
+                }
+                if p.showCycles, let c = b.cycles {
+                    PanelStat(label: L10n.Battery.cycles) { BigValue(value: "\(c)", unit: L10n.Monitor.ofTotal("\(b.designCycles ?? 1000)"), size: 20) }
+                }
+                if p.showTemperature, let t = b.temperature ?? monitor.snapshot.sensors.value(.battery) {
+                    PanelStat(label: L10n.Battery.temperature) { BigValue(value: Format.temperatureNumber(t, unit: unit), unit: Format.temperatureSymbol(unit), size: 20) }
+                }
+            }
+            ConsoleRule()
+            VStack(alignment: .leading, spacing: 8) {
+                PanelTitle(title: L10n.Battery.level) { Text(L10n.Range.last24h).ui(12) }
+                ConsoleChart(kind: .area, series: [ChartSeries(id: "b", points: monitor.history.points(.battery, range: .h24), color: Theme.bat, fill: 0.16, lineWidth: 1.5)],
+                             span: TimeRange.h24.seconds, maxValue: 100, height: 72, xLabels: [L10n.Range.ago24h, L10n.Range.ago12h, L10n.Range.now],
+                             bands: ChargingBands.of(.h24), slot: 5)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(L10n.Panel.batteryChartA11y)
             }
         }
         // Bluetooth accessories have their own module; a UPS stays with the battery.
         if !b.ups.isEmpty {
+            ConsoleRule()
             PanelSection(title: L10n.Battery.ups) {
-                Well(padding: EdgeInsets(top: 0, leading: 12, bottom: 0, trailing: 12)) {
-                    DividedRows {
-                        ForEach(b.ups) { source in
-                            PanelDeviceRow(icon: Icons.ups, name: source.name,
-                                           detail: source.onAC ? (source.minutesLeft.map { L10n.Battery.upsDetail($0) } ?? L10n.Battery.upsOnAC) : L10n.Battery.onBattery,
-                                           level: source.level)
-                        }
+                VStack(spacing: 0) {
+                    ForEach(b.ups) { source in
+                        PanelDeviceRow(icon: Icons.ups, name: source.name,
+                                       detail: source.onAC ? (source.minutesLeft.map { L10n.Battery.upsDetail($0) } ?? L10n.Battery.upsOnAC) : L10n.Battery.onBattery,
+                                       level: source.level)
                     }
                 }
             }
         }
     }
-
-    @ViewBuilder private func timeItem(_ b: BatterySample) -> some View {
-        if b.isCharging {
-            HeroItem(label: L10n.Panel.untilFullLabel) {
-                BigReadout(value: b.minutesToFull.map { BatteryTime.text($0) } ?? L10n.Common.dash)
-            }
-        } else {
-            HeroItem(label: L10n.Panel.timeLeftLabel) {
-                BigReadout(value: b.onAC ? L10n.Common.dash : (b.minutesToEmpty.map { BatteryTime.text($0) } ?? L10n.Common.dash))
-            }
-        }
-    }
-
-    @ViewBuilder private func powerItem(_ b: BatterySample) -> some View {
-        let watts: Double? = b.isCharging ? b.power.flatMap { $0 > 0 ? $0 : nil } : (b.onAC ? b.systemPowerIn : b.power.map(abs))
-        HeroItem(label: b.isCharging ? L10n.Battery.chargingPower : L10n.Battery.power) {
-            BigReadout(value: watts.map { "\(Int($0.rounded()))" } ?? L10n.Common.dash, unit: watts == nil ? "" : L10n.Common.wattUnit)
-        }
-    }
-
-    private func batteryCells(_ b: BatterySample, _ p: BatteryPrefs) -> [(String, String)] {
-        var out: [(String, String)] = []
-        if p.showHealth, let h = b.health { out.append((Format.percent(h), L10n.Battery.health)) }
-        if p.showCycles, let c = b.cycles { out.append(("\(c)" + Format.marker + L10n.Monitor.cyclesLimit(b.designCycles ?? 1000), L10n.Battery.cycles)) }
-        if p.showTemperature, let t = b.temperature ?? monitor.snapshot.sensors.value(.battery) {
-            out.append((Format.temperature(t, unit: settings.prefs.general.temperatureUnit, showUnit: true), L10n.Battery.temperature))
-        }
-        return out
-    }
 }
 
-/// Bluetooth device or UPS in the battery dropdown (40 pt).
+/// A UPS in the battery dropdown: icon, name and state, its level as cells, the percentage.
 struct PanelDeviceRow: View {
     var icon: String
     var name: String
@@ -616,18 +608,15 @@ struct PanelDeviceRow: View {
         HStack(spacing: 10) {
             LineIcon(d: icon, size: 16, lineWidth: 1.4).foregroundStyle(Theme.sub)
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 6) {
-                    Text(name).lineLimit(1)
-                    if low { StatusPill(text: L10n.Battery.low, fg: Theme.danger, bg: Theme.dangerBg, fontSize: 12, height: 18, radius: 5) }
-                }
+                Text(name).lineLimit(1)
                 if let detail { Text(detail).ui(12).foregroundStyle(Theme.sub).lineLimit(1) }
             }
             Spacer(minLength: 4)
-            BatteryGlyph(level: level, fill: low ? Theme.danger : Theme.bat, rim: Theme.faint, rimOpacity: 1)
+            DotMeter(fraction: level, color: low ? Theme.danger : Theme.bat, count: 16).frame(width: 72)
             Text(Format.percent(level)).ui(13, 500).foregroundStyle(low ? Theme.danger : Theme.text)
                 .frame(width: 40, alignment: .trailing)
         }
-        .frame(minHeight: 40)
+        .frame(minHeight: 36)
         .accessibilityElement(children: .combine)
     }
 }
@@ -643,69 +632,76 @@ struct SensorsPanel: View {
         let p = settings.prefs.sensors
         let unit = settings.prefs.general.temperatureUnit
         let _ = monitor.tick
+        let deg = { (c: Double?) in c.map { Format.temperature($0, unit: unit) } ?? L10n.Common.dash }
         PanelHeader(module: .sensors, subtitle: s.fans.isEmpty ? L10n.Panel.passiveCooling : L10n.Panel.fanCount(s.fans.count))
-        HeroRow {
-            HeroItem(label: L10n.Sensors.gpu) { tempRing(s.value(.gpu), unit, large: false) }
-        } center: {
-            HeroItem(label: L10n.Sensors.choice(p.sensor)) { tempRing(MenuBarText.sensorValue(s, p.sensor), unit, large: true) }
-        } trailing: {
-            HeroItem(label: L10n.Sensors.ssd) { tempRing(s.value(.ssd), unit, large: false) }
+        ShareRow(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L10n.Sensors.choice(p.sensor)).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
+                BigValue(value: deg(MenuBarText.sensorValue(s, p.sensor)), size: 40)
+            }
+            .share(1.4)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L10n.Sensors.gpu).ui(12).foregroundStyle(Theme.sub)
+                BigValue(value: deg(s.value(.gpu)))
+            }
+            .frame(maxHeight: .infinity, alignment: .bottom)
+            .share(1)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L10n.Sensors.ssd).ui(12).foregroundStyle(Theme.sub)
+                BigValue(value: deg(s.value(.ssd)))
+            }
+            .frame(maxHeight: .infinity, alignment: .bottom)
+            .share(1)
         }
+        .accessibilityElement(children: .combine)
         if p.showThermal {
             let th = PanelText.thermal(s.thermal)
-            Well(padding: EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12)) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(L10n.Sensors.thermalState).foregroundStyle(Theme.sub)
-                    Spacer(minLength: 8)
-                    Text(th.0).fontWeight(.medium).foregroundStyle(th.1).lineLimit(1)
-                }
-                LevelSegments(level: s.thermal.rawValue, color: th.1, height: 3, gap: 3).padding(.top, 10)
+            HStack {
+                Text(L10n.Sensors.thermalState).ui(13).foregroundStyle(Theme.sub)
+                Spacer(minLength: 8)
+                StatusText(text: th.0, color: th.1)
             }
+            .frame(height: 22)
             .accessibilityElement(children: .combine)
         }
         if p.showAllTemps, !s.temps.isEmpty {
+            ConsoleRule()
             PanelSection(title: L10n.Sensors.temperatures) {
-                Well(padding: EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4)) {
+                VStack(spacing: 0) {
                     ForEach(s.temps) { t in
-                        HStack(spacing: 10) {
-                            Text(PanelText.tempName(t.group)).lineLimit(1).frame(width: 84, alignment: .leading)
-                            ZoneTrack(zones: [(50, Theme.ok), (20, Theme.sys), (10, Theme.temp)], position: (t.value - 20) / 80,
-                                      knob: TempZone.color(t.value), zoneOpacity: 0.3)
-                            Text(Format.temperature(t.value, unit: unit, showUnit: true)).ui(13, 500).lineLimit(1).frame(width: 48, alignment: .trailing)
-                        }
-                        .padding(.horizontal, 8)
-                        .frame(height: 28)
-                        .accessibilityElement(children: .combine)
+                        MeterRow(name: PanelText.tempName(t.group), fraction: t.value / 100,
+                                 value: Format.temperature(t.value, unit: unit, showUnit: true), color: TempZone.meter(t.value))
                     }
                 }
             }
         }
         if p.showFans {
+            ConsoleRule()
             if s.hasFans {
                 PanelSection(title: L10n.Sensors.fans, right: s.fans.first.map { L10n.Sensors.maxRPM(Int($0.max)) }) {
-                    Well(padding: EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4)) {
+                    VStack(spacing: 0) {
                         ForEach(s.fans) { f in
                             MeterRow(name: PanelText.fanName(f.id, count: s.fans.count), fraction: f.max > 0 ? f.rpm / f.max : 0,
-                                     value: Format.rpm(f.rpm), color: Theme.sub)
+                                     value: Format.rpm(f.rpm), color: Theme.temp)
                         }
                     }
                 }
             } else {
-                PanelSection(title: L10n.Sensors.fans) {
-                    Well { KVRow(key: L10n.Sensors.fanless, value: "") }
-                }
+                PanelSection(title: L10n.Sensors.fans) { KVRow(key: L10n.Sensors.fanless, value: "") }
             }
         }
         if p.showPower, s.systemPower != nil || s.cpuPower != nil || s.gpuPower != nil {
-            CellStrip(cells: [(s.systemPower.map(Format.watts) ?? L10n.Common.dash, L10n.Sensors.systemPower),
-                              (s.cpuPower.map(Format.watts) ?? L10n.Common.dash, L10n.Module.cpu),
-                              (s.gpuPower.map(Format.watts) ?? L10n.Common.dash, L10n.Module.gpu)],
-                      fill: Theme.well, radius: 12, compact: true)
+            let cpu = s.cpuPower ?? 0, gpu = s.gpuPower ?? 0
+            let other = max(0, (s.systemPower ?? cpu + gpu) - cpu - gpu)
+            ConsoleRule()
+            VStack(alignment: .leading, spacing: 8) {
+                PanelTitle(title: L10n.Sensors.power) { KeyValue(label: L10n.Sensors.systemPower, value: s.systemPower.map(Format.watts) ?? L10n.Common.dash) }
+                SegmentBar(parts: [(cpu, Theme.cpu), (gpu, Theme.gpu), (other, Theme.neutral.opacity(0.4))], height: 8)
+                HStack(spacing: 14) {
+                    KeyValue(label: L10n.Module.cpu, value: s.cpuPower.map(Format.watts) ?? L10n.Common.dash, key: Theme.cpu)
+                    KeyValue(label: L10n.Module.gpu, value: s.gpuPower.map(Format.watts) ?? L10n.Common.dash, key: Theme.gpu)
+                }
+            }
         }
-    }
-
-    private func tempRing(_ celsius: Double?, _ unit: TemperatureUnit, large: Bool) -> some View {
-        ValueRing(fraction: (celsius ?? 0) / 100, color: Theme.temp,
-                  value: celsius.map { Format.temperature($0, unit: unit) } ?? L10n.Common.dash, large: large)
     }
 }

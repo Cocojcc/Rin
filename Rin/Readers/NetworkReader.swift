@@ -83,7 +83,7 @@ final class NetworkReader {
         sample.todayUp = today.up
         if probeLatency {
             latency.tick(connected: sample.connected)
-            (sample.latencyMS, sample.checks) = latency.results()
+            (sample.latencyMS, sample.checks, sample.latencies) = latency.results()
         }
         return sample
     }
@@ -229,6 +229,8 @@ final class LatencyProbe {
     private var lastStart = Date.distantPast
     private var latest: Double?
     private var checks: [ConnectionCheck] = []
+    /// The round trips behind the checks (nil where none was measured).
+    private var latencies: [Double?] = []
     private static let target = "1.1.1.1"
     private static let slowMS = 100.0
     /// No reply from the internet comes back this fast; one that does was answered on the Mac.
@@ -242,9 +244,9 @@ final class LatencyProbe {
         queue.async { [weak self] in self?.record(Self.ping(Self.target)) }
     }
 
-    func results() -> (Double?, [ConnectionCheck]) {
+    func results() -> (Double?, [ConnectionCheck], [Double?]) {
         lock.lock(); defer { lock.unlock() }
-        return (latest, checks)
+        return (latest, checks, latencies)
     }
 
     private func record(_ ms: Double?) {
@@ -256,7 +258,9 @@ final class LatencyProbe {
             latest = ms
             checks.append(ms.map { $0 < Self.slowMS ? .ok : .slow } ?? .failed)
         }
+        latencies.append(latest)
         if checks.count > 48 { checks.removeFirst(checks.count - 48) }
+        if latencies.count > 48 { latencies.removeFirst(latencies.count - 48) }
     }
 
     /// One echo request; nil on timeout (1 s) or error.

@@ -111,6 +111,15 @@ enum Format {
         return "\(n)°"
     }
 
+    /// "°C" or "°F", for a reading drawn as a big number with its unit beside it.
+    static func temperatureSymbol(_ unit: TemperatureUnit) -> String { unit == .celsius ? "°C" : "°F" }
+
+    /// A formatted reading split at its first space: "45 MB/s" → ("45", "MB/s").
+    static func parts(_ s: String) -> (String, String) {
+        guard let i = s.firstIndex(of: " ") else { return (s, "") }
+        return (String(s[..<i]), String(s[s.index(after: i)...]))
+    }
+
     static func temperatureNumber(_ celsius: Double, unit: TemperatureUnit) -> String {
         "\(Int((unit == .celsius ? celsius : celsius * 9 / 5 + 32).rounded()))"
     }

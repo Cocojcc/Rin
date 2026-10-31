@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Glass window: translucent sidebar on the left, the page on the right.
+/// The window: sidebar on the left, the page on the right, both on solid surfaces.
 struct MainView: View {
     /// Two overview columns side by side; three rows of overview cards top to bottom.
     static let minSize = CGSize(width: UIScale.of(720), height: UIScale.of(700))
@@ -54,11 +54,12 @@ struct PageView: View {
         }
     }
 
-    private var fillsWindow: Bool { page == .processes }
+    /// The processes table scrolls itself; the overview's tiles share the window's height.
+    private var fillsWindow: Bool { page == .processes || page == .overview }
 
     private var stack: some View {
         content
-            .padding(EdgeInsets(top: 46, leading: 24, bottom: 24, trailing: 24))
+            .padding(EdgeInsets(top: 14, leading: 20, bottom: 16, trailing: 20))
             .frame(maxWidth: .infinity, maxHeight: fillsWindow ? .infinity : nil, alignment: .topLeading)
     }
 
@@ -115,16 +116,13 @@ struct Sidebar: View {
         VStack(alignment: .leading, spacing: 2) {
             // Clear of the traffic lights; the mark sits where the two-line title block used to
             // center it, and the pages below keep their place.
-            Color.clear.frame(height: 42)
+            Color.clear.frame(height: 44)
             HStack(spacing: 10) {
                 MoodMark(size: 26)
-                HStack(spacing: 7) {
-                    Text(L10n.App.name).ui(20, 600).kerning(-0.2)
-                    Seal(size: 17)
-                }
+                Text(L10n.App.name).ui(20, 600).kerning(-0.2)
             }
             .padding(.horizontal, 10)
-            .padding(.bottom, 26)
+            .padding(.bottom, 16)
 
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(overviewPages, id: \.0) { item($0) }
@@ -140,7 +138,7 @@ struct Sidebar: View {
                 Color.clear.frame(height: 10)
                 ForEach(toolPages, id: \.0) { item($0, badge: $0.0 == .alerts ? alerts.unseenCount : 0) }
             }
-            .slidingThumb(navigator.page.sidebarPage) { GlassThumb() }
+            .slidingThumb(navigator.page.sidebarPage) { RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.selection) }
             Spacer(minLength: 12)
             HStack {
                 footerButton(Icons.gear, lineWidth: 1.3, label: L10n.Sidebar.settings, selected: navigator.page == .settings) {
@@ -158,10 +156,10 @@ struct Sidebar: View {
             }
             .padding(.horizontal, 2)
         }
-        .padding(EdgeInsets(top: 0, leading: 12, bottom: 16, trailing: 12))
+        .padding(EdgeInsets(top: 0, leading: 10, bottom: 12, trailing: 10))
         .frame(maxHeight: .infinity, alignment: .top)
         .background(Theme.side)
-        .overlay(alignment: .trailing) { Rectangle().fill(Theme.line).frame(width: 0.5) }
+        .overlay(alignment: .trailing) { Rectangle().fill(Theme.panelEdge).frame(width: 1) }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Sidebar.label)
     }
@@ -177,7 +175,7 @@ struct Sidebar: View {
             navigator.page = entry.0
         } label: {
             HStack(spacing: 10) {
-                LineIcon(d: entry.1, size: 15, lineWidth: 1.5)
+                LineIcon(d: entry.1, size: 14, lineWidth: 1.5)
                 Text(entry.2).ui(13, on ? 500 : 400)
                 Spacer(minLength: 0)
                 if badge > 0 {
@@ -190,7 +188,7 @@ struct Sidebar: View {
             }
             .foregroundStyle(on ? Theme.text : Theme.sub)
             .padding(.horizontal, 10)
-            .frame(height: 32)
+            .frame(height: 30)
             .thumbAnchor(on)
             .contentShape(Rectangle())
         }
@@ -203,7 +201,7 @@ struct Sidebar: View {
     }
 }
 
-/// Round sidebar footer button: glass when selected, a grey disc under the pointer.
+/// Sidebar footer button: the selection fill when selected, a grey square under the pointer.
 private struct FooterButton: View {
     var d: String
     var lineWidth: CGFloat
@@ -214,14 +212,14 @@ private struct FooterButton: View {
 
     var body: some View {
         Button(action: action) {
-            LineIcon(d: d, size: 16, lineWidth: lineWidth)
+            LineIcon(d: d, size: 15, lineWidth: lineWidth)
                 .foregroundStyle(selected ? Theme.text : Theme.sub)
-                .frame(width: 32, height: 32)
+                .frame(width: 28, height: 28)
                 .background {
-                    if selected { GlassThumb() } else if hovering { Circle().fill(Theme.well) }
+                    if selected || hovering { RoundedRectangle(cornerRadius: 6, style: .continuous).fill(selected ? Theme.selection : Theme.lgHover) }
                 }
                 .hoverAnimation(hovering)
-                .contentShape(Circle())
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }

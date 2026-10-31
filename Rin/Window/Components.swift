@@ -72,10 +72,9 @@ private struct ScaleLayout: Layout {
 
 // MARK: - Liquid glass
 
-/// Track behind a group of glass controls: faint fill, a 1 pt highlight along the top inside
-/// edge, a hairline outline.
+/// Flat track behind a group of segments (7 pt corners).
 struct GlassTrack: View {
-    var cornerRadius: CGFloat? = nil
+    var cornerRadius: CGFloat? = 7
 
     var body: some View {
         GlassShape(cornerRadius: cornerRadius)
@@ -84,16 +83,16 @@ struct GlassTrack: View {
     }
 }
 
-/// The raised glass piece of a selected segment, sidebar row or chip.
+/// The flat piece behind a selected segment or chip (5 pt corners).
 struct GlassThumb: View {
-    var cornerRadius: CGFloat? = nil
+    var cornerRadius: CGFloat? = 5
 
     var body: some View {
         GlassShape(cornerRadius: cornerRadius)
             .fill(Theme.lgThumb.shadow(.inner(color: Theme.lgThumbLight, radius: 0, x: 0, y: 1)))
             .overlay(GlassShape(cornerRadius: cornerRadius).strokeBorder(Theme.lgThumbRing, lineWidth: 0.5))
             .overlay(GlassShape(cornerRadius: cornerRadius).inset(by: -0.25).stroke(Theme.lgThumbLine, lineWidth: 0.5))
-            .shadow(color: Theme.lgThumbShadow, radius: 3.5, x: 0, y: 2)
+            .shadow(color: Theme.lgThumbShadow, radius: 1.5, x: 0, y: 1)
     }
 }
 
@@ -172,37 +171,6 @@ struct Panel<Content: View>: View {
     }
 }
 
-/// Section title above a panel: 13 / 500 grey, optional note on the right.
-struct SectionHeader: View {
-    var title: String
-    var right: String? = nil
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(title).ui(13, 500).foregroundStyle(Theme.sub).accessibilityAddTraits(.isHeader)
-            Spacer(minLength: 0)
-            if let right { Text(right).ui(12).foregroundStyle(Theme.sub) }
-        }
-        .frame(minHeight: 18)
-        .padding(.horizontal, 14)
-        .padding(.bottom, 8)
-    }
-}
-
-/// A titled block: header, then content.
-struct TitledSection<Content: View>: View {
-    var title: String
-    var right: String? = nil
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SectionHeader(title: title, right: right)
-            content
-        }
-    }
-}
-
 /// Settings group: rows on a panel, separated by hairlines.
 struct SettingsGroup<Content: View>: View {
     var title: String? = nil
@@ -272,7 +240,7 @@ struct SettingsRow<Control: View>: View {
 
 // MARK: - Controls
 
-/// 34 × 20 switch. On: accent track. Off: grey track with a raised white knob.
+/// 32 × 20 switch. On: an ink track with a light knob. Off: a grey track with a grey knob.
 struct RinSwitch: View {
     @Binding var isOn: Bool
     var label: String
@@ -282,13 +250,12 @@ struct RinSwitch: View {
             withAnimation(.easeOut(duration: 0.15)) { isOn.toggle() }
         } label: {
             ZStack(alignment: isOn ? .trailing : .leading) {
-                Capsule().fill(isOn ? Theme.accent : Theme.track)
-                Circle().fill(isOn ? Theme.onAccent : Theme.raised)
-                    .raisedShadow(!isOn)
+                Capsule().fill(isOn ? Theme.accent : Theme.switchOff)
+                Circle().fill(isOn ? Theme.onAccent : Theme.switchKnob)
                     .frame(width: 16, height: 16)
                     .padding(2)
             }
-            .frame(width: 34, height: 20)
+            .frame(width: 32, height: 20)
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -331,7 +298,7 @@ struct Segmented<Value: Hashable>: View {
                         }
                     }
                     .foregroundStyle(on ? Theme.text : Theme.sub)
-                    .padding(.horizontal, style == .range ? 12 : 7)
+                    .padding(.horizontal, style == .range ? 9 : 7)
                     .frame(maxWidth: fills ? .infinity : nil)
                     .frame(height: height)
                     .thumbAnchor(on)
@@ -364,7 +331,7 @@ struct Segmented<Value: Hashable>: View {
 
     private var height: CGFloat {
         switch style {
-        case .range: return 26
+        case .range: return 24
         case .tab: return 22
         case .tabs, .sort: return 26
         case .compact: return 24
@@ -372,7 +339,7 @@ struct Segmented<Value: Hashable>: View {
     }
 
     private var glass: Bool { style != .tab }
-    private var fontSize: CGFloat { 12 }
+    private var fontSize: CGFloat { style == .tab ? 12 : 13 }
 }
 
 /// "− 12 pt +" on a glass track.
@@ -546,73 +513,14 @@ struct IconButton: View {
 
 // MARK: - Data display
 
-/// Value over label (monitor-page stat row: 18 / 500 over 12 grey).
-struct StatBlock: View {
-    var value: String
-    var label: String
-    var valueSize: CGFloat = 18
-    var valueColor: Color = Theme.text
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value).ui(valueSize, 500).kerning(valueSize >= 18 ? -0.18 : 0).foregroundStyle(valueColor).lineLimit(1)
-            Text(label).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// A rounded strip of equal cells separated by hairlines (load average, frequencies, power).
-/// Anything after `Format.marker` in a value is set small and grey ("214 / 1000").
-struct CellStrip: View {
-    var cells: [(String, String)]
-    var fill: Color = Theme.panel
-    var radius: CGFloat = 16
-    var compact = false
-    @Environment(\.textScale) private var textScale
-
-    var body: some View {
-        HStack(spacing: 0) {
-            ForEach(Array(cells.enumerated()), id: \.offset) { i, cell in
-                VStack(alignment: .leading, spacing: 2) {
-                    value(cell.0).ui(15, 500).lineLimit(1).minimumScaleFactor(0.8)
-                    Text(cell.1).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
-                }
-                .padding(.horizontal, compact ? 12 : 14)
-                .padding(.vertical, compact ? 10 : 12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .overlay(alignment: .leading) {
-                    if i > 0 { Rectangle().fill(Theme.line).frame(width: 0.5) }
-                }
-                .accessibilityElement(children: .combine)
-            }
-        }
-        .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill))
-    }
-
-    private func value(_ s: String) -> Text {
-        let parts = s.components(separatedBy: Format.marker)
-        guard parts.count > 1 else { return Text(s) }
-        return Text(parts[0]) + Text(parts[1...].joined()).font(Fonts.text(12, scale: textScale)).foregroundColor(Theme.sub)
-    }
-}
-
-/// Thin horizontal meter on a track (3 pt by default).
+/// A level as a row of short cells, 6 pt tall (see `DotMeter`).
 struct MeterBar: View {
     var fraction: Double
     var color: Color
-    var height: CGFloat = 3
+    var height: CGFloat = 6
 
     var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule().fill(Theme.track)
-                Capsule().fill(color).frame(width: max(0, geo.size.width * min(1, max(0, fraction))))
-            }
-        }
-        .frame(height: height)
-        .accessibilityHidden(true)
+        DotMeter(fraction: fraction, color: color, height: max(height, 4))
     }
 }
 
@@ -662,44 +570,6 @@ struct Ring: View {
     private var starts: [Double] {
         var acc = 0.0
         return segments.map { s in defer { acc += max(0, s.fraction) }; return acc }
-    }
-}
-
-struct LegendDot: View {
-    var color: Color
-    var label: String
-    var size: CGFloat = 8
-    var value: String? = nil
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Circle().fill(color).frame(width: size, height: size)
-            Text(label).foregroundStyle(Theme.sub)
-            if let value { Text(value).fontWeight(.medium).foregroundStyle(Theme.text) }
-        }
-        .ui(12)
-    }
-}
-
-/// Rounded pill with tinted background ("一切正常", "被挡住", "电量低").
-struct StatusPill: View {
-    var text: String
-    var fg: Color
-    var bg: Color
-    var dot = false
-    var fontSize: CGFloat = 12
-    var height: CGFloat = 20
-    var radius: CGFloat = 6
-
-    var body: some View {
-        HStack(spacing: 6) {
-            if dot { Circle().fill(fg).frame(width: 6, height: 6) }
-            Text(text).ui(fontSize, 500).lineLimit(1)
-        }
-        .foregroundStyle(fg)
-        .padding(.horizontal, dot ? 10 : 7)
-        .frame(height: height)
-        .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(bg))
     }
 }
 

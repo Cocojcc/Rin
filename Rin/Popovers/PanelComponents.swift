@@ -3,8 +3,8 @@ import SwiftUI
 
 // MARK: - Chrome
 
-/// A module dropdown's header: its open-in-window button, centered title and subtitle, its
-/// settings button.
+/// A module dropdown's header: its name and a note on the left, buttons to its monitor page and
+/// its settings on the right.
 struct PanelHeader: View {
     var title: String
     var subtitle: String?
@@ -18,21 +18,20 @@ struct PanelHeader: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
-            if let buttons { HeaderButton(d: Icons.monitorWindow, label: buttons.openLabel, action: buttons.open) }
-            VStack(spacing: 0) {
-                Text(title).ui(15, 500).frame(height: 20).accessibilityAddTraits(.isHeader)
-                if let subtitle {
-                    Text(subtitle).ui(12).lineLimit(1)
-                        .foregroundStyle(Theme.sub)
-                        .frame(height: 14)
+        HStack(spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(title).ui(15, 600).accessibilityAddTraits(.isHeader)
+                if let subtitle { Text(subtitle).ui(12).foregroundStyle(Theme.sub).lineLimit(1) }
+            }
+            Spacer(minLength: 0)
+            if let buttons {
+                HStack(spacing: 2) {
+                    HeaderButton(d: Icons.monitorWindow, label: buttons.openLabel, action: buttons.open)
+                    HeaderButton(d: Icons.general, label: buttons.settingsLabel, action: buttons.settings)
                 }
             }
-            .frame(maxWidth: .infinity)
-            if let buttons { HeaderButton(d: Icons.general, label: buttons.settingsLabel, action: buttons.settings) }
         }
-        .padding(.horizontal, 6)
-        .padding(.top, -4)
+        .frame(height: 26)
     }
 }
 
@@ -46,7 +45,8 @@ struct PanelFooter: View {
             HeaderButton(d: Icons.gear, lineWidth: 1.3, label: L10n.Sidebar.settings) { MainWindowController.shared.show(.settings) }
             HeaderButton(d: Icons.power, label: L10n.Menu.quit) { NSApp.terminate(nil) }
         }
-        .padding(.horizontal, 6)
+        .padding(.top, 10)
+        .overlay(alignment: .top) { ConsoleRule() }
     }
 }
 
@@ -74,98 +74,6 @@ struct HeaderButton: View {
     }
 }
 
-/// The big readouts under the header: one prominent center item flanked by two smaller ones,
-/// or two / one equal columns.
-struct HeroRow<Leading: View, Center: View, Trailing: View>: View {
-    @ViewBuilder var leading: Leading
-    @ViewBuilder var center: Center
-    @ViewBuilder var trailing: Trailing
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            leading.frame(maxWidth: .infinity)
-            center.fixedSize()
-            trailing.frame(maxWidth: .infinity)
-        }
-        .padding(.top, 2)
-    }
-}
-
-/// Two equal hero columns (memory, network).
-struct HeroPair<Leading: View, Trailing: View>: View {
-    @ViewBuilder var leading: Leading
-    @ViewBuilder var trailing: Trailing
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            leading.frame(maxWidth: .infinity)
-            trailing.frame(maxWidth: .infinity)
-        }
-        .padding(.top, 2)
-    }
-}
-
-/// One hero column: the readout centered in a fixed-height box, label underneath.
-struct HeroItem<Content: View>: View {
-    var label: String
-    var dot: Color? = nil
-    var height: CGFloat = 88
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        VStack(spacing: 8) {
-            content.frame(height: height)
-            HStack(spacing: 6) {
-                if let dot { Circle().fill(dot).frame(width: 6, height: 6) }
-                Text(label).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
-            }
-            .frame(height: 14)
-        }
-        .frame(minWidth: 0)
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// Ring with the value in the middle: 84 / 5 for the hero center, 58 / 4 beside it.
-struct ValueRing: View {
-    var segments: [Ring.Segment]
-    var value: String
-    var large = true
-
-    init(fraction: Double, color: Color, value: String, large: Bool = true) {
-        segments = [Ring.Segment(fraction: fraction, color: color)]
-        self.value = value
-        self.large = large
-    }
-
-    init(segments: [Ring.Segment], value: String, large: Bool = true) {
-        self.segments = segments
-        self.value = value
-        self.large = large
-    }
-
-    var body: some View {
-        ZStack {
-            Ring(segments: segments, size: large ? 84 : 58, lineWidth: large ? 5 : 4)
-            Text(value).ui(large ? 20 : 15, 500).kerning(large ? -0.4 : -0.3).lineLimit(1)
-        }
-    }
-}
-
-/// "45 MB/s" style readout (24 / 500 with a small grey unit).
-struct BigReadout: View {
-    var value: String
-    var unit: String = ""
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 2) {
-            Text(value).ui(24, 500).kerning(-0.48).lineLimit(1)
-            if !unit.isEmpty { Text(unit).ui(12).foregroundStyle(Theme.sub).lineLimit(1) }
-        }
-        .fixedSize()
-    }
-}
-
 /// Section inside a dropdown: small grey title (and note) above its content.
 struct PanelSection<Content: View>: View {
     var title: String
@@ -176,28 +84,20 @@ struct PanelSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(title).font(Fonts.ui(12, 500)).accessibilityAddTraits(.isHeader)
-                Spacer(minLength: 0)
-                HStack(alignment: .firstTextBaseline, spacing: 0) {
-                    if let right { Text(right) }
-                    if let link { AllProcessesLink(sort: link) }
-                }
+            PanelTitle(title: title) {
+                if let right { Text(right).ui(12) }
+                if let link { AllProcessesLink(sort: link) }
             }
-            .ui(12)
-            .foregroundStyle(Theme.sub)
-            .frame(height: 16)
-            .padding(.horizontal, 12)
-            .padding(.bottom, 6)
+            .padding(.bottom, 4)
             content
         }
     }
 }
 
-/// Rounded well that holds a group of rows or a chart (12 radius).
+/// A group of rows or a chart; flat by default, a filled rounded well when given a fill.
 struct Well<Content: View>: View {
     var padding: EdgeInsets = EdgeInsets()
-    var fill: Color = Theme.well
+    var fill: Color = .clear
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -209,44 +109,6 @@ struct Well<Content: View>: View {
     }
 }
 
-/// Chart in a well: plot on top, legend (or time labels) underneath.
-struct WellChart<Chart: View>: View {
-    var height: CGFloat = 56
-    var legend: [(Color, String)] = []
-    var right: String? = nil
-    var labels: [String] = []
-    @ViewBuilder var chart: Chart
-
-    var body: some View {
-        VStack(spacing: 0) {
-            chart.frame(height: height).padding(.top, 10)
-            if !legend.isEmpty || right != nil || !labels.isEmpty {
-                HStack(spacing: 14) {
-                    if labels.isEmpty {
-                        ForEach(Array(legend.enumerated()), id: \.offset) { _, item in
-                            HStack(spacing: 6) {
-                                Circle().fill(item.0).frame(width: 6, height: 6)
-                                Text(item.1)
-                            }
-                        }
-                        Spacer(minLength: 0)
-                        if let right { Text(right) }
-                    } else {
-                        ForEach(Array(labels.enumerated()), id: \.offset) { i, label in
-                            if i > 0 { Spacer(minLength: 0) }
-                            Text(label)
-                        }
-                    }
-                }
-                .ui(12)
-                .foregroundStyle(Theme.sub)
-                .frame(height: 16)
-                .padding(EdgeInsets(top: 8, leading: 12, bottom: 10, trailing: 12))
-            }
-        }
-    }
-}
-
 /// Key / value line in a well (32 pt).
 struct KVRow: View {
     var key: String
@@ -255,12 +117,11 @@ struct KVRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(key).foregroundStyle(Theme.sub)
+            Text(key).ui(13).foregroundStyle(Theme.sub)
             Spacer(minLength: 8)
             Text(value).ui(13, 500).foregroundStyle(valueColor).lineLimit(1).truncationMode(.middle)
         }
-        .padding(.horizontal, 12)
-        .frame(height: 32)
+        .frame(height: 26)
         .accessibilityElement(children: .combine)
     }
 }
@@ -274,12 +135,11 @@ struct MeterRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(name).lineLimit(1).frame(width: 96, alignment: .leading)
-            MeterBar(fraction: fraction, color: color)
+            Text(name).ui(13).foregroundStyle(Theme.sub).lineLimit(1).frame(width: 76, alignment: .leading)
+            DotMeter(fraction: fraction, color: color, count: 20)
             Text(value).ui(13, 500).lineLimit(1).frame(width: 64, alignment: .trailing)
         }
-        .padding(.horizontal, 8)
-        .frame(height: 28)
+        .frame(height: 24)
         .accessibilityElement(children: .combine)
     }
 }
@@ -297,8 +157,8 @@ struct PanelProcessList: View {
     var body: some View {
         PanelSection(title: title, link: link) {
             ProcessListPanel(processes: processes, metric: metric, color: color,
-                             rowHeight: 30, nameWidth: nameWidth, valueWidth: valueWidth, rowPadding: 8,
-                             fill: Theme.well, radius: 12)
+                             rowHeight: 28, nameWidth: nameWidth, valueWidth: valueWidth, rowPadding: 6,
+                             fill: .clear, radius: 0)
         }
     }
 }
@@ -454,7 +314,8 @@ struct ProcessListPanel: View {
                     }
                     ForEach(rest) { row($0, fraction: metric.value($0) / maxValue) }
                 }
-                .padding(4)
+                .padding(fill == .clear ? 0 : 4)
+                .padding(.horizontal, fill == .clear ? -rowPadding : 0)
                 .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill))
             }
         }
@@ -463,9 +324,9 @@ struct ProcessListPanel: View {
     private func row(_ p: ProcessUsage, fraction: Double) -> some View {
         let isHover = hovered == p.id && !p.isSystem
         return HStack(spacing: 10) {
-            ProcessIcon(process: p, size: 18)
-            Text(p.name).ui(13, isHover ? 500 : 400).lineLimit(1).truncationMode(.tail)
-                .frame(width: nameWidth, alignment: .leading)
+            ProcessIcon(process: p, size: 14)
+            Text(p.name).ui(13).lineLimit(1).truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
             if isHover {
                 Spacer(minLength: 0)
                 Button {
@@ -482,17 +343,13 @@ struct ProcessListPanel: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(L10n.Panel.quitNamed(p.name))
             } else {
-                MeterBar(fraction: fraction, color: color)
+                DotMeter(fraction: fraction * 0.9, color: color, count: 16).frame(width: 56)
             }
             Text(metric.text(p)).ui(13, 500).lineLimit(1).frame(width: valueWidth, alignment: .trailing)
         }
         .padding(.horizontal, rowPadding)
         .frame(height: rowHeight)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(isHover ? Theme.raised : Color.clear)
-                .raisedShadow(isHover)
-        )
+        .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(isHover ? Theme.lgHover : Color.clear))
         .contentShape(Rectangle())
         .onHover { inside in
             if inside { hovered = p.id } else if hovered == p.id { hovered = nil }
@@ -519,7 +376,7 @@ struct TrafficList: View {
             }
             ForEach(processes) { p in
                 HStack(spacing: 10) {
-                    ProcessIcon(process: p, size: 18)
+                    ProcessIcon(process: p, size: 14)
                     Text(p.name).lineLimit(1).truncationMode(.tail).frame(maxWidth: .infinity, alignment: .leading)
                     Text(MenuBarText.downArrow + " " + Format.rate(p.netDown, unit: unit)).fontWeight(.medium).lineLimit(1)
                         .frame(width: 76, alignment: .trailing)
@@ -527,17 +384,14 @@ struct TrafficList: View {
                         .frame(width: 64, alignment: .trailing)
                 }
                 .ui(13)
-                .padding(.horizontal, 8)
-                .frame(height: 30)
+                .frame(height: 28)
                 .contentShape(Rectangle())
                 .contextMenu { ProcessContextMenu(process: p) }
                 .accessibilityElement(children: .combine)
             }
             ForEach(0..<max(0, rows - max(processes.count, 1)), id: \.self) { _ in
-                Color.clear.frame(height: 30).accessibilityHidden(true)
+                Color.clear.frame(height: 28).accessibilityHidden(true)
             }
         }
-        .padding(4)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.well))
     }
 }

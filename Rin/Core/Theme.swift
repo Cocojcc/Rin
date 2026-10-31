@@ -2,10 +2,10 @@ import AppKit
 import CoreText
 import SwiftUI
 
-/// Design tokens (light / dark pairs), in the night-sakura palette (夜樱): plum-ink text on faintly
-/// pink glass, sakura rose and plum for data with slate blue for traffic, jade for all is well,
-/// vermilion only for alerts and her seal. Color is reserved for data and state, so a value reads
-/// the same everywhere.
+/// Design tokens (light / dark pairs) for the monitoring console: solid neutral surfaces (charcoal
+/// with a trace of warmth when dark, white and light grey when light) and color only for data and
+/// state. Each module owns one hue and its parts (user / system, down / up, read / write) are
+/// shades of it; green, amber and red only ever mean status.
 struct RGBA {
     let r: CGFloat, g: CGFloat, b: CGFloat, a: CGFloat
 
@@ -43,88 +43,97 @@ extension Color {
 }
 
 enum Theme {
-    // Glass surfaces
-    static let glass = Color.dyn(RGBA(252, 248, 249, 0.64), RGBA(42, 36, 40, 0.62))
-    /// The main window's tint: more solid than the dropdowns' glass, so dense pages read the same
-    /// over any wallpaper or window behind them.
-    static let windowGlass = Color.dyn(RGBA(252, 248, 249, 0.84), RGBA(42, 36, 40, 0.82))
-    static let side = Color.dyn(RGBA(255, 255, 255, 0.28), RGBA(20, 20, 22, 0.25))
-    static let glassRim = Color.dyn(RGBA(255, 255, 255, 0.8), RGBA(255, 255, 255, 0.14))
+    // Surfaces: solid, no glass.
+    /// The dropdowns' background.
+    static let glass = Color.dyn(RGBA(0xFFFFFF), RGBA(0x1A191C))
+    static let windowGlass = Color.dyn(RGBA(0xFFFFFF), RGBA(0x151416))
+    static let side = Color.dyn(RGBA(0xF5F5F7), RGBA(0x111012))
+    static let glassRim = Color.dyn(RGBA(0, 0, 0, 0.1), RGBA(255, 255, 255, 0.14))
     static let glassEdge = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(0, 0, 0, 0.5))
-    static let menu = Color.dyn(RGBA(250, 246, 247, 0.84), RGBA(52, 45, 50, 0.86))
+    static let menu = Color.dyn(RGBA(0xFFFFFF), RGBA(0x242326))
 
-    // Raised controls (selected segments, sidebar selection, inline values)
-    static let raised = Color.dyn(RGBA(0xFFFFFF), RGBA(255, 255, 255, 0.2))
-    static let raisedShadowNear = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(0, 0, 0, 0.3))
-    static let raisedShadowFar = Color.dyn(RGBA(0, 0, 0, 0.06), RGBA(0, 0, 0, 0))
+    // Selected pieces: a white chip on light, a lighter step on dark.
+    static let raised = Color.dyn(RGBA(0xFFFFFF), RGBA(255, 255, 255, 0.15))
+    static let raisedShadowNear = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(0, 0, 0, 0))
+    static let raisedShadowFar = Color.dyn(RGBA(0, 0, 0, 0.04), RGBA(0, 0, 0, 0))
 
-    // Liquid-glass controls: a track behind segmented groups, a thumb for the selected piece.
-    static let lgFill = Color.dyn(RGBA(255, 255, 255, 0.05), RGBA(255, 255, 255, 0.03))
-    static let lgEdgeLight = Color.dyn(RGBA(255, 255, 255, 0.55), RGBA(255, 255, 255, 0.1))
-    static let lgEdgeLine = Color.dyn(RGBA(0, 0, 0, 0.1), RGBA(255, 255, 255, 0.1))
-    // The design asks for 7–8% white, which barely shows on the real window; filled enough to read as selected.
-    static let lgThumb = Color.dyn(RGBA(255, 255, 255, 0.78), RGBA(255, 255, 255, 0.16))
-    static let lgThumbLight = Color.dyn(RGBA(255, 255, 255, 0.8), RGBA(255, 255, 255, 0.28))
-    static let lgThumbRing = Color.dyn(RGBA(255, 255, 255, 0.35), RGBA(255, 255, 255, 0.14))
-    static let lgThumbLine = Color.dyn(RGBA(0, 0, 0, 0.14), RGBA(0, 0, 0, 0.5))
-    static let lgThumbShadow = Color.dyn(RGBA(0, 0, 0, 0.12), RGBA(0, 0, 0, 0.45))
-    static let lgHover = Color.dyn(RGBA(255, 255, 255, 0.4), RGBA(255, 255, 255, 0.08))
+    // Segmented groups: a flat track and a flat thumb on the selected piece.
+    static let lgFill = Color.dyn(RGBA(0, 0, 0, 0.06), RGBA(255, 255, 255, 0.08))
+    static let lgEdgeLight = Color.clear
+    static let lgEdgeLine = Color.clear
+    static let lgThumb = raised
+    static let lgThumbLight = Color.clear
+    static let lgThumbRing = Color.clear
+    static let lgThumbLine = Color.dyn(RGBA(0, 0, 0, 0.06), RGBA(0, 0, 0, 0))
+    static let lgThumbShadow = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(0, 0, 0, 0))
+    static let lgHover = Color.dyn(RGBA(0, 0, 0, 0.04), RGBA(255, 255, 255, 0.05))
+    /// The selected sidebar row.
+    static let selection = Color.dyn(RGBA(0, 0, 0, 0.06), RGBA(255, 255, 255, 0.09))
 
-    static let well = Color.dyn(RGBA(0, 0, 0, 0.055), RGBA(255, 255, 255, 0.08))
-    static let panel = Color.dyn(RGBA(0, 0, 0, 0.035), RGBA(255, 255, 255, 0.05))
-    static let line = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(255, 255, 255, 0.1))
+    static let well = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.08))
+    static let switchOff = Color.dyn(RGBA(0, 0, 0, 0.12), RGBA(255, 255, 255, 0.14))
+    static let switchKnob = Color.dyn(RGBA(0xFFFFFF), RGBA(0x9C99A1))
+    static let panel = Color.dyn(RGBA(0xF4F4F6), RGBA(0x1D1C1F))
+    /// A clickable panel under the pointer (the overview's tiles).
+    static let panelHover = Color.dyn(RGBA(0xECECEF), RGBA(0x242326))
+    /// A panel's 1 pt inner edge.
+    static let panelEdge = Color.dyn(RGBA(0, 0, 0, 0.06), RGBA(255, 255, 255, 0.06))
+    static let line = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(255, 255, 255, 0.08))
 
-    static let text = Color.dyn(RGBA(0x221C1F), RGBA(0xF6F1F3))
-    /// Secondary text, a step darker than the design's #5C5C5C / #ABABAB: small grey labels on
-    /// glass read too faintly at the window's scale.
-    static let sub = Color.dyn(RGBA(0x54494E), RGBA(0xBDB1B6))
-    /// The quietest text (empty states, hints), dark enough for about 4.5 : 1 on the panels.
-    static let faint = Color.dyn(RGBA(0x76696F), RGBA(0x988B91))
-    static let track = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.1))
-    static let grid = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.08))
+    static let text = Color.dyn(RGBA(0x1C1C1E), RGBA(0xEDEBEE))
+    static let sub = Color.dyn(RGBA(0x6B6A70), RGBA(0x9C99A1))
+    /// Decoration and the quietest hints; text that has to be read uses `sub`.
+    static let faint = Color.dyn(RGBA(0x8E8D93), RGBA(0x77747B))
+    static let neutral = Color.dyn(RGBA(0x8E8D93), RGBA(0xC9C6CC))
+    static let track = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.08))
+    static let grid = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.07))
     static let cache = Color.dyn(RGBA(0, 0, 0, 0.18), RGBA(255, 255, 255, 0.22))
     static let cross = Color.dyn(RGBA(0, 0, 0, 0.3), RGBA(255, 255, 255, 0.35))
     static let rim = Color.dyn(RGBA(29, 29, 31, 0.4), RGBA(245, 245, 247, 0.45))
     static let tile = Color.dyn(RGBA(29, 29, 31, 0.08), RGBA(245, 245, 247, 0.1))
     static let bar = Color.dyn(RGBA(255, 255, 255, 0.5), RGBA(30, 30, 32, 0.5))
-    static let barFg = Color.dyn(RGBA(0x221C1F), RGBA(0xF6F1F3))
+    static let barFg = Color.dyn(RGBA(0x1C1C1E), RGBA(0xEDEBEE))
     /// Menu bar ink: opaque black or white like the system's own menu bar text (`.primary` is
     /// 85% opaque, which rendered the items grey).
     static let barInk = Color.dyn(RGBA(0x000000), RGBA(0xFFFFFF))
 
-    static let ink = Color.dyn(RGBA(0x221C1F), RGBA(0xF6F1F3))
-    static let onInk = Color.dyn(RGBA(0xFCF8F9), RGBA(0x221C1F))
-    /// Filled controls (a switch that is on, the main button): ink, so the window stays grey.
+    static let ink = Color.dyn(RGBA(0x1C1C1E), RGBA(0xEDEBEE))
+    static let onInk = Color.dyn(RGBA(0xFFFFFF), RGBA(0x151416))
+    /// Filled controls (a switch that is on, the main button): ink, so color stays with the data.
     static let accent = ink
     static let onAccent = onInk
-    /// Her seal's vermilion (朱), a touch brighter on dark so it doesn't sink.
-    static let seal = Color.dyn(RGBA(0xC8402E), RGBA(0xD9533F))
-    static let onSeal = Color.dyn(RGBA(0xFFF9F2), RGBA(0xFFF9F2))
-    /// A soft wallpaper for the About page's laptop when the desktop picture can't be read.
-    static let wall = Color.dyn(RGBA(0xEBDDE2), RGBA(0x2B2228))
+    /// A plain wallpaper for the About page's laptop when the desktop picture can't be read.
+    static let wall = Color.dyn(RGBA(0xE8E8EB), RGBA(0x232226))
 
     // Status
-    static let ok = Color.dyn(RGBA(0x3F7A6A), RGBA(0x8CCBB8))
-    static let okBg = Color.dyn(RGBA(63, 122, 106, 0.14), RGBA(140, 203, 184, 0.18))
-    static let warn = Color.dyn(RGBA(0x8A6420), RGBA(0xE6C27E))
-    static let warnBg = Color.dyn(RGBA(190, 150, 70, 0.18), RGBA(230, 194, 126, 0.18))
-    static let danger = Color.dyn(RGBA(0xC8402E), RGBA(0xF08A74))
-    static let dangerBg = Color.dyn(RGBA(200, 64, 46, 0.12), RGBA(240, 138, 116, 0.16))
-    static let dangerFill = Color.dyn(RGBA(0xC8402E), RGBA(0xE0624C))
-    static let onDanger = Color.dyn(RGBA(0xFFF9F2), RGBA(0x1B1D22))
+    static let ok = Color.dyn(RGBA(0x17844A), RGBA(0x5ED38C))
+    static let okBg = Color.dyn(RGBA(23, 132, 74, 0.1), RGBA(94, 211, 140, 0.14))
+    static let warn = Color.dyn(RGBA(0xC78A00), RGBA(0xF5C24C))
+    static let warnBg = Color.dyn(RGBA(199, 138, 0, 0.12), RGBA(245, 194, 76, 0.14))
+    static let danger = Color.dyn(RGBA(0xD93A31), RGBA(0xFF5A52))
+    static let dangerBg = Color.dyn(RGBA(217, 58, 49, 0.1), RGBA(255, 90, 82, 0.14))
+    static let dangerFill = Color.dyn(RGBA(0xD93A31), RGBA(0xFF5A52))
+    static let onDanger = Color.dyn(RGBA(0xFFFFFF), RGBA(0x151416))
 
-    // Data: CPU's system share is the paler sakura beside its user rose.
-    static let cpu = Color.dyn(RGBA(0xC4607A), RGBA(0xEE9BB0))
-    static let sys = Color.dyn(RGBA(0xE6B3C0), RGBA(0x8E5A6A))
-    static let gpu = Color.dyn(RGBA(0x9A7BC0), RGBA(0xC6B0E8))
-    static let mem = Color.dyn(RGBA(0x7D4E8C), RGBA(0xC39AD6))
-    static let down = Color.dyn(RGBA(0x5E7C9C), RGBA(0x9DB8D6))
-    static let up = Color.dyn(RGBA(0xC4607A), RGBA(0xEE9BB0))
-    static let read = Color.dyn(RGBA(0x5E7C9C), RGBA(0x9DB8D6))
-    static let write = Color.dyn(RGBA(0x7D4E8C), RGBA(0xC39AD6))
-    static let disk = Color.dyn(RGBA(0x5E8E8A), RGBA(0x96C6C0))
-    static let temp = Color.dyn(RGBA(0xB88A5A), RGBA(0xE2BA8C))
-    static let bat = Color.dyn(RGBA(0x6E9A72), RGBA(0xA6D0A8))
+    // Data: one hue per module, one step darker on white so it holds.
+    static let cpu = Color.dyn(RGBA(0x2B6BE8), RGBA(0x4D8EFF))
+    static let sys = Color.dyn(RGBA(0xA9C5FB), RGBA(0x2F5FC4))
+    static let gpu = Color.dyn(RGBA(0x6E9A12), RGBA(0xB6DB4C))
+    static let mem = Color.dyn(RGBA(0x8A4FE6), RGBA(0xB47CFF))
+    static let memWired = Color.dyn(RGBA(0x5E2FB8), RGBA(0x7E4FD0))
+    static let memCompressed = Color.dyn(RGBA(0xC7A6F5), RGBA(0xD6B8FF))
+    static let memCache = Color.dyn(RGBA(138, 79, 230, 0.25), RGBA(180, 124, 255, 0.35))
+    static let down = Color.dyn(RGBA(0x0B9BB8), RGBA(0x3FCBE3))
+    static let up = Color.dyn(RGBA(0x8EDCEB), RGBA(0x1E8FA6))
+    static let read = Color.dyn(RGBA(0x4F58E0), RGBA(0x7C86FF))
+    static let write = Color.dyn(RGBA(0xA9AEF7), RGBA(0x4B55C9))
+    static let disk = read
+    static let purgeable = Color.dyn(RGBA(79, 88, 224, 0.3), RGBA(124, 134, 255, 0.45))
+    /// Temperature and power.
+    static let temp = Color.dyn(RGBA(0xEE7A1E), RGBA(0xFF9B54))
+    /// Battery and device levels use the status colors.
+    static let bat = ok
+    static let chargeBand = Color.dyn(RGBA(23, 132, 74, 0.08), RGBA(94, 211, 140, 0.1))
 
     // Menu bar items keep Apple's vivid colors: they sit on the system menu bar, not on glass.
     static let barCPU = Color.dyn(RGBA(0x34C759), RGBA(0x34C759))
@@ -206,10 +215,9 @@ enum Fonts {
         registered = CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
     }
 
-    /// The main window draws its text this much larger than the design's sizes. Its layout stays
-    /// at the design's numbers (scaled by `UIScale`); only the type grows, so pages read
-    /// comfortably at 85% without getting bigger. Dropdowns keep the design's sizes.
-    static let windowTextScale: CGFloat = 1.08
+    /// How much larger than the design's sizes the main window draws its text. The console's
+    /// type ramp (13 for body text) already reads well at 85%, so it is 1; kept as a knob.
+    static let windowTextScale: CGFloat = 1
 
     /// Interface text at a design size, enlarged by the surface's text scale (half points).
     /// Big readouts sit 40 units lighter: with the system's font smoothing on they would

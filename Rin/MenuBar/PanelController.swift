@@ -155,19 +155,19 @@ struct PanelRoot: View {
 
     var body: some View {
         UIScaled {
-            VStack(spacing: 8) {
+            VStack(spacing: 12) {
                 switch kind {
                 case .module(let m): ModulePanel(module: m)
                 case .combined: CombinedPanel()
                 }
                 PanelFooter()
             }
-            .padding(EdgeInsets(top: 16, leading: 16, bottom: 10, trailing: 16))
+            .padding(EdgeInsets(top: 14, leading: 14, bottom: 10, trailing: 14))
             .frame(width: PanelController.width)
             .ui(13)
             .foregroundStyle(Theme.text)
         }
-        .background(GlassBackground(radius: UIScale.of(20)))
+        .background(GlassBackground(radius: UIScale.of(14)))
         .focusEffectDisabled()
     }
 }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Plain page title (20 / 600) for pages without a module header.
+/// Plain page title (20 / 600) for pages without a module header, controls on the right.
 struct PageTitle<Trailing: View>: View {
     var title: String
     @ViewBuilder var trailing: Trailing
@@ -11,8 +11,7 @@ struct PageTitle<Trailing: View>: View {
             Spacer(minLength: 0)
             trailing
         }
-        .frame(height: 36)
-        .padding(.horizontal, 14)
+        .frame(height: 32)
     }
 }
 
@@ -27,220 +26,6 @@ struct RangeControl: View {
     var body: some View {
         Segmented(label: L10n.Range.label, options: options.map { ($0, $0.title) }, selection: $range, style: .range)
             .fixedSize()
-    }
-}
-
-/// Range control on the left, legend or a link on the right; the chart panel underneath. When a
-/// narrow window can't fit both, the legend moves to its own line, still on the right.
-struct RangeRow<Leading: View, Trailing: View>: View {
-    @ViewBuilder var leading: Leading
-    @ViewBuilder var trailing: Trailing
-    @Environment(\.textScale) private var textScale
-
-    var body: some View {
-        RangeRowLayout(textScale: textScale) {
-            HStack(spacing: 8) { leading }
-            trailing
-        }
-    }
-}
-
-/// One line while the right side fits (its text may settle back to the design's size for that),
-/// otherwise the right side drops below, still flush right.
-private struct RangeRowLayout: Layout {
-    var textScale: CGFloat
-    private let gap: CGFloat = 16
-    private let lineGap: CGFloat = 8
-
-    private func measure(_ width: CGFloat?, _ subviews: Subviews) -> (lead: CGSize, trail: CGSize, oneLine: Bool) {
-        let lead = subviews[0].sizeThatFits(.unspecified)
-        let trail = subviews[1].sizeThatFits(.unspecified)
-        guard let width, width.isFinite else { return (lead, trail, true) }
-        return (lead, trail, lead.width + gap + trail.width / textScale <= width + 0.5)
-    }
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        guard subviews.count == 2 else { return .zero }
-        let m = measure(proposal.width, subviews)
-        let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? (m.lead.width + gap + m.trail.width)
-        return CGSize(width: width, height: m.oneLine ? max(m.lead.height, m.trail.height) : m.lead.height + lineGap + m.trail.height)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        guard subviews.count == 2 else { return }
-        let m = measure(bounds.width, subviews)
-        if m.oneLine {
-            let room = max(0, min(m.trail.width, bounds.width - m.lead.width - gap))
-            subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(m.lead))
-            subviews[1].place(at: CGPoint(x: bounds.maxX, y: bounds.midY), anchor: .trailing,
-                              proposal: ProposedViewSize(width: room, height: m.trail.height))
-        } else {
-            subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.minY), anchor: .topLeading, proposal: ProposedViewSize(m.lead))
-            subviews[1].place(at: CGPoint(x: bounds.maxX, y: bounds.minY + m.lead.height + lineGap), anchor: .topTrailing,
-                              proposal: ProposedViewSize(width: min(m.trail.width, bounds.width), height: m.trail.height))
-        }
-    }
-}
-
-/// Legend items under the range control (12 pt, 16 apart, 14 from the right edge).
-struct ChartLegend: View {
-    var items: [LegendItem]
-
-    var body: some View {
-        HStack(spacing: 16) {
-            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                HStack(spacing: 6) {
-                    item.swatch
-                    Text(item.label).foregroundStyle(Theme.sub)
-                    if let value = item.value { Text(value).fontWeight(.medium).foregroundStyle(Theme.text) }
-                }
-                .fixedSize()
-            }
-        }
-        .ui(12)
-        .padding(.trailing, 14)
-    }
-}
-
-struct LegendItem {
-    enum Shape { case dot, bar, square, outline }
-    var color: Color
-    var label: String
-    var value: String? = nil
-    var shape: Shape = .dot
-    var opacity: Double = 1
-
-    @ViewBuilder var swatch: some View {
-        switch shape {
-        case .dot: Circle().fill(color.opacity(opacity)).frame(width: 8, height: 8)
-        case .bar: RoundedRectangle(cornerRadius: 2, style: .continuous).fill(color.opacity(opacity)).frame(width: 12, height: 8)
-        case .square: RoundedRectangle(cornerRadius: 2, style: .continuous).fill(color.opacity(opacity)).frame(width: 8, height: 8)
-        case .outline: RoundedRectangle(cornerRadius: 2, style: .continuous).strokeBorder(Theme.faint, lineWidth: 1.5).frame(width: 8, height: 8)
-        }
-    }
-}
-
-/// Chart in an 18 pt panel that bleeds to the edges (12 pt above the plot).
-struct ChartPanel<Chart: View>: View {
-    var height: CGFloat
-    /// The module's alert rule, offered at the top right.
-    var alert: Alerts.Rule? = nil
-    /// Where the rule's limit sits on the plot (0 bottom, 1 top); its label rides that line while on.
-    var alertLine: Double? = nil
-    var settings = SettingsStore.shared
-    @ViewBuilder var chart: Chart
-
-    var body: some View {
-        chart
-            .frame(height: height)
-            .padding(.top, 12)
-            .background(Theme.panel)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(alignment: .topTrailing) {
-                if let alert {
-                    ChartAlertBadge(rule: alert).padding(.top, badgeTop(alert)).padding(.trailing, 8)
-                }
-            }
-    }
-
-    private func badgeTop(_ rule: Alerts.Rule) -> CGFloat {
-        guard rule.isOn(settings.prefs), let line = alertLine else { return 8 }
-        let center = 12 + (1 - CGFloat(min(max(line, 0), 1))) * height
-        return min(max(center - 10, 8), 12 + height - 28)
-    }
-}
-
-/// Parts side by side with 2 pt gaps, each a rounded 6 pt bar (CPU, memory, power, volumes).
-struct StackedBar: View {
-    var parts: [(Double, Color)]
-    var height: CGFloat = 6
-    var gap: CGFloat = 2
-
-    var body: some View {
-        GeometryReader { geo in
-            let visible = parts.filter { $0.0 > 0 }
-            let total = max(visible.map(\.0).reduce(0, +), 0.0001)
-            let gaps = CGFloat(max(visible.count - 1, 0)) * gap
-            HStack(spacing: gap) {
-                ForEach(Array(visible.enumerated()), id: \.offset) { _, p in
-                    RoundedRectangle(cornerRadius: height / 2, style: .continuous).fill(p.1)
-                        .frame(width: max(0, (geo.size.width - gaps) * p.0 / total))
-                }
-            }
-        }
-        .frame(height: height)
-        .accessibilityHidden(true)
-    }
-}
-
-/// Label left, value right (13 pt; the value 500).
-struct ValueLine: View {
-    var label: String
-    var value: String
-    var labelColor: Color = Theme.text
-    var valueColor: Color = Theme.text
-    var swatch: LegendItem? = nil
-    var height: CGFloat? = nil
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            HStack(spacing: 6) {
-                if let swatch { swatch.swatch.alignmentGuide(.firstTextBaseline) { $0[.bottom] - 0.5 } }
-                Text(label).foregroundStyle(swatch == nil ? labelColor : Theme.sub).lineLimit(1)
-            }
-            Spacer(minLength: 0)
-            Text(value).fontWeight(.medium).foregroundStyle(valueColor).lineLimit(1).fixedSize()
-        }
-        .ui(13)
-        .frame(height: height)
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// Zones along a 3 pt track with a knob at the current value (memory pressure, temperatures).
-struct ZoneTrack: View {
-    var zones: [(Double, Color)]
-    var position: Double
-    var knob: Color
-    var zoneOpacity: Double = 0.45
-
-    var body: some View {
-        GeometryReader { geo in
-            let total = max(zones.map(\.0).reduce(0, +), 0.0001)
-            let gaps = CGFloat(max(zones.count - 1, 0)) * 2
-            ZStack(alignment: .topLeading) {
-                HStack(spacing: 2) {
-                    ForEach(Array(zones.enumerated()), id: \.offset) { _, z in
-                        Capsule().fill(z.1.opacity(zoneOpacity)).frame(width: (geo.size.width - gaps) * z.0 / total)
-                    }
-                }
-                .frame(height: 3)
-                .padding(.top, 2.5)
-                Circle().fill(knob)
-                    .frame(width: 8, height: 8)
-                    .overlay(Circle().strokeBorder(Theme.raised, lineWidth: 2).padding(-2))
-                    .offset(x: geo.size.width * min(1, max(0, position)) - 4)
-            }
-        }
-        .frame(height: 8)
-        .accessibilityHidden(true)
-    }
-}
-
-/// Four equal segments, the first `level + 1` lit (thermal state).
-struct LevelSegments: View {
-    var level: Int
-    var color: Color
-    var height: CGFloat = 4
-    var gap: CGFloat = 4
-
-    var body: some View {
-        HStack(spacing: gap) {
-            ForEach(0..<4, id: \.self) { i in
-                Capsule().fill(i <= level ? color : Theme.track).frame(height: height)
-            }
-        }
-        .accessibilityHidden(true)
     }
 }
 
@@ -261,8 +46,8 @@ struct PageRing: View {
     }
 }
 
-/// Top processes on a monitor page: rows split by hairlines, name column, meter, one or two values.
-/// Hovering a row swaps the meter for Quit; right click has the rest.
+/// Top processes on a monitor page, inside its panel: icon, name, a cell meter, one or two values.
+/// Hovering a row tints it and swaps the meter for Quit; right click has the rest.
 struct ProcessTable: View {
     var processes: [ProcessUsage]
     var fraction: (ProcessUsage) -> Double
@@ -271,7 +56,8 @@ struct ProcessTable: View {
     var valueWidth: CGFloat = 72
     var secondary: ((ProcessUsage) -> String)? = nil
     var secondaryWidth: CGFloat = 72
-    var rowHeight: CGFloat = 34
+    var rowHeight: CGFloat = 28
+    var nameWidth: CGFloat = 120
     /// Pads with empty rows up to this many, so a list that comes and goes keeps its height.
     var minRows = 0
     var quitCenter = QuitCenter.shared
@@ -289,15 +75,11 @@ struct ProcessTable: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .frame(height: rowHeight)
                     }
-                    DividedRows {
-                        ForEach(rest) { row($0) }
-                    }
+                    ForEach(rest) { row($0) }
                     ForEach(0..<max(0, minRows - max(processes.count, 1)), id: \.self) { _ in
                         Color.clear.frame(height: rowHeight).accessibilityHidden(true)
                     }
                 }
-                .padding(.horizontal, 14)
-                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
             }
         }
     }
@@ -306,10 +88,10 @@ struct ProcessTable: View {
         let isHover = hovered == p.id && !p.isSystem
         return HStack(spacing: 10) {
             HStack(spacing: 10) {
-                ProcessIcon(process: p, size: 18)
+                ProcessIcon(process: p, size: 14)
                 Text(p.name).lineLimit(1).truncationMode(.tail)
             }
-            .frame(width: 158, alignment: .leading)
+            .frame(width: nameWidth, alignment: .leading)
             if isHover {
                 Spacer(minLength: 0)
                 Button {
@@ -328,62 +110,21 @@ struct ProcessTable: View {
             } else {
                 MeterBar(fraction: fraction(p), color: color)
             }
-            Text(value(p)).fontWeight(.medium).lineLimit(1).frame(width: valueWidth, alignment: .trailing)
+            Text(value(p)).ui(13, 500).lineLimit(1).frame(width: valueWidth, alignment: .trailing)
             if let secondary {
                 Text(secondary(p)).foregroundStyle(Theme.sub).lineLimit(1).frame(width: secondaryWidth, alignment: .trailing)
             }
         }
         .ui(13)
         .frame(height: rowHeight)
+        .padding(.horizontal, 6)
+        .background { if hovered == p.id { RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.lgHover) } }
+        .padding(.horizontal, -6)
         .contentShape(Rectangle())
         .onHover { inside in
             if inside { hovered = p.id } else if hovered == p.id { hovered = nil }
         }
         .contextMenu { ProcessContextMenu(process: p) }
         .accessibilityElement(children: .combine)
-    }
-}
-
-/// Small time labels under a 24 h / 7 d chart.
-struct TimeAxisLabels: View {
-    var range: TimeRange
-
-    var body: some View {
-        GeometryReader { geo in
-            let now = Date()
-            let start = now.addingTimeInterval(-range.seconds)
-            let marks = TimeAxisLabels.marks(range: range, now: now)
-            ZStack(alignment: .topLeading) {
-                ForEach(marks, id: \.self) { d in
-                    let x = geo.size.width * CGFloat(d.timeIntervalSince(start) / range.seconds)
-                    Text(label(d)).ui(12).foregroundStyle(Theme.sub).fixedSize()
-                        .position(x: x, y: 7)
-                }
-                Text(L10n.Range.now).ui(12).foregroundStyle(Theme.sub).fixedSize()
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            }
-        }
-        .frame(height: 14)
-        .accessibilityHidden(true)
-    }
-
-    private func label(_ d: Date) -> String {
-        range == .d7 ? d.formatted(.dateTime.month(.defaultDigits).day()) : Format.time(d)
-    }
-
-    static func marks(range: TimeRange, now: Date) -> [Date] {
-        let cal = Calendar.current
-        let start = now.addingTimeInterval(-range.seconds)
-        var out: [Date] = []
-        if range == .d7 {
-            var d = cal.startOfDay(for: start).addingTimeInterval(86_400)
-            while d < now.addingTimeInterval(-43_200) { out.append(d); d.addTimeInterval(86_400 * 2) }
-        } else {
-            // Every 6 hours on the clock, like 18:00 / 0:00 / 6:00 / 12:00.
-            var d = cal.date(bySetting: .minute, value: 0, of: start) ?? start
-            while cal.component(.hour, from: d) % 6 != 0 || d <= start { d.addTimeInterval(3600) }
-            while d < now.addingTimeInterval(-3600) { out.append(d); d.addTimeInterval(6 * 3600) }
-        }
-        return out
     }
 }

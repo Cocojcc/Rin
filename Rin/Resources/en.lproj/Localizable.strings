@@ -1,7 +1,6 @@
 /* Rin — English */
 
 "app.name" = "Rin";
-"app.seal" = "凜";
 
 "module.cpu" = "CPU";
 "module.gpu" = "GPU";
@@ -520,9 +519,9 @@
 "monitor.volumeUsed" = "%1$@ used · %2$@ total";
 "monitor.volumeUsedPurgeable" = "%1$@ used (%2$@ purgeable) · %3$@ total";
 "monitor.vramUnified" = "VRAM · unified memory";
-"monitor.zoneLow" = "● Below %@";
-"monitor.zoneMid" = "● %1$@–%2$@";
-"monitor.zoneHigh" = "● Above %@";
+"monitor.zoneLow" = "Below %@";
+"monitor.zoneMid" = "%1$@–%2$@";
+"monitor.zoneHigh" = "Above %@";
 "settings.moduleSettings" = "%@ settings";
 "settings.processRefresh" = "Process refresh";
 "settings.ruleGPU" = "GPU usage above";
@@ -977,3 +976,28 @@
 "mood.battery" = "Battery's running low.";
 "mood.bluetooth" = "A Bluetooth device is running low.";
 "mood.sensors" = "Running a little hot.";
+"chart.minutesAgo" = "−%d:00";
+"chart.hoursAgo" = "−%dh";
+"chart.daysAgo" = "−%dd";
+"monitor.loadAverage1" = "Load average · 1 min";
+"monitor.frequencyAll" = "Frequency · all cores";
+"monitor.peakWhen" = "· %@";
+"monitor.ghz" = "GHz";
+"monitor.localIPTitle" = "Local IP";
+"monitor.publicIPTitle" = "Public IP";
+"monitor.ms" = "ms";
+"chart.minutesShort" = "−%dm";
+"monitor.readTotal" = "Read";
+"monitor.smart" = "S.M.A.R.T.";
+"monitor.good" = "Good";
+"monitor.failing" = "Failing";
+"monitor.topReadWrite" = "Most disk activity";
+"monitor.unitFree" = "%@ free";
+"monitor.mAh" = "mAh";
+"monitor.cpuAverageTitle" = "CPU average temperature";
+"bluetooth.connected" = "Connected";
+"monitor.totalOf" = "of %@";
+"disk.readShort" = "Read";
+"panel.vramLimit" = "VRAM · limit %@";
+"panel.unitUsed" = "%@ used";
+"chart.secondsAgo" = "−%ds";

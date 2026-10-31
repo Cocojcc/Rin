@@ -80,10 +80,10 @@ struct AllProcessesLink: View {
             MainWindowController.shared.showProcesses(sortedBy: sort)
         } label: {
             HStack(spacing: 4) {
-                Text(L10n.Processes.viewAll).ui(12)
+                Text(L10n.Processes.viewAll).ui(13)
                 LineIcon(d: Icons.linkChevron, width: 6, height: 10, viewBox: CGSize(width: 6, height: 10), lineWidth: 1.4)
             }
-            .foregroundStyle(Theme.sub)
+            .foregroundStyle(Theme.text)
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background {
@@ -97,8 +97,7 @@ struct AllProcessesLink: View {
         .accessibilityLabel(L10n.Processes.viewAllA11y)
         // The hover box reaches past the text, as the design's negative margins.
         .padding(.vertical, -3)
-        .padding(.trailing, -6)
-        .padding(.leading, 10)
+        .padding(.horizontal, -6)
     }
 }
 

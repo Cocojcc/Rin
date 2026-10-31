@@ -1,7 +1,6 @@
 /* Rin — 简体中文 */
 
 "app.name" = "Rin";
-"app.seal" = "凜";
 
 "module.cpu" = "CPU";
 "module.gpu" = "GPU";
@@ -497,7 +496,7 @@
 "monitor.router" = "路由器 %@";
 "monitor.memoryPressure" = "内存压力";
 "monitor.milliseconds" = "%d ms";
-"monitor.ofTotal" = "共 %@";
+"monitor.ofTotal" = "/ %@";
 "monitor.other" = "其他";
 "monitor.peak24h" = "24 小时峰值";
 "monitor.powerSource" = "电源";
@@ -520,9 +519,9 @@
 "monitor.volumeUsed" = "已用 %1$@ · 共 %2$@";
 "monitor.volumeUsedPurgeable" = "已用 %1$@（其中可清除 %2$@）· 共 %3$@";
 "monitor.vramUnified" = "显存 · 统一内存";
-"monitor.zoneLow" = "● 低于 %@";
-"monitor.zoneMid" = "● %1$@–%2$@";
-"monitor.zoneHigh" = "● %@ 以上";
+"monitor.zoneLow" = "低于 %@";
+"monitor.zoneMid" = "%1$@–%2$@";
+"monitor.zoneHigh" = "%@ 以上";
 "settings.moduleSettings" = "%@设置";
 "settings.processRefresh" = "进程刷新频率";
 "settings.ruleGPU" = "GPU 使用率高于";
@@ -977,3 +976,28 @@
 "mood.battery" = "电量不多了。";
 "mood.bluetooth" = "蓝牙设备快没电了。";
 "mood.sensors" = "有点热了。";
+"chart.minutesAgo" = "−%d:00";
+"chart.hoursAgo" = "−%d 时";
+"chart.daysAgo" = "−%d 天";
+"monitor.loadAverage1" = "平均负载 · 1 分钟";
+"monitor.frequencyAll" = "频率 · 所有核心";
+"monitor.peakWhen" = "· %@";
+"monitor.ghz" = "GHz";
+"monitor.localIPTitle" = "本机 IP";
+"monitor.publicIPTitle" = "公网 IP";
+"monitor.ms" = "ms";
+"chart.minutesShort" = "−%d 分";
+"monitor.readTotal" = "读取";
+"monitor.smart" = "S.M.A.R.T.";
+"monitor.good" = "良好";
+"monitor.failing" = "异常";
+"monitor.topReadWrite" = "读写最多";
+"monitor.unitFree" = "%@ 可用";
+"monitor.mAh" = "mAh";
+"monitor.cpuAverageTitle" = "CPU 平均温度";
+"bluetooth.connected" = "已连接";
+"monitor.totalOf" = "共 %@";
+"disk.readShort" = "读取";
+"panel.vramLimit" = "显存 · 上限 %@";
+"panel.unitUsed" = "%@ 已用";
+"chart.secondsAgo" = "−%d 秒";

@@ -123,7 +123,17 @@ final class History {
 
     // MARK: Recording
 
+    /// The last dozen readings of each core (total, system; 0...1), newest last, for the CPU
+    /// page's small per-core charts.
+    private(set) var recentCores: [[(total: Double, system: Double)]] = []
+
     func record(_ s: Snapshot) {
+        if s.monitored.contains(.cpu), !s.cpu.perCore.isEmpty {
+            recentCores.append(s.cpu.perCore.indices.map { i in
+                (s.cpu.perCore[i], i < s.cpu.perCoreSystem.count ? s.cpu.perCoreSystem[i] : 0)
+            })
+            if recentCores.count > 12 { recentCores.removeFirst(recentCores.count - 12) }
+        }
         var values = [Float](repeating: .nan, count: metricCount)
         // Modules switched off record nothing, so their charts show a gap rather than zeros.
         let on = s.monitored.contains

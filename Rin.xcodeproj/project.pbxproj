@@ -32,6 +32,7 @@
 		2BC114DAD2A6487C31E75260 /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E8278671F8A6D720F53E16 /* MainWindowController.swift */; };
 		2BD959F3190BBAB6617A4174 /* StatusBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA29A42C062D81FA550E5C35 /* StatusBarController.swift */; };
 		2BF003BF04D73FB99208714A /* runner-girl-1x-0.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BB44CBB0072D79C19536590 /* runner-girl-1x-0.png */; };
+		3038A9494EE118A4C1557B06 /* Console.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D2A7215A6FDCDE4D8226638 /* Console.swift */; };
 		38445EA5C6CCA6EB6750DFC1 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 582A09C1C325595C8DD0993E /* Settings.swift */; };
 		396D7E05F01D0AB6BCFD862E /* Mood.swift in Sources */ = {isa = PBXBuildFile; fileRef = 299C6AFA605F60D09DCFAAA1 /* Mood.swift */; };
 		39A8AB9AF94E064B5BD69840 /* NVMeSMART.c in Sources */ = {isa = PBXBuildFile; fileRef = EB7FC88ECEE7E884A34F5D10 /* NVMeSMART.c */; };
@@ -228,6 +229,7 @@
 		58AAB669C17CA92EE8F738B6 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		59F9A1320CFF90120D61E694 /* SpaceGrotesk.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = SpaceGrotesk.ttf; sourceTree = "<group>"; };
 		5B43A5722A566ED8ABC06254 /* runner-girl-2x-9.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-2x-9.png"; sourceTree = "<group>"; };
+		5D2A7215A6FDCDE4D8226638 /* Console.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Console.swift; sourceTree = "<group>"; };
 		5D914128807FFA4E20628523 /* runner-cat-1x-15.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-1x-15.png"; sourceTree = "<group>"; };
 		633FB24112FDA4CEA8C45AFA /* runner-girl-2x-5.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-2x-5.png"; sourceTree = "<group>"; };
 		635D302F39A5B40A49C9A614 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -378,6 +380,7 @@
 				39362989E1B562F1AE12714A /* Brand.swift */,
 				844141E9C2A7CCD22F2095F8 /* Charts.swift */,
 				683B616EF6FE582932090D2C /* Components.swift */,
+				5D2A7215A6FDCDE4D8226638 /* Console.swift */,
 				D54AD06C5F3D1FFBC47E2EF0 /* MainView.swift */,
 				17E8278671F8A6D720F53E16 /* MainWindowController.swift */,
 				39F49ABD0586DA40DB1FA7DB /* MonitorComponents.swift */,
@@ -771,6 +774,7 @@
 				40E63C6575A1BF74157D0FCF /* Charts.swift in Sources */,
 				27C8CA0CA4EE2C388E080B61 /* CombinedPanel.swift in Sources */,
 				2752B58534EAC02FEB42CA49 /* Components.swift in Sources */,
+				3038A9494EE118A4C1557B06 /* Console.swift in Sources */,
 				DF7632E9F81AD8CD9C60E08F /* DiskReader.swift in Sources */,
 				3E4B2651931C889AADF17EED /* Format.swift in Sources */,
 				8D9EBE17B49C71DB4C9CCDB9 /* GPUReader.swift in Sources */,
@@ -922,7 +926,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -935,7 +939,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -981,7 +985,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -1000,7 +1004,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

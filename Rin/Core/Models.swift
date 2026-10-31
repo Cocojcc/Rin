@@ -109,6 +109,8 @@ struct NetworkSample {
     var latencyMS: Double?
     /// Recent connection checks, oldest first (at most 48).
     var checks: [ConnectionCheck] = []
+    /// The round trips of those checks in ms, nil where none was measured.
+    var latencies: [Double?] = []
 }
 
 /// `unmeasured`: the reply came back too fast to have left the Mac (a VPN's tunnel answering

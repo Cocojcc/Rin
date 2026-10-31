@@ -470,14 +470,13 @@ struct ModuleHeader<Extra: View>: View {
     @ViewBuilder var extra: Extra
 
     var body: some View {
-        HStack(spacing: 20) {
+        HStack(spacing: 12) {
             Text(module.title).ui(20, 600).kerning(-0.2).accessibilityAddTraits(.isHeader)
-            extra
             Spacer(minLength: 0)
+            extra
             ModuleViewToggle(module: module, settingsActive: settingsActive)
         }
-        .frame(height: 36)
-        .padding(.horizontal, 14)
+        .frame(height: 32)
     }
 }
 
@@ -512,18 +511,18 @@ private struct ViewSegment: View {
 
     var body: some View {
         Button(action: action) {
-            LineIcon(d: d, size: 16, lineWidth: 1.5)
+            LineIcon(d: d, size: 14, lineWidth: 1.5)
                 .foregroundStyle(on || hovering ? Theme.text : Theme.sub)
-                .frame(width: 32, height: 24)
+                .frame(width: 30, height: 22)
                 .background {
                     if on {
                         if let pageGlass { GlassThumb().matchedGeometryEffect(id: "viewToggle", in: pageGlass) } else { GlassThumb() }
                     } else if hovering {
-                        Capsule().fill(Theme.lgHover)
+                        RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.lgHover)
                     }
                 }
                 .hoverAnimation(hovering)
-                .contentShape(Capsule())
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }

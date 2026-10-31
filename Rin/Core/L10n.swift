@@ -34,7 +34,6 @@ enum L10n {
 
     enum App {
         static var name: String { tr("app.name") }
-        static var seal: String { tr("app.seal") }
     }
 
     enum Module {
@@ -190,6 +189,7 @@ enum L10n {
         static func devicesMore(_ a: String, _ b: Int) -> String { tr("bluetooth.devicesMore", a, b) }
         static var noHistory: String { tr("bluetooth.noHistory") }
         static func daysAgo(_ a: Int) -> String { tr("bluetooth.daysAgo", a) }
+        static var connected: String { tr("bluetooth.connected") }
     }
 
     enum Menu {
@@ -363,6 +363,8 @@ enum L10n {
         static func volumeUsedPurgeable(_ a: String, _ b: String, _ c: String) -> String { tr("panel.volumeUsedPurgeable", a, b, c) }
         static var passiveCooling: String { tr("panel.passiveCooling") }
         static func fanCount(_ n: Int) -> String { tr("panel.fanCount", n) }
+        static func vramLimit(_ a: String) -> String { tr("panel.vramLimit", a) }
+        static func unitUsed(_ a: String) -> String { tr("panel.unitUsed", a) }
     }
 
     enum Sensors {
@@ -434,6 +436,7 @@ enum L10n {
         static var free: String { tr("disk.free") }
         static var total: String { tr("disk.total") }
         static var internalDrive: String { tr("disk.internal") }
+        static var readShort: String { tr("disk.readShort") }
     }
 
     enum Monitor {
@@ -545,6 +548,22 @@ enum L10n {
         static func coreTip(_ a: Int, _ b: String, _ c: String) -> String { tr("monitor.coreTip", a, b, c) }
         static func cyclesLimit(_ a: Int) -> String { tr("monitor.cyclesLimit", a) }
         static func publicIP(_ a: String) -> String { tr("monitor.publicIP", a) }
+        static var loadAverage1: String { tr("monitor.loadAverage1") }
+        static var frequencyAll: String { tr("monitor.frequencyAll") }
+        static func peakWhen(_ a: String) -> String { tr("monitor.peakWhen", a) }
+        static var ghz: String { tr("monitor.ghz") }
+        static var localIPTitle: String { tr("monitor.localIPTitle") }
+        static var publicIPTitle: String { tr("monitor.publicIPTitle") }
+        static var ms: String { tr("monitor.ms") }
+        static var readTotal: String { tr("monitor.readTotal") }
+        static var smart: String { tr("monitor.smart") }
+        static var good: String { tr("monitor.good") }
+        static var failing: String { tr("monitor.failing") }
+        static var topReadWrite: String { tr("monitor.topReadWrite") }
+        static func unitFree(_ a: String) -> String { tr("monitor.unitFree", a) }
+        static var mAh: String { tr("monitor.mAh") }
+        static var cpuAverageTitle: String { tr("monitor.cpuAverageTitle") }
+        static func totalOf(_ a: String) -> String { tr("monitor.totalOf", a) }
     }
 
     enum Settings {
@@ -735,6 +754,15 @@ enum L10n {
         static var dontRemind: String { tr("notch.dontRemind") }
         static var openSettings: String { tr("notch.openSettings") }
         static var blocked: String { tr("notch.blocked") }
+    }
+
+    /// Times under a chart.
+    enum Chart {
+        static func minutesAgo(_ a: Int) -> String { tr("chart.minutesAgo", a) }
+        static func hoursAgo(_ a: Int) -> String { tr("chart.hoursAgo", a) }
+        static func daysAgo(_ a: Int) -> String { tr("chart.daysAgo", a) }
+        static func minutesShort(_ a: Int) -> String { tr("chart.minutesShort", a) }
+        static func secondsAgo(_ a: Int) -> String { tr("chart.secondsAgo", a) }
     }
 
     /// What she says while something runs high.

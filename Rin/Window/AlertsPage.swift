@@ -17,59 +17,65 @@ struct AlertsPage: View {
     var body: some View {
         let prefs = settings.prefs
         let enabledCount = Alerts.Rule.allCases.filter { prefs[keyPath: $0.enabledKey] && prefs.isEnabled($0.module) }.count
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 10) {
             PageTitle(title: L10n.Sidebar.alerts)
-            Section(title: L10n.Alerts.rules, right: L10n.Alerts.rulesOn(enabledCount)) {
+            ConsolePanel {
+                PanelTitle(title: L10n.Alerts.rules) { Text(L10n.Alerts.rulesOn(enabledCount)) }
                 VStack(spacing: 0) {
                     DividedRows {
                         ForEach(Alerts.Rule.allCases, id: \.self) { AlertRuleRow(rule: $0, highlighted: highlighted == $0) }
                         addRow
                     }
                 }
-                .padding(.horizontal, 14)
-                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
+                .padding(.top, 4)
                 .opacity(prefs.alerts.enabled ? 1 : 0.5)
             }
-            Section(title: L10n.Alerts.recent, right: alerts.events.isEmpty ? nil : L10n.Alerts.thisWeek(alerts.thisWeek)) {
-                VStack(spacing: 0) {
-                    if alerts.events.isEmpty {
-                        Text(L10n.Alerts.noneYet).ui(13).foregroundStyle(Theme.faint)
-                            .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+            ShareRow(spacing: 10) {
+                ConsolePanel {
+                    PanelTitle(title: L10n.Alerts.recent) {
+                        if !alerts.events.isEmpty { Text(L10n.Alerts.thisWeek(alerts.thisWeek)) }
                     }
-                    DividedRows {
+                    VStack(spacing: 0) {
+                        if alerts.events.isEmpty {
+                            Text(L10n.Alerts.noneYet).ui(13).foregroundStyle(Theme.sub)
+                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        }
                         ForEach(alerts.events.prefix(Self.recentShown)) { e in
                             EventRow(event: e, fresh: fresh.contains(e.id)) { alerts.show(e) }
                         }
                     }
+                    .padding(.top, 6)
                 }
-                .padding(.horizontal, 14)
-                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
-            }
-            Section(title: L10n.Alerts.delivery) {
-                VStack(spacing: 0) {
-                    DividedRows {
-                        row(L10n.Alerts.enabled) { RinSwitch(isOn: pref(\.alerts.enabled), label: L10n.Alerts.enabled) }
-                        if authorization == .denied {
-                            row(L10n.Settings.notificationsOff) {
-                                WellButton(title: L10n.Settings.openNotificationSettings) { openNotificationSettings() }
+                .frame(maxHeight: .infinity, alignment: .top)
+                .share(1.25)
+                ConsolePanel {
+                    PanelTitle(title: L10n.Alerts.delivery)
+                    VStack(spacing: 0) {
+                        DividedRows {
+                            row(L10n.Alerts.enabled) { RinSwitch(isOn: pref(\.alerts.enabled), label: L10n.Alerts.enabled) }
+                            if authorization == .denied {
+                                row(L10n.Settings.notificationsOff) {
+                                    WellButton(title: L10n.Settings.openNotificationSettings) { openNotificationSettings() }
+                                }
                             }
+                            row(L10n.Settings.notificationStyle) {
+                                Segmented(label: L10n.Settings.notificationStyle,
+                                          options: [(NotificationStyle.banner, L10n.Settings.banner), (.alert, L10n.Settings.alertStyle)],
+                                          selection: Binding(get: { prefs.alerts.style }, set: { style in
+                                              guard style != settings.prefs.alerts.style else { return }
+                                              settings.prefs.alerts.style = style
+                                              // Banner vs. alert is a system setting per app; open the page where it is changed.
+                                              openNotificationSettings()
+                                          }))
+                            }
+                            row(L10n.Settings.playSound) { RinSwitch(isOn: pref(\.alerts.sound), label: L10n.Settings.playSound) }
+                            row(L10n.Settings.colorMenubar) { RinSwitch(isOn: pref(\.alerts.colorMenubar), label: L10n.Settings.colorMenubar) }
                         }
-                        row(L10n.Settings.notificationStyle) {
-                            Segmented(label: L10n.Settings.notificationStyle,
-                                      options: [(NotificationStyle.banner, L10n.Settings.banner), (.alert, L10n.Settings.alertStyle)],
-                                      selection: Binding(get: { prefs.alerts.style }, set: { style in
-                                          guard style != settings.prefs.alerts.style else { return }
-                                          settings.prefs.alerts.style = style
-                                          // Banner vs. alert is a system setting per app; open the page where it is changed.
-                                          openNotificationSettings()
-                                      }))
-                        }
-                        row(L10n.Settings.playSound) { RinSwitch(isOn: pref(\.alerts.sound), label: L10n.Settings.playSound) }
-                        row(L10n.Settings.colorMenubar) { RinSwitch(isOn: pref(\.alerts.colorMenubar), label: L10n.Settings.colorMenubar) }
                     }
+                    .padding(.top, 6)
                 }
-                .padding(.horizontal, 14)
-                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
+                .frame(maxHeight: .infinity, alignment: .top)
+                .share(1)
             }
         }
         .onAppear {
@@ -102,9 +108,9 @@ struct AlertsPage: View {
         } label: {
             HStack(spacing: 10) {
                 LineIcon(d: Icons.plus, size: 14, viewBox: 14, lineWidth: 1.5).foregroundStyle(Theme.sub)
-                Text(L10n.Alerts.add).ui(13, 500).foregroundStyle(Theme.text)
+                Text(L10n.Alerts.add).ui(13).foregroundStyle(Theme.sub)
             }
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 34, alignment: .leading)
             .contentShape(Rectangle())
         }
         .menuStyle(.button)
@@ -126,7 +132,7 @@ struct AlertsPage: View {
             Spacer(minLength: 8)
             control()
         }
-        .frame(minHeight: 42)
+        .frame(minHeight: 36)
     }
 
     private func openNotificationSettings() {
@@ -151,20 +157,15 @@ private struct EventRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
-                HStack(spacing: 12) {
-                    LineIcon(d: Icons.module(event.rule.module), size: 14, lineWidth: 1.5)
-                        .foregroundStyle(Theme.sub)
-                        .frame(width: 28, height: 28)
-                        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.well))
+            HStack(spacing: 10) {
+                HStack(spacing: 10) {
+                    // Red while it holds, green once it is over.
+                    Circle().fill(event.ended == nil ? Theme.danger : Theme.ok).frame(width: 8, height: 8)
                         .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
-                            if fresh {
-                                Circle().fill(Theme.danger).frame(width: 6, height: 6)
-                                    .accessibilityLabel(L10n.Alerts.newA11y)
-                            }
                             Text(AlertText.headline(event)).ui(13, fresh ? 500 : 400).lineLimit(1)
+                                .accessibilityLabel(fresh ? L10n.Alerts.newA11y + AlertText.headline(event) : AlertText.headline(event))
                         }
                         if let detail = AlertText.detail(event) {
                             Text(detail).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
@@ -179,7 +180,10 @@ private struct EventRow: View {
                 .foregroundStyle(hovering ? Theme.text : Theme.sub)
             }
             .foregroundStyle(Theme.text)
-            .frame(minHeight: 52)
+            .frame(minHeight: 44)
+            .padding(.horizontal, 6)
+            .background { if hovering { RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.lgHover) } }
+            .padding(.horizontal, -6)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

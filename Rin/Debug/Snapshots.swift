@@ -42,7 +42,7 @@ enum Snapshots {
             let tag = dark ? "dark" : "light"
             let appearance = NSAppearance(named: dark ? .darkAqua : .aqua)!
             // A soft wallpaper (Theme.wall's values), so the glass reads as it does on a desktop.
-            let wall = dark ? Color(red: 0.169, green: 0.133, blue: 0.157) : Color(red: 0.922, green: 0.867, blue: 0.886)
+            let wall = dark ? Color(red: 0.137, green: 0.133, blue: 0.149) : Color(red: 0.910, green: 0.910, blue: 0.922)
             func want(_ name: String) -> Bool { only == nil || name.hasPrefix(only!) }
             if want("menubar") { save(MenubarSheet(dark: dark), appearance, dir.appendingPathComponent("menubar-\(tag).png")) }
             for m in Module.allCases where want("panel") {
@@ -69,7 +69,8 @@ enum Snapshots {
             ] + Module.allCases.map { (.moduleSettings($0), "module-\($0.rawValue)") }
             for (page, name) in pages where want("page") || want("page-\(name)") {
                 Navigator.shared.page = page
-                save(MainView().frame(width: pageWidth, height: UIScale.of(1400)).background(wall), appearance, dir.appendingPathComponent("page-\(name)-\(tag).png"))
+                // The overview fills the window, so it is drawn at the window's height.
+                save(MainView().frame(width: pageWidth, height: UIScale.of(page == .overview ? 700 : 1400)).background(wall), appearance, dir.appendingPathComponent("page-\(name)-\(tag).png"))
             }
             if want("page") || want("page-processes") {
                 Navigator.shared.page = .processes
@@ -100,9 +101,9 @@ enum Snapshots {
                 SettingsStore.shared.prefs.setEnabled(.gpu, false)
                 SettingsStore.shared.prefs.setEnabled(.bluetooth, false)
                 Navigator.shared.page = .overview
-                save(MainView().frame(width: pageWidth, height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-overview-off-\(tag).png"))
+                save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-overview-off-\(tag).png"))
                 OverviewPage.initialEditing = true
-                save(MainView().frame(width: pageWidth, height: UIScale.of(1100)).background(wall), appearance, dir.appendingPathComponent("page-overview-edit-\(tag).png"))
+                save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-overview-edit-\(tag).png"))
                 OverviewPage.initialEditing = false
                 save(PanelRoot(kind: .combined).padding(20).background(wall), appearance, dir.appendingPathComponent("panel-combined-off-\(tag).png"))
                 SettingsStore.shared.prefs.setEnabled(.gpu, true)
@@ -114,7 +115,7 @@ enum Snapshots {
                 save(MainView().frame(width: pageWidth, height: UIScale.of(1100)).background(wall), appearance, dir.appendingPathComponent("page-alerts-\(tag).png"))
                 seedAlerts()
                 Navigator.shared.page = .overview
-                save(MainView().frame(width: pageWidth, height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-overview-alert-\(tag).png"))
+                save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-overview-alert-\(tag).png"))
                 Alerts.shared.debugSeed([], open: nil)
             }
             for m in Module.allCases where want("tabs") {
