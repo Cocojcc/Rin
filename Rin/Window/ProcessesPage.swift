@@ -17,10 +17,11 @@ enum ProcessSort: CaseIterable {
 
     var width: CGFloat {
         switch self {
-        case .cpu, .gpu: return 44
-        case .memory: return 60
-        case .energy: return 56
-        case .disk, .network: return 64
+        case .cpu: return 64
+        case .gpu: return 52
+        case .memory: return 76
+        case .energy: return 60
+        case .disk, .network: return 72
         }
     }
 
@@ -70,34 +71,14 @@ enum ProcessFilter: CaseIterable {
     }
 }
 
-/// "全部 ›" after a process list's section title: opens the Processes page sorted by that list.
+/// "›" after a process list's head: opens the Processes page sorted by that list.
 struct AllProcessesLink: View {
     var sort: ProcessSort
-    @State private var hovering = false
 
     var body: some View {
-        Button {
+        IconAction(d: Icons.chevronRight, label: L10n.Processes.viewAllA11y, inline: true) {
             MainWindowController.shared.showProcesses(sortedBy: sort)
-        } label: {
-            HStack(spacing: 4) {
-                Text(L10n.Processes.viewAll).ui(14)
-                LineIcon(d: Icons.linkChevron, width: 6, height: 10, viewBox: CGSize(width: 6, height: 10), lineWidth: 1.4)
-            }
-            .foregroundStyle(Theme.text)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background {
-                if hovering { RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.lgHover) }
-            }
-            .hoverAnimation(hovering)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .accessibilityLabel(L10n.Processes.viewAllA11y)
-        // The hover box reaches past the text, as the design's negative margins.
-        .padding(.vertical, -3)
-        .padding(.horizontal, -6)
     }
 }
 
@@ -109,7 +90,6 @@ struct ProcessesPage: View {
 
     var monitor = Monitor.shared
     var navigator = Navigator.shared
-    @State private var search = ""
     @State private var filter: ProcessFilter = .all
     @State private var selected: String? = ProcessesPage.initialSelection
 
@@ -117,27 +97,28 @@ struct ProcessesPage: View {
         let s = monitor.snapshot.processes
         let rows = sorted(s.all)
         let selection = selected.flatMap { id in s.all.first { $0.id == id } }
-        VStack(alignment: .leading, spacing: 16) {
-            PageTitle(title: L10n.Sidebar.processes) { SearchField(text: $search) }
-            HStack(spacing: 12) {
-                Segmented(label: L10n.Processes.filterLabel, options: ProcessFilter.allCases.map { ($0, $0.title) },
-                          selection: $filter, style: .range)
-                    .fixedSize()
-                Spacer(minLength: 0)
-                Text(L10n.Monitor.processThreads(grouped(s.processCount), grouped(s.threadCount)))
-                    .ui(12).foregroundStyle(Theme.sub).lineLimit(1)
-                    .padding(.trailing, 14)
+        VStack(alignment: .leading, spacing: 0) {
+            PageHeader(title: L10n.Sidebar.processes) {
+                KeyValue(label: L10n.Monitor.processesLabel, value: grouped(s.processCount), size: 13)
+                KeyValue(label: L10n.Monitor.threadsLabel, value: grouped(s.threadCount), size: 13)
             }
-            HStack(alignment: .top, spacing: 12) {
+            Segmented(label: L10n.Processes.filterLabel, options: ProcessFilter.allCases.map { ($0, $0.title) },
+                      selection: $filter, style: .range)
+                .fixedSize()
+                .padding(.top, 22)
+            HStack(alignment: .top, spacing: 24) {
                 ProcessGrid(rows: rows, allColumns: columns(inspecting: selection != nil),
                             sort: navigator.processSort, selected: $selected) { navigator.processSort = $0 }
                 if let selection {
                     ProcessInspector(process: selection) { selected = nil }
-                        .frame(width: 236)
+                        .frame(width: 212)
+                        .padding(.leading, 24)
+                        .overlay(alignment: .leading) { Rectangle().fill(Theme.line).frame(width: 1) }
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
             .frame(maxHeight: .infinity, alignment: .top)
+            .padding(.top, 16)
             .animation(Motion.slide, value: selection?.id)
         }
         .frame(maxHeight: .infinity, alignment: .top)
@@ -152,7 +133,7 @@ struct ProcessesPage: View {
     }
 
     private func sorted(_ all: [ProcessUsage]) -> [ProcessUsage] {
-        let query = search.trimmingCharacters(in: .whitespaces)
+        let query = navigator.processQuery.trimmingCharacters(in: .whitespaces)
         let sort = navigator.processSort
         return all
             .filter { filter.includes($0) }
@@ -161,32 +142,6 @@ struct ProcessesPage: View {
                 let a = sort.value($0), b = sort.value($1)
                 return a != b ? a > b : $0.name.localizedStandardCompare($1.name) == .orderedAscending
             }
-    }
-
-    private func grouped(_ n: Int) -> String { n.formatted(.number.grouping(.automatic)) }
-}
-
-/// Glass search capsule in the page title (180 × 28).
-private struct SearchField: View {
-    @Binding var text: String
-
-    var body: some View {
-        HStack(spacing: 6) {
-            LineIcon(d: Icons.search, size: 12, viewBox: 12, lineWidth: 1.4).foregroundStyle(Theme.sub)
-            if RenderContext.offscreen {
-                // ImageRenderer can't draw text fields.
-                Text(L10n.Processes.search).ui(12).foregroundStyle(Theme.sub).frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                TextField(L10n.Processes.search, text: $text, prompt: Text(L10n.Processes.search).foregroundStyle(Theme.sub))
-                    .textFieldStyle(.plain)
-                    .ui(12)
-                    .foregroundStyle(Theme.text)
-            }
-        }
-        .padding(.horizontal, 10)
-        .frame(width: 180, height: 28)
-        .background(GlassTrack())
-        .accessibilityElement(children: .contain)
     }
 }
 
@@ -207,7 +162,7 @@ private struct ProcessGrid: View {
         var cols = allColumns
         func needed() -> CGFloat {
             // Header padding, row inset and padding, icon and gap, the name, then each column.
-            28 + 8 + 26 + Self.minNameWidth + cols.reduce(0) { $0 + $1.width + 8 }
+            Self.minNameWidth + cols.reduce(0) { $0 + $1.width + 12 }
         }
         for drop in [ProcessSort.network, .disk, .energy, .gpu] where needed() > width && drop != sort {
             cols.removeAll { $0 == drop }
@@ -235,12 +190,10 @@ private struct ProcessGrid: View {
                     .onChange(of: geo.size.width) { _, w in width = w }
             }
         }
-        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var header: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 12) {
             Text(L10n.Processes.name).frame(maxWidth: .infinity, alignment: .leading)
             ForEach(columns, id: \.self) { column in
                 let on = column == sort
@@ -249,7 +202,7 @@ private struct ProcessGrid: View {
                 } label: {
                     HStack(spacing: 3) {
                         if on { LineIcon(d: Icons.sortChevron, size: 8, viewBox: 8, lineWidth: 1.4) }
-                        Text(column.title).fontWeight(on ? .medium : .regular).lineLimit(1)
+                        Text(column.title).ui(12, on ? 500 : 400).lineLimit(1)
                     }
                     .foregroundStyle(on ? Theme.text : Theme.sub)
                     .frame(width: column.width, alignment: .trailing)
@@ -262,17 +215,16 @@ private struct ProcessGrid: View {
         }
         .ui(12)
         .foregroundStyle(Theme.sub)
-        .padding(.horizontal, 14)
-        .frame(height: 32)
-        .overlay(alignment: .bottom) { Rectangle().fill(Theme.line).frame(height: 0.5) }
+        .frame(height: 28)
+        .overlay(alignment: .bottom) { Hairline() }
+        .padding(.bottom, 4)
     }
 
     private func list(_ rows: [ProcessUsage]) -> some View {
-        LazyVStack(spacing: 1) {
+        LazyVStack(spacing: 0) {
             if rows.isEmpty {
-                Text(L10n.Panel.noProcesses).ui(14).foregroundStyle(Theme.faint)
+                Text(L10n.Panel.noProcesses).ui(14).foregroundStyle(Theme.sub)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 10)
                     .frame(height: 30)
             }
             ForEach(rows) { p in
@@ -281,7 +233,6 @@ private struct ProcessGrid: View {
                 }
             }
         }
-        .padding(4)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Processes.listLabel)
     }
@@ -296,14 +247,13 @@ private struct ProcessGridRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                ProcessIcon(process: process, size: 18)
+            HStack(spacing: 12) {
                 Text(process.name).lineLimit(1).truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                ForEach(columns, id: \.self) { column in
+                ForEach(Array(columns.enumerated()), id: \.element) { i, column in
                     Group {
                         if let text = column.text(process) {
-                            Text(text)
+                            Text(text).fontWeight(i == 0 ? .medium : .regular)
                         } else {
                             Text(L10n.Common.dash).foregroundStyle(Theme.sub)
                         }
@@ -314,15 +264,14 @@ private struct ProcessGridRow: View {
             }
             .ui(14)
             .foregroundStyle(Theme.text)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 8)
             .frame(height: 30)
             .background {
-                if selected {
-                    GlassThumb(cornerRadius: 10)
-                } else if hovering {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.well)
+                if selected || hovering {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous).fill(selected ? Theme.raise : Theme.lgHover)
                 }
             }
+            .padding(.horizontal, -8)
             .hoverAnimation(hovering)
             .contentShape(Rectangle())
         }
@@ -354,17 +303,16 @@ private struct ProcessInspector: View {
             }
         }
         .frame(maxHeight: .infinity, alignment: .top)
-        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Processes.inspector)
     }
 
     private func content(_ p: ProcessUsage, _ d: ProcessDetails, _ history: [ProcessPoint]) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 0) {
             header(p, d)
             if !p.isSystem {
                 if quitCenter.states[p.id] == .unresponsive {
-                    ConfirmForceQuitRow(process: p, value: Format.memory(p.memory))
+                    ConfirmForceQuitRow(process: p, value: Format.memory(p.memory)).padding(.top, 12)
                 } else {
                     HStack(spacing: 8) {
                         actionButton(quitCenter.states[p.id] == .quitting ? L10n.Panel.quitting : L10n.Panel.quit, color: Theme.text) {
@@ -372,10 +320,11 @@ private struct ProcessInspector: View {
                         }
                         actionButton(L10n.Panel.forceQuit, color: Theme.danger) { quitCenter.askForceQuit(p) }
                     }
+                    .padding(.top, 12)
                 }
             }
-            sparkCard(L10n.Module.cpu, value: Format.percentValue(p.cpu), values: history.map(\.cpu), color: Theme.cpu)
-            sparkCard(L10n.Module.memory, value: Format.memory(p.memory), values: history.map(\.memory), color: Theme.mem)
+            sparkCard(L10n.Module.cpu, value: Format.percentValue(p.cpu), values: history.map(\.cpu), color: Theme.accent).padding(.top, 16)
+            sparkCard(L10n.Module.memory, value: Format.memory(p.memory), values: history.map(\.memory), color: Theme.faint).padding(.top, 12)
             group(L10n.Processes.details, [
                 (L10n.Processes.cpuTime, p.cpuTime > 0 ? Format.hms(p.cpuTime) : nil),
                 (L10n.Processes.threads, d.threads.map { "\($0)" }),
@@ -384,23 +333,26 @@ private struct ProcessInspector: View {
                 (L10n.Processes.networkInOut, pair(p.netDown, p.netUp)),
                 (L10n.Processes.started, d.started.map(Format.dayAndTime)),
             ])
+            .padding(.top, 16)
             group(L10n.Processes.relations, [
                 (L10n.Processes.parent, d.parent.map { "\($0.name) · \($0.pid)" }),
                 (L10n.Processes.children, children(d.children)),
             ])
+            .padding(.top, 12)
         }
-        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func header(_ p: ProcessUsage, _ d: ProcessDetails) -> some View {
-        var subtitle = L10n.Processes.pidUser("\(p.pid)", d.user ?? "\(p.uid)")
-        if p.isSystem { subtitle += " · " + L10n.Processes.systemProcess }
-        return HStack(alignment: .top, spacing: 10) {
-            ProcessIcon(process: p, size: 28)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(p.name).ui(16, 500).lineLimit(1).frame(height: 20)
-                Text(subtitle).ui(12).foregroundStyle(Theme.sub).lineLimit(1).frame(height: 16)
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(p.name).ui(18, 600).lineLimit(1)
+                HStack(spacing: 14) {
+                    KeyValue(label: L10n.Processes.pidLabel, value: "\(p.pid)")
+                    KeyValue(label: L10n.Processes.userLabel, value: d.user ?? "\(p.uid)")
+                    if p.isSystem { Text(L10n.Processes.systemProcess).ui(12).foregroundStyle(Theme.sub) }
+                }
+                .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             CloseButton(action: close)
@@ -409,11 +361,11 @@ private struct ProcessInspector: View {
 
     private func actionButton(_ title: String, color: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title).ui(12, 500).lineLimit(1)
+            Text(title).ui(13).lineLimit(1)
                 .foregroundStyle(color)
                 .frame(maxWidth: .infinity)
                 .frame(height: 28)
-                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.well))
+                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.raise))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -421,38 +373,38 @@ private struct ProcessInspector: View {
 
     private func sparkCard(_ label: String, value: String, values: [Double], color: Color) -> some View {
         let top = max(values.max() ?? 0, 0.0001) * 1.1
+        let now = Date()
+        let points = values.enumerated().map { ChartPoint(date: now.addingTimeInterval(Double($0.offset - values.count + 1) * 3), value: $0.element / top * 100) }
         return VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(label).foregroundStyle(Theme.sub)
                 Spacer(minLength: 4)
                 Text(value).fontWeight(.medium)
             }
-            .ui(12)
-            .frame(height: 16)
-            MiniChart(series: [MiniChart.Series(values: values.map { $0 / top }, color: color, fill: 0.16)],
-                      gridLines: 0, minCount: ProcessPoint.kept)
-                .frame(height: 28)
+            .ui(13)
+            ConsoleChart(kind: .area, series: ChartSeries.line(points, color, width: 1.5),
+                         span: Double(max(ProcessPoint.kept, 2) * 3), maxValue: 100, height: 24, xLabels: nil, midline: false)
                 .accessibilityHidden(true)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.well))
         .accessibilityElement(children: .combine)
     }
 
     private func group(_ title: String, _ rows: [(String, String?)]) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(title).ui(12, 500).foregroundStyle(Theme.sub).frame(height: 16).padding(.bottom, 2)
-                .accessibilityAddTraits(.isHeader)
-            ForEach(rows, id: \.0) { row in
-                HStack(spacing: 10) {
-                    Text(row.0).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
-                    Spacer(minLength: 0)
-                    Text(row.1 ?? L10n.Common.dash).fontWeight(.medium).lineLimit(1).truncationMode(.tail)
+            SmallLabel(text: title).padding(.bottom, 2).accessibilityAddTraits(.isHeader)
+            VStack(spacing: 0) {
+                DividedRows {
+                    ForEach(rows, id: \.0) { row in
+                        HStack(spacing: 10) {
+                            Text(row.0).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
+                            Spacer(minLength: 0)
+                            Text(row.1 ?? L10n.Common.dash).lineLimit(1).truncationMode(.tail)
+                        }
+                        .ui(13)
+                        .frame(height: 25)
+                        .accessibilityElement(children: .combine)
+                    }
                 }
-                .ui(12)
-                .frame(height: 24)
-                .accessibilityElement(children: .combine)
             }
         }
     }
@@ -478,12 +430,12 @@ private struct CloseButton: View {
 
     var body: some View {
         Button(action: action) {
-            LineIcon(d: Icons.closeSmall, size: 10, viewBox: 10, lineWidth: 1.4)
+            LineIcon(d: Icons.close, size: 12, lineWidth: 1.8)
                 .foregroundStyle(Theme.sub)
-                .frame(width: 24, height: 24)
-                .background { if hovering { Circle().fill(Theme.lgHover) } }
+                .frame(width: 26, height: 26)
+                .background { if hovering { RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.lgHover) } }
                 .hoverAnimation(hovering)
-                .contentShape(Circle())
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }

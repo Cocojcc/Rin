@@ -142,9 +142,6 @@ struct MenubarPrefs: Codable, Equatable {
     var combinedIcon: CombinedIcon = .avatar
     /// The character the combined item plays when its icon is `.runner`, paced by the CPU.
     var combinedRunner = RunnerLibrary.defaultID
-    /// The combined dropdown's module cards, top to bottom; the ones in `combinedHidden` are left out.
-    var combinedOrder: [Module] = MenubarPrefs.combinedDefaultOrder
-    var combinedHidden: [Module] = MenubarPrefs.combinedDefaultHidden
     /// The combined dropdown's line under her name, its busiest-apps card (by CPU or by memory),
     /// and its card naming what keeps the Mac awake.
     var combinedStatus = true
@@ -152,8 +149,6 @@ struct MenubarPrefs: Codable, Equatable {
     var combinedTopByMemory = false
     var combinedSleep = true
 
-    static let combinedDefaultOrder: [Module] = [.cpu, .memory, .network, .disk, .sensors, .bluetooth, .gpu, .battery]
-    static let combinedDefaultHidden: [Module] = [.gpu, .battery]
 }
 
 /// What the combined item shows when it shows an icon.
@@ -207,14 +202,12 @@ struct Preferences: Codable, Equatable {
 
     func isEnabled(_ m: Module) -> Bool { !general.disabledModules.contains(m) }
 
-    /// The combined dropdown's cards: on there and switched on, in their order.
+    /// The combined dropdown's modules: every module that is switched on, in the menu bar's order
+    /// with the ones in the menu bar first. The first (what the merged item shows) is drawn large.
     var combinedModules: [Module] {
-        menubar.combinedOrder.filter { !menubar.combinedHidden.contains($0) && isEnabled($0) }
-    }
-
-    mutating func setInCombined(_ m: Module, _ on: Bool) {
-        menubar.combinedHidden.removeAll { $0 == m }
-        if !on { menubar.combinedHidden.append(m) }
+        let enabled = menubar.order.filter(isEnabled)
+        let shown = enabled.filter { showsInMenubar($0) }
+        return shown + enabled.filter { !shown.contains($0) }
     }
 
     mutating func setEnabled(_ m: Module, _ on: Bool) {

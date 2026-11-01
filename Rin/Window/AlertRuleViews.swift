@@ -13,10 +13,10 @@ struct ChevronLink: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
-                Text(title).ui(12)
-                LineIcon(d: Icons.linkChevron, width: 6, height: 10, viewBox: CGSize(width: 6, height: 10), lineWidth: 1.4)
+                Text(title).ui(13)
+                LineIcon(d: Icons.chevronRight, size: 14, lineWidth: 1.5)
             }
-            .foregroundStyle(Theme.sub)
+            .foregroundStyle(hovering ? Theme.text : Theme.sub)
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background {
@@ -82,7 +82,9 @@ struct AlertRuleSentence: View {
             }
         }
         .ui(14)
-        .padding(.vertical, 7)
+        .lineLimit(1)
+        .fixedSize()
+        .padding(.vertical, 6)
     }
 
     static let percents: [(Double, String)] = [70, 80, 90, 95].map { (Double($0), Format.percent(Double($0) / 100)) }
@@ -92,22 +94,23 @@ struct AlertRuleSentence: View {
     }
 }
 
-/// A rule with its switch: the Alerts page (with the module icon) and a module's 提醒 tab.
+/// A rule with its switch: the Alerts page and a module's 提醒 tab. Off rules read grey.
 struct AlertRuleRow: View {
     var rule: Alerts.Rule
     var showsIcon = true
-    var minHeight: CGFloat = 36
+    var minHeight: CGFloat = 42
     /// Pointed out after arriving from a chart or a module's settings.
     var highlighted = false
     var settings = SettingsStore.shared
 
     var body: some View {
+        let on = settings.prefs[keyPath: rule.enabledKey]
         HStack(spacing: 12) {
             HStack(spacing: 10) {
                 if showsIcon {
-                    LineIcon(d: Icons.module(rule.module), size: 14, lineWidth: 1.5).foregroundStyle(Theme.sub).accessibilityHidden(true)
+                    LineIcon(d: Icons.module(rule.module), size: 16, lineWidth: 1.5).foregroundStyle(Theme.sub).accessibilityHidden(true)
                 }
-                AlertRuleSentence(rule: rule)
+                AlertRuleSentence(rule: rule).foregroundStyle(on ? Theme.text : Theme.sub)
             }
             Spacer(minLength: 8)
             if settings.prefs.isEnabled(rule.module) {
@@ -142,20 +145,19 @@ struct ChartAlertBadge: View {
         Button { MainWindowController.shared.showAlerts(focus: rule) } label: {
             if on {
                 HStack(spacing: 4) {
-                    LineIcon(d: Icons.bell, size: 12, lineWidth: 1.5).foregroundStyle(Theme.danger)
-                    Text(AlertText.pill(rule, p)).ui(12, 500).foregroundStyle(Theme.text).lineLimit(1)
+                    LineIcon(d: Icons.bell, size: 12, lineWidth: 1.5)
+                    Text(AlertText.pill(rule, p)).ui(12).lineLimit(1)
                 }
-                .padding(.horizontal, 8)
+                .foregroundStyle(Theme.danger)
                 .frame(height: 20)
-                .background(Capsule().fill(Theme.raised).raisedShadow())
-                .contentShape(Capsule())
+                .contentShape(Rectangle())
             } else {
                 LineIcon(d: Icons.bell, size: 12, lineWidth: 1.5)
                     .foregroundStyle(hovering ? Theme.text : Theme.sub)
-                    .frame(width: 24, height: 24)
-                    .background(Circle().fill(hovering ? Theme.lgHover : Theme.well))
+                    .frame(width: 22, height: 22)
+                    .background { if hovering { RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.lgHover) } }
                     .hoverAnimation(hovering)
-                    .contentShape(Circle())
+                    .contentShape(Rectangle())
             }
         }
         .buttonStyle(.plain)

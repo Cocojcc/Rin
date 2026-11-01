@@ -10,10 +10,21 @@ enum Format {
         "\(Int((max(0, fraction) * 100).rounded()))%"
     }
 
+    /// 0...1 → "23", for a big reading with its "%" set apart.
+    static func percentNumber(_ fraction: Double) -> String {
+        "\(Int((max(0, fraction) * 100).rounded()))"
+    }
+
     /// Already a percentage (Activity Monitor style, may exceed 100) → "38.2%"
     static func percentValue(_ value: Double) -> String {
         if value >= 100 { return "\(Int(value.rounded()))%" }
         return String(format: "%.1f%%", value)
+    }
+
+    /// A total in whole gigabytes when it is one ("16 GB", not "16.0 GB").
+    static func memoryTotal(_ bytes: UInt64) -> String {
+        let gb = Double(bytes) / 1_073_741_824
+        return abs(gb - gb.rounded()) < 0.05 ? "\(Int(gb.rounded())) GB" : memory(bytes)
     }
 
     /// Memory uses binary units (what Activity Monitor shows).

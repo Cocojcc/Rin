@@ -1,203 +1,48 @@
 import SwiftUI
 
-// The console's building blocks: solid panels with a 1 pt inner edge, big tabular numbers, KPI
-// strips, levels drawn as rows of short cells, and charts with their scale (dashed grid, values
-// in a gutter on the right, times underneath).
-
-// MARK: - Panels
-
-struct PanelBackground: View {
-    var radius: CGFloat = 10
-    var fill: Color = Theme.panel
-    /// A page's first panel: washed in its module's color.
-    var tint: Color? = nil
-
-    /// Told apart from the window by tone alone; outlines everywhere read as a wireframe.
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        shape.fill(fill)
-            .overlay { if let tint { shape.fill(tint.opacity(0.06)) } }
-    }
-}
-
-/// A panel with 12 pt padding.
-struct ConsolePanel<Content: View>: View {
-    var padding = EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12)
-    var spacing: CGFloat = 0
-    var tint: Color? = nil
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: spacing) { content }
-            .padding(padding)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .background(PanelBackground(tint: tint))
-    }
-}
-
-/// A panel's title row: 15 / 600 on the left, 13 grey on the right, 20 tall.
-struct PanelTitle<Trailing: View>: View {
-    var title: String
-    @ViewBuilder var trailing: Trailing
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(title).ui(16, 600).lineLimit(1).accessibilityAddTraits(.isHeader)
-            Spacer(minLength: 0)
-            HStack(spacing: 12) { trailing }.ui(14).foregroundStyle(Theme.sub).lineLimit(1)
-        }
-        .frame(height: 22)
-    }
-}
-
-extension PanelTitle where Trailing == EmptyView {
-    init(title: String) { self.init(title: title) { EmptyView() } }
-}
-
-/// A 1 pt rule between parts of a panel or dropdown.
-struct ConsoleRule: View {
-    var body: some View { Rectangle().fill(Theme.grid).frame(height: 1) }
-}
-
-/// Rows with a `ConsoleRule` above every row but the first (none under the last).
-struct RuledRows<Content: View>: View {
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        _VariadicView.Tree(Layout()) { content }
-    }
-
-    private struct Layout: _VariadicView_MultiViewRoot {
-        func body(children: _VariadicView.Children) -> some View {
-            let first = children.first?.id
-            ForEach(children) { child in
-                child.overlay(alignment: .top) { if child.id != first { ConsoleRule() } }
-            }
-        }
-    }
-}
+// Building blocks: big tabular numbers, label / value pairs, thin level bars, stacked bars, and
+// charts with their scale (dashed grid at the labelled levels, values in a gutter on the right,
+// times underneath), drawn as smooth lines over a neutral wash.
 
 // MARK: - Numbers
 
-/// A reading in one of the console's number sizes (40 a page's lead, 28 metrics, 20 small),
-/// tight tracking, its unit small and grey beside it.
+/// A reading at one of the big sizes (56 a page's lead, 44 / 36 figures, 22–28 small), tight
+/// tracking, its unit 14 and grey beside it.
 struct BigValue: View {
     var value: String
     var unit: String? = nil
     var size: CGFloat = 28
     var color: Color = Theme.text
+    var unitSize: CGFloat = 14
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 5) {
-            Text(value).ui(size, 500).kerning(-0.02 * size).foregroundStyle(color).lineLimit(1).fixedSize()
-            // The unit gives way first when room runs out (a long process name on the overview).
-            if let unit, !unit.isEmpty { Text(unit).ui(12).foregroundStyle(Theme.sub).lineLimit(1).truncationMode(.tail) }
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text(value).ui(size, 500).kerning(-0.035 * size).foregroundStyle(color).lineLimit(1).fixedSize()
+            // The unit gives way first when room runs out.
+            if let unit, !unit.isEmpty { Text(unit).ui(unitSize).foregroundStyle(Theme.sub).lineLimit(1).truncationMode(.tail) }
         }
+        // The system font's line is about 1.2 × its size; the design sets big figures solid.
+        .padding(.vertical, size >= 20 ? -size * 0.075 : 0)
     }
 }
 
-/// "用户 15%": grey label, the value in 500, 6 apart; an optional color key in front.
+/// "用户 15%": grey label, the value in 500, 6 apart; an optional color dot in front.
 struct KeyValue: View {
     var label: String
     var value: String
     var valueColor: Color = Theme.text
     var key: Color? = nil
+    var size: CGFloat = 12
 
     var body: some View {
         HStack(spacing: 6) {
-            if let key { RoundedRectangle(cornerRadius: 2, style: .continuous).fill(key).frame(width: 8, height: 8) }
-            Text(label).ui(14).foregroundStyle(Theme.sub)
-            if !value.isEmpty { Text(value).ui(14, 500).foregroundStyle(valueColor) }
+            if let key { Circle().fill(key).frame(width: 8, height: 8) }
+            Text(label).ui(size).foregroundStyle(Theme.sub)
+            if !value.isEmpty { Text(value).ui(size, 500).foregroundStyle(valueColor) }
         }
         .lineLimit(1)
         .fixedSize()
         .accessibilityElement(children: .combine)
-    }
-}
-
-/// A status: a 6 pt dot and the words, both in the status color.
-struct StatusText: View {
-    var text: String
-    var color: Color
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Circle().fill(color).frame(width: 6, height: 6)
-            Text(text).ui(14)
-        }
-        .foregroundStyle(color)
-        .lineLimit(1)
-        .fixedSize()
-    }
-}
-
-/// A small grey tag ("内置", "自动").
-struct TagText: View {
-    var text: String
-    var color: Color = Theme.sub
-
-    var body: some View {
-        Text(text).ui(12).foregroundStyle(color)
-            .padding(.horizontal, 6)
-            .frame(height: 18)
-            .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Theme.track))
-            .fixedSize()
-    }
-}
-
-// MARK: - KPI strip
-
-/// Cells side by side in one panel, 1 pt rules between them.
-struct KPIStrip<Content: View>: View {
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        _VariadicView.Tree(Columns()) { content }
-            .frame(maxWidth: .infinity)
-            .background(PanelBackground())
-    }
-
-    private struct Columns: _VariadicView_MultiViewRoot {
-        func body(children: _VariadicView.Children) -> some View {
-            let last = children.last?.id
-            HStack(spacing: 0) {
-                ForEach(children) { child in
-                    child.frame(maxWidth: .infinity, alignment: .leading)
-                        .overlay(alignment: .trailing) {
-                            if child.id != last { Rectangle().fill(Theme.panelEdge).frame(width: 1) }
-                        }
-                }
-            }
-            .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-}
-
-/// One KPI: label, a 28 pt reading, and a line of detail underneath.
-struct KPICell<Value: View, Extra: View>: View {
-    var label: String
-    @ViewBuilder var value: Value
-    @ViewBuilder var extra: Extra
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(label).ui(14).foregroundStyle(Theme.sub).lineLimit(1).frame(height: 20)
-            HStack(alignment: .firstTextBaseline, spacing: 5) { value }
-                .frame(height: 28, alignment: .leading)
-                .padding(.top, 8)
-            HStack(spacing: 12) { extra }
-                .frame(height: 20, alignment: .leading)
-                .padding(.top, 6)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .accessibilityElement(children: .combine)
-    }
-}
-
-extension KPICell where Extra == EmptyView {
-    init(label: String, @ViewBuilder value: () -> Value) {
-        self.init(label: label, value: value) { EmptyView() }
     }
 }
 
@@ -223,34 +68,10 @@ struct LevelBar: View {
     }
 }
 
-/// Capacity as a grid of cells filled column by column from the left (the overview's disk).
-struct WaffleGrid: View {
-    var fraction: Double
-    var color: Color
-    var columns = 20
-    var rows = 5
-    var gap: CGFloat = 2
-
-    var body: some View {
-        Canvas { ctx, size in
-            let w = (size.width - gap * CGFloat(columns - 1)) / CGFloat(columns)
-            let h = (size.height - gap * CGFloat(rows - 1)) / CGFloat(rows)
-            let lit = Int((min(max(fraction, 0), 1) * Double(columns * rows)).rounded())
-            for c in 0..<columns {
-                for r in 0..<rows {
-                    let rect = CGRect(x: CGFloat(c) * (w + gap), y: CGFloat(r) * (h + gap), width: w, height: h)
-                    ctx.fill(Path(roundedRect: rect, cornerRadius: 1), with: .color(c * rows + r < lit ? color : Theme.track))
-                }
-            }
-        }
-        .accessibilityHidden(true)
-    }
-}
-
-/// Parts side by side with 2 pt gaps in a bar with 3 pt corners (memory, power).
+/// Parts side by side with 2 pt gaps in one thin rounded bar (CPU, memory, power).
 struct SegmentBar: View {
     var parts: [(Double, Color)]
-    var height: CGFloat = 10
+    var height: CGFloat = 6
 
     var body: some View {
         GeometryReader { geo in
@@ -264,47 +85,8 @@ struct SegmentBar: View {
             }
         }
         .frame(height: height)
-        .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: height / 2, style: .continuous))
         .accessibilityHidden(true)
-    }
-}
-
-/// The parts under a `SegmentBar`: a color key and name, the value underneath.
-struct StackLegend: View {
-    struct Item {
-        var label: String
-        var value: String
-        var color: Color
-    }
-
-    var items: [Item]
-    var columns: Int? = nil
-
-    var body: some View {
-        let n = max(1, columns ?? items.count)
-        let rows = stride(from: 0, to: items.count, by: n).map { Array(items[$0..<min($0 + n, items.count)]) }
-        VStack(alignment: .leading, spacing: 10) {
-            ForEach(rows.indices, id: \.self) { r in
-                HStack(alignment: .top, spacing: 10) {
-                    ForEach(0..<n, id: \.self) { c in
-                        if c < rows[r].count {
-                            let item = rows[r][c]
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 6) {
-                                    RoundedRectangle(cornerRadius: 2, style: .continuous).fill(item.color).frame(width: 8, height: 8)
-                                    Text(item.label).ui(14).foregroundStyle(Theme.sub).lineLimit(1)
-                                }
-                                Text(item.value).ui(14, 500).lineLimit(1)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .accessibilityElement(children: .combine)
-                        } else {
-                            Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -367,8 +149,9 @@ struct ConsoleChart: View {
     /// Values in the gutter on the right: (level 0...1, text).
     var yLabels: [(Double, String)] = []
     var gutter: CGFloat = 32
-    var grid: [Double] = [0.25, 0.5, 0.75]
-    var baseline = true
+    /// Extra dashed levels; the labelled levels always get one.
+    var grid: [Double] = []
+    var baseline = false
     /// A mirrored chart's line through the middle.
     var midline = true
     var xLabels: [String]? = nil
@@ -386,7 +169,7 @@ struct ConsoleChart: View {
     @State private var hoverX: CGFloat?
 
     init(kind: Kind, series: [ChartSeries], range: TimeRange, maxValue: Double, bottomMax: Double = 1, height: CGFloat? = nil,
-         yLabels: [(Double, String)] = [], gutter: CGFloat = 32, grid: [Double] = [0.25, 0.5, 0.75], baseline: Bool = true,
+         yLabels: [(Double, String)] = [], gutter: CGFloat = 36, grid: [Double] = [], baseline: Bool = false,
          showTimes: Bool = true, rules: [ChartRule] = [], bands: [ClosedRange<Date>] = [], markers: [PeakMarker] = [],
          selectedMarker: Date? = nil, markerColor: Color = Theme.cpu, hoverText: ((Date) -> [String])? = nil,
          onTap: ((Date) -> Void)? = nil, pinnedTip: [String]? = nil) {
@@ -414,7 +197,7 @@ struct ConsoleChart: View {
 
     /// A short window (the dropdowns' last minute) with its own labels.
     init(kind: Kind, series: [ChartSeries], span: TimeInterval, maxValue: Double, bottomMax: Double = 1, height: CGFloat,
-         xLabels: [String]?, grid: [Double] = [0.25, 0.75], baseline: Bool = true, midline: Bool = true, bands: [ClosedRange<Date>] = [], slot: CGFloat = 5) {
+         xLabels: [String]?, grid: [Double] = [], baseline: Bool = false, midline: Bool = true, bands: [ClosedRange<Date>] = [], slot: CGFloat = 5) {
         self.kind = kind
         self.series = series
         self.span = span
@@ -454,7 +237,7 @@ struct ConsoleChart: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 0) {
                 plot
                     .frame(height: height)
@@ -478,14 +261,13 @@ struct ConsoleChart: View {
         }
     }
 
+    /// Each value centered on its level, like the design's scale.
     private var yAxis: some View {
         GeometryReader { geo in
             ForEach(Array(yLabels.enumerated()), id: \.offset) { _, label in
-                let y = geo.size.height * (1 - label.0)
-                let mid = label.0 >= 0.999 ? 7 : (label.0 <= 0.001 ? geo.size.height - 7 : y)
                 Text(label.1).ui(12).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
                     .frame(width: gutter, alignment: .trailing)
-                    .position(x: gutter / 2, y: mid)
+                    .position(x: gutter / 2, y: geo.size.height * (1 - label.0))
             }
         }
         .accessibilityHidden(true)
@@ -543,8 +325,9 @@ struct ConsoleChart: View {
             .allowsHitTesting(false)
     }
 
+    /// A dashed line across the plot; its words, if any, sit just above it on the left and open the rule.
     private func ruleView(_ rule: ChartRule, size: CGSize) -> some View {
-        let y = size.height * (1 - min(max(rule.fraction, 0), 1))
+        let y = (size.height * (1 - min(max(rule.fraction, 0), 1))).rounded() + 0.5
         return ZStack(alignment: .topLeading) {
             Path { p in
                 p.move(to: CGPoint(x: 0, y: y))
@@ -553,23 +336,18 @@ struct ConsoleChart: View {
             .stroke(rule.color, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
             if let label = rule.label {
                 Button { rule.action?() } label: {
-                    HStack(spacing: 4) {
-                        if rule.bell { LineIcon(d: Icons.bell, size: 11, lineWidth: 1.5) }
+                    HStack(spacing: 3) {
+                        if rule.bell { LineIcon(d: Icons.bell, size: 11, lineWidth: 1.6) }
                         Text(label).ui(12)
                     }
                     .foregroundStyle(rule.color)
-                    .padding(.horizontal, 6)
-                    .frame(height: 18)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Theme.panel)
-                            .overlay(RoundedRectangle(cornerRadius: 4, style: .continuous).strokeBorder(rule.color, lineWidth: 1))
-                    )
+                    .frame(height: 16)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help(rule.help ?? "")
                 .fixedSize()
-                .offset(y: max(0, min(size.height - 18, y - 9)))
+                .offset(y: max(0, y - 20))
             }
         }
     }
@@ -584,7 +362,9 @@ struct ConsoleChart: View {
     }
 
     private func drawGrid(_ ctx: inout GraphicsContext, _ size: CGSize) {
-        for g in grid { dashed(&ctx, y: (size.height * (1 - g)).rounded() + 0.5, width: size.width, color: Theme.grid) }
+        for g in Set(grid + yLabels.map(\.0)) {
+            dashed(&ctx, y: min(size.height - 0.5, (size.height * (1 - g)).rounded() + 0.5), width: size.width, color: Theme.grid)
+        }
         if baseline { ctx.fill(Path(CGRect(x: 0, y: size.height - 1, width: size.width, height: 1)), with: .color(Theme.grid)) }
         if midline && (kind == .mirrored || kind == .mirroredArea) {
             ctx.fill(Path(CGRect(x: 0, y: (size.height / 2).rounded() - 0.5, width: size.width, height: 1)), with: .color(Theme.grid))
@@ -676,28 +456,68 @@ struct ConsoleChart: View {
             }
             last = p.date
         }
+        return out.map { downsample($0, width: width) }
+    }
+
+    /// Readings averaged into about `points` steps across the plot, so a second-by-second series
+    /// draws as a calm curve rather than a scribble.
+    var points = 72
+
+    private func downsample(_ run: [(x: CGFloat, level: CGFloat)], width: CGFloat) -> [(x: CGFloat, level: CGFloat)] {
+        let step = max(width / CGFloat(max(points, 2)), 1)
+        guard run.count > 2, let last = run.last, last.x - run[0].x > step * 2, CGFloat(run.count) > (last.x - run[0].x) / step else { return run }
+        var out: [(x: CGFloat, level: CGFloat)] = []
+        var bin = Int((run[0].x / step).rounded(.down)), sx: CGFloat = 0, sl: CGFloat = 0, n: CGFloat = 0
+        for p in run {
+            let b = Int((p.x / step).rounded(.down))
+            if b != bin, n > 0 {
+                out.append((sx / n, sl / n))
+                sx = 0; sl = 0; n = 0
+                bin = b
+            }
+            sx += p.x; sl += p.level; n += 1
+        }
+        if n > 0 { out.append((sx / n, sl / n)) }
+        // Keep the run's ends where they are, so the curve still reaches "现在".
+        if let f = run.first, out.first?.x != f.x { out.insert(f, at: 0) }
+        out[out.count - 1] = last
         return out
     }
 
-    /// Fills each run back to `base` and strokes its edge; `extent` is how far a full level reaches
-    /// (negative draws downward). A series with no line width is a fill alone.
+    /// Fills each run back to `base` with the neutral wash and strokes its edge as a smooth curve;
+    /// `extent` is how far a full level reaches (negative draws downward). A series with no line
+    /// width is a fill alone; one with no fill a line alone.
     private func drawRuns(_ ctx: inout GraphicsContext, _ s: ChartSeries, _ runs: [[(x: CGFloat, level: CGFloat)]], base: CGFloat, extent: CGFloat) {
         for run in runs where run.count > 1 {
             let points = run.map { CGPoint(x: $0.x, y: base - $0.level * extent) }
-            var line = Path()
-            line.addLines(points)
+            let line = Self.smooth(points)
             if s.fill > 0 {
                 var fill = line
                 fill.addLine(to: CGPoint(x: points[points.count - 1].x, y: base))
                 fill.addLine(to: CGPoint(x: points[0].x, y: base))
                 fill.closeSubpath()
-                ctx.fill(fill, with: .color(s.color.opacity(s.fill)))
+                ctx.fill(fill, with: .color(Theme.area))
             }
             if s.lineWidth > 0 {
                 ctx.stroke(line, with: .color(s.color.opacity(s.opacity)),
                            style: StrokeStyle(lineWidth: s.lineWidth, lineCap: .round, lineJoin: .round, dash: s.dash))
             }
         }
+    }
+
+    /// A Catmull-Rom curve through the points, as cubic Béziers.
+    static func smooth(_ pts: [CGPoint]) -> Path {
+        var path = Path()
+        guard let first = pts.first else { return path }
+        path.move(to: first)
+        let n = pts.count - 1
+        for i in 0..<n {
+            let p0 = pts[max(i - 1, 0)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[min(i + 2, n)]
+            path.addCurve(to: p2,
+                          control1: CGPoint(x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6),
+                          control2: CGPoint(x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6))
+        }
+        return path
     }
 
     private func drawMarkers(_ ctx: inout GraphicsContext, _ size: CGSize, start: Date) {
@@ -715,62 +535,6 @@ struct ConsoleChart: View {
 /// The 0 / 50 / 100 scale most percent charts use.
 enum ChartScale {
     static let percent: [(Double, String)] = [(1, "100"), (0.5, "50"), (0, "0")]
-}
-
-/// A panel listing the busiest processes (or devices): the title, an optional note and "全部 ›".
-struct ListPanel<Content: View>: View {
-    var title: String
-    var note: String? = nil
-    var link: ProcessSort? = nil
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        ConsolePanel(padding: EdgeInsets(top: 10, leading: 12, bottom: 8, trailing: 12)) {
-            PanelTitle(title: title) {
-                if let note { Text(note) }
-                if let link { AllProcessesLink(sort: link) }
-            }
-            content.padding(.top, 6)
-        }
-    }
-}
-
-/// A hero row: big reading and its keys on the left, a note or link on the right.
-struct PageHero<Leading: View, Trailing: View>: View {
-    @ViewBuilder var leading: Leading
-    @ViewBuilder var trailing: Trailing
-
-    var body: some View {
-        HStack(alignment: .bottom, spacing: 12) {
-            HStack(alignment: .firstTextBaseline, spacing: 16) { leading }
-            Spacer(minLength: 0)
-            HStack(spacing: 12) { trailing }.ui(14).foregroundStyle(Theme.sub).lineLimit(1).padding(.bottom, 4)
-        }
-        .frame(minHeight: 32)
-        .padding(.bottom, 12)
-    }
-}
-
-extension PageHero where Trailing == EmptyView {
-    init(@ViewBuilder leading: () -> Leading) { self.init(leading: leading) { EmptyView() } }
-}
-
-/// A rule's limit on a chart: the dashed line and a tag that opens the rule, while it is on.
-enum AlertRules {
-    static func chartRule(_ rule: Alerts.Rule, fraction: Double, _ p: Preferences) -> [ChartRule] {
-        guard rule.isOn(p) else { return [] }
-        return [ChartRule(fraction: fraction, color: Theme.danger, label: AlertText.pill(rule, p), help: L10n.Alerts.edit,
-                          action: { MainWindowController.shared.showAlerts(focus: rule) })]
-    }
-}
-
-extension View {
-    /// While the rule is off, a small bell at the chart's top right (left of its scale) offers to add it.
-    func alertBell(_ rule: Alerts.Rule, gutter: CGFloat = 32, settings: SettingsStore = .shared) -> some View {
-        overlay(alignment: .topTrailing) {
-            if !rule.isOn(settings.prefs) { ChartAlertBadge(rule: rule).padding(.trailing, gutter + 4) }
-        }
-    }
 }
 
 private struct ShareKey: LayoutValueKey { static let defaultValue: CGFloat = 0 }

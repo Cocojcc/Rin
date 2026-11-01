@@ -66,6 +66,7 @@
 		5A12AA55C5B85DD261F8F11B /* runner-cat-2x-15.png in Resources */ = {isa = PBXBuildFile; fileRef = 829217F45C6BA30BB6356E10 /* runner-cat-2x-15.png */; };
 		5A1BA929203D9E3505A35D81 /* runner-cat-1x-19.png in Resources */ = {isa = PBXBuildFile; fileRef = A7C2A0AE26A252D5395C0FEA /* runner-cat-1x-19.png */; };
 		65BD5D148182B482E3C9D4DC /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2658CDA651427E19D7A49CC5 /* UpdateChecker.swift */; };
+		699303466EB619AE2918372C /* OverviewPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F4E0257D15C8D30BD26345 /* OverviewPage.swift */; };
 		6CAB89EDCD11508DE8A1459D /* runner-girl-2x-5.png in Resources */ = {isa = PBXBuildFile; fileRef = 633FB24112FDA4CEA8C45AFA /* runner-girl-2x-5.png */; };
 		6CC7573D9B37B2DF6DDD07AF /* runner-cat-2x-4.png in Resources */ = {isa = PBXBuildFile; fileRef = 8A2162121163C6E0711F9B11 /* runner-cat-2x-4.png */; };
 		6D8D3EB6544E2FE0766CD33E /* runner-cat-2x-22.png in Resources */ = {isa = PBXBuildFile; fileRef = 98DC11D650325689CD8B4039 /* runner-cat-2x-22.png */; };
@@ -81,6 +82,7 @@
 		786AB9BEBDD4F3681B33F193 /* AlertText.swift in Sources */ = {isa = PBXBuildFile; fileRef = C025E9906D1A0A09289F78CE /* AlertText.swift */; };
 		7877CAD19BBC38AA7C01B89D /* runner-girl-2x-9.png in Resources */ = {isa = PBXBuildFile; fileRef = 5B43A5722A566ED8ABC06254 /* runner-girl-2x-9.png */; };
 		7E33FDA276D2B256B18B10C3 /* MenuIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = E02472A22BDB813E9096C661 /* MenuIcons.swift */; };
+		801D0A0F6FF0AB0CB606CB01 /* Mono.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73371E3251D835805F8B890D /* Mono.swift */; };
 		805AE7A69CD80C056D248D00 /* runner-cat-1x-15.png in Resources */ = {isa = PBXBuildFile; fileRef = 5D914128807FFA4E20628523 /* runner-cat-1x-15.png */; };
 		828232293D402A57ED556279 /* runner-girl-1x-17.png in Resources */ = {isa = PBXBuildFile; fileRef = CC8A6AFA7005057BB17BC52F /* runner-girl-1x-17.png */; };
 		840371FFA85001136E766FBC /* runner-girl-2x-2.png in Resources */ = {isa = PBXBuildFile; fileRef = BA93449232F7DA721A55814D /* runner-girl-2x-2.png */; };
@@ -237,6 +239,7 @@
 		6F414BC11853F0151C93FD48 /* runner-cat-1x-7.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-1x-7.png"; sourceTree = "<group>"; };
 		71A078870D3037E33325489B /* runner-cat-2x-19.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-2x-19.png"; sourceTree = "<group>"; };
 		725AB808C2B07F39AF7551DF /* runner-girl-2x-11.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-2x-11.png"; sourceTree = "<group>"; };
+		73371E3251D835805F8B890D /* Mono.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mono.swift; sourceTree = "<group>"; };
 		7513338909BD48BE9608C60F /* SleepBlockers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepBlockers.swift; sourceTree = "<group>"; };
 		767FCD1C8474664519A8DDC9 /* runner-girl-1x-3.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-1x-3.png"; sourceTree = "<group>"; };
 		78EE9B5635AC8B8EAB2EA22B /* Icons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Icons.swift; sourceTree = "<group>"; };
@@ -283,6 +286,7 @@
 		B341E290988255D625B255B5 /* AboutPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutPage.swift; sourceTree = "<group>"; };
 		B53C67228DE80D6EDFC244E0 /* runner-girl-1x-20.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-1x-20.png"; sourceTree = "<group>"; };
 		B6CD089B55AA1D6B61E5A9E2 /* runner-cat-2x-7.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-2x-7.png"; sourceTree = "<group>"; };
+		B7F4E0257D15C8D30BD26345 /* OverviewPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewPage.swift; sourceTree = "<group>"; };
 		BA93449232F7DA721A55814D /* runner-girl-2x-2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-2x-2.png"; sourceTree = "<group>"; };
 		BC0EF7333AD50996168C2426 /* runner-cat-2x-18.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-2x-18.png"; sourceTree = "<group>"; };
 		BD12D9C0588661B83F76FFB9 /* BluetoothViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothViews.swift; sourceTree = "<group>"; };
@@ -372,7 +376,9 @@
 				17E8278671F8A6D720F53E16 /* MainWindowController.swift */,
 				39F49ABD0586DA40DB1FA7DB /* MonitorComponents.swift */,
 				CEFF19C24EEC508AA0D9947C /* MonitorPages.swift */,
+				73371E3251D835805F8B890D /* Mono.swift */,
 				D26DEC61995EED0054E89D22 /* Onboarding.swift */,
+				B7F4E0257D15C8D30BD26345 /* OverviewPage.swift */,
 				2D44E164BAD1924EBE8B02F6 /* ProcessesPage.swift */,
 				09C8D433845ADD9E19D1F3D5 /* RunnerViews.swift */,
 				42D38E01A831C43DCE4E382C /* SettingsPages.swift */,
@@ -778,11 +784,13 @@
 				02A66FC11B5A7BA523CF29C1 /* Monitor.swift in Sources */,
 				89788BA39B517844D1D867B2 /* MonitorComponents.swift in Sources */,
 				3C2F4BB90586474F4F470B18 /* MonitorPages.swift in Sources */,
+				801D0A0F6FF0AB0CB606CB01 /* Mono.swift in Sources */,
 				396D7E05F01D0AB6BCFD862E /* Mood.swift in Sources */,
 				39A8AB9AF94E064B5BD69840 /* NVMeSMART.c in Sources */,
 				211F8C1C204C0E03A5F79A44 /* NetworkReader.swift in Sources */,
 				5470B608999F5FD253387AED /* Notch.swift in Sources */,
 				A3A9864289617AAF005221B1 /* Onboarding.swift in Sources */,
+				699303466EB619AE2918372C /* OverviewPage.swift in Sources */,
 				E8F65B1EA6CFBFA8B273D34F /* PanelComponents.swift in Sources */,
 				E9FE37B4D339864A0F8C5E93 /* PanelController.swift in Sources */,
 				945A02DCBA56C11F5E2FCB23 /* PowerReport.swift in Sources */,
@@ -910,7 +918,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -923,7 +931,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.1;
+				MARKETING_VERSION = 0.3.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -969,7 +977,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -988,7 +996,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.1;
+				MARKETING_VERSION = 0.3.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

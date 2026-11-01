@@ -2,11 +2,10 @@ import AppKit
 import CoreText
 import SwiftUI
 
-/// Design tokens (light / dark pairs) for the monitoring console: solid neutral surfaces (charcoal
-/// with a trace of warmth when dark, white and light grey when light) and color only for data and
-/// state. Each module owns one soft, natural hue (moss, lavender, celadon, sand, olive, terracotta)
-/// and its parts (user / system, down / up, read / write) are shades of it. All-is-well is not
-/// colored: only amber (running high) and red (an alert) draw the eye.
+/// Design tokens (light / dark pairs), monochrome: one surface (white, or graphite when dark), no
+/// cards; space and hairlines do the grouping. Everything is text greys except one accent (lime,
+/// a deeper green on white) for the one reading a page is about. Red is kept for what needs
+/// attention, amber for running high; all-is-well is never colored.
 struct RGBA {
     let r: CGFloat, g: CGFloat, b: CGFloat, a: CGFloat
 
@@ -44,107 +43,74 @@ extension Color {
 }
 
 enum Theme {
-    // Surfaces: solid, no glass.
+    // Surfaces: one solid color for the window and its rail, another for the dropdowns.
     /// The dropdowns' background.
-    static let glass = Color.dyn(RGBA(0xFFFFFF), RGBA(0x1A191C))
-    static let windowGlass = Color.dyn(RGBA(0xFFFFFF), RGBA(0x151416))
-    static let side = Color.dyn(RGBA(0xF5F5F7), RGBA(0x111012))
-    static let glassRim = Color.dyn(RGBA(0, 0, 0, 0.1), RGBA(255, 255, 255, 0.14))
-    static let glassEdge = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(0, 0, 0, 0.5))
-    static let menu = Color.dyn(RGBA(0xFFFFFF), RGBA(0x242326))
+    static let glass = Color.dyn(RGBA(0xFFFFFF), RGBA(0x161618))
+    static let windowGlass = Color.dyn(RGBA(0xFFFFFF), RGBA(0x111113))
+    static let glassRim = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(255, 255, 255, 0.07))
 
-    // Selected pieces: a white chip on light, a lighter step on dark.
-    static let raised = Color.dyn(RGBA(0xFFFFFF), RGBA(255, 255, 255, 0.15))
-    static let raisedShadowNear = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(0, 0, 0, 0))
-    static let raisedShadowFar = Color.dyn(RGBA(0, 0, 0, 0.04), RGBA(0, 0, 0, 0))
+    /// A raised piece (the selected segment): a white chip with a soft shadow on light, a lighter step on dark.
+    static let raised = Color.dyn(RGBA(0xFFFFFF), RGBA(255, 255, 255, 0.12))
+    static let raisedShadowNear = Color.dyn(RGBA(0, 0, 0, 0.12), RGBA(0, 0, 0, 0))
+    static let raisedRing = Color.dyn(RGBA(0, 0, 0, 0.06), RGBA(0, 0, 0, 0))
 
-    // Segmented groups: a flat track and a flat thumb on the selected piece.
-    static let lgFill = Color.dyn(RGBA(0, 0, 0, 0.06), RGBA(255, 255, 255, 0.08))
-    static let lgEdgeLight = Color.clear
-    static let lgEdgeLine = Color.clear
-    static let lgThumb = raised
-    static let lgThumbLight = Color.clear
-    static let lgThumbRing = Color.clear
-    static let lgThumbLine = Color.dyn(RGBA(0, 0, 0, 0.06), RGBA(0, 0, 0, 0))
-    static let lgThumbShadow = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(0, 0, 0, 0))
-    static let lgHover = Color.dyn(RGBA(0, 0, 0, 0.04), RGBA(255, 255, 255, 0.05))
-    /// The selected sidebar row.
-    static let selection = Color.dyn(RGBA(0, 0, 0, 0.06), RGBA(255, 255, 255, 0.09))
+    /// The grey behind a group of segments, a button, a popup, the selected rail item.
+    static let raise = Color.dyn(RGBA(0, 0, 0, 0.05), RGBA(255, 255, 255, 0.06))
+    static let lgHover = Color.dyn(RGBA(0, 0, 0, 0.04), RGBA(255, 255, 255, 0.06))
+    /// The selected rail item.
+    static let selection = raise
+    /// Tags and chips that are on ("90%" in a rule, a module in the menu bar).
+    static let chip = Color.dyn(RGBA(0, 0, 0, 0.06), RGBA(255, 255, 255, 0.08))
 
-    static let well = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.08))
-    static let switchOff = Color.dyn(RGBA(0, 0, 0, 0.12), RGBA(255, 255, 255, 0.14))
-    static let switchKnob = Color.dyn(RGBA(0xFFFFFF), RGBA(0x9C99A1))
-    /// A switch that is on: moss with a white knob.
-    static var switchOn: Color { cpu }
-    static let switchOnKnob = Color.white
-    static let panel = Color.dyn(RGBA(0xF4F4F6), RGBA(0x1D1C1F))
-    /// A clickable panel under the pointer (the overview's tiles).
-    static let panelHover = Color.dyn(RGBA(0xECECEF), RGBA(0x242326))
-    /// A panel's 1 pt inner edge.
-    static let panelEdge = Color.dyn(RGBA(0, 0, 0, 0.06), RGBA(255, 255, 255, 0.06))
+    static let well = raise
+    static let switchOff = Color.dyn(RGBA(0, 0, 0, 0.12), RGBA(255, 255, 255, 0.16))
+    static let switchKnob = Color.dyn(RGBA(0xFFFFFF), RGBA(0xD9D9DC))
+    /// A switch that is on: the accent, with a white knob (a graphite one on the lime).
+    static var switchOn: Color { accent }
+    static let switchOnKnob = Color.dyn(RGBA(0xFFFFFF), RGBA(0x111113))
+    /// No cards: a "panel" is the window itself.
+    static let panel = windowGlass
     static let line = Color.dyn(RGBA(0, 0, 0, 0.08), RGBA(255, 255, 255, 0.08))
 
-    static let text = Color.dyn(RGBA(0x1C1C1E), RGBA(0xEDEBEE))
-    static let sub = Color.dyn(RGBA(0x6B6A70), RGBA(0x9C99A1))
-    /// Decoration and the quietest hints; text that has to be read uses `sub`.
-    static let faint = Color.dyn(RGBA(0x8E8D93), RGBA(0x77747B))
-    static let neutral = Color.dyn(RGBA(0x8E8D93), RGBA(0xC9C6CC))
+    static let text = Color.dyn(RGBA(0x1C1C1E), RGBA(0xF2F2F3))
+    static let sub = Color.dyn(RGBA(0x6E6E73), RGBA(0x8B8B90))
+    /// Secondary series and quiet marks (system CPU, efficiency cores).
+    static let faint = Color.dyn(RGBA(0, 0, 0, 0.28), RGBA(255, 255, 255, 0.45))
+    /// Levels that are not the page's lead (a volume on the overview, a temperature).
+    static let mid = Color.dyn(RGBA(0, 0, 0, 0.45), RGBA(255, 255, 255, 0.55))
+    static let low = Color.dyn(RGBA(0, 0, 0, 0.16), RGBA(255, 255, 255, 0.25))
     static let track = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.08))
-    static let grid = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.07))
-    static let cache = Color.dyn(RGBA(0, 0, 0, 0.18), RGBA(255, 255, 255, 0.22))
-    static let cross = Color.dyn(RGBA(0, 0, 0, 0.3), RGBA(255, 255, 255, 0.35))
-    static let rim = Color.dyn(RGBA(29, 29, 31, 0.4), RGBA(245, 245, 247, 0.45))
-    static let tile = Color.dyn(RGBA(29, 29, 31, 0.08), RGBA(245, 245, 247, 0.1))
-    static let bar = Color.dyn(RGBA(255, 255, 255, 0.5), RGBA(30, 30, 32, 0.5))
-    static let barFg = Color.dyn(RGBA(0x1C1C1E), RGBA(0xEDEBEE))
+    static let grid = line
+    /// Under a chart's line: a neutral wash, whatever the line's color.
+    static let area = Color.dyn(RGBA(0, 0, 0, 0.035), RGBA(255, 255, 255, 0.045))
+    static let cache = low
+    static let cross = Color.dyn(RGBA(0, 0, 0, 0.28), RGBA(255, 255, 255, 0.45))
+    static let barFg = Color.dyn(RGBA(0x1C1C1E), RGBA(0xF2F2F3))
     /// Menu bar ink: opaque black or white like the system's own menu bar text (`.primary` is
     /// 85% opaque, which rendered the items grey).
     static let barInk = Color.dyn(RGBA(0x000000), RGBA(0xFFFFFF))
 
-    static let ink = Color.dyn(RGBA(0x1C1C1E), RGBA(0xEDEBEE))
-    static let onInk = Color.dyn(RGBA(0xFFFFFF), RGBA(0x151416))
-    /// Filled controls (a switch that is on, the main button): ink, so color stays with the data.
-    static let accent = ink
-    static let onAccent = onInk
-    /// A plain wallpaper for the About page's laptop when the desktop picture can't be read.
-    static let wall = Color.dyn(RGBA(0xE8E8EB), RGBA(0x232226))
+    /// The one accent: lime on graphite, a deeper green on white so lines and figures hold.
+    static let accent = Color.dyn(RGBA(0x4D8C00), RGBA(0xD7FF3A))
+    static let accentSoft = Color.dyn(RGBA(77, 140, 0, 0.4), RGBA(215, 255, 58, 0.55))
+    static let onAccent = Color.dyn(RGBA(0xFFFFFF), RGBA(0x111113))
 
-    // Status: all is well is a neutral grey; only running high and an alert are colored.
-    static let ok = Color.dyn(RGBA(0x5E5D63), RGBA(0xA8A5AD))
-    static let okBg = Color.dyn(RGBA(94, 93, 99, 0.1), RGBA(168, 165, 173, 0.14))
-    static let warn = Color.dyn(RGBA(0xB07800), RGBA(0xF5B83D))
-    static let warnBg = Color.dyn(RGBA(176, 120, 0, 0.12), RGBA(245, 184, 61, 0.14))
-    static let danger = Color.dyn(RGBA(0xD23A30), RGBA(0xF05A4F))
-    static let dangerBg = Color.dyn(RGBA(210, 58, 48, 0.1), RGBA(240, 90, 79, 0.14))
-    static let dangerFill = Color.dyn(RGBA(0xD23A30), RGBA(0xF05A4F))
-    static let onDanger = Color.dyn(RGBA(0xFFFFFF), RGBA(0x151416))
+    // Status: all is well is plain text; only running high and an alert are colored.
+    static let ok = sub
+    static let okBg = Color.dyn(RGBA(0, 0, 0, 0.05), RGBA(255, 255, 255, 0.06))
+    static let warn = Color.dyn(RGBA(0xB07800), RGBA(0xFFB547))
+    static let warnBg = Color.dyn(RGBA(176, 120, 0, 0.12), RGBA(255, 181, 71, 0.14))
+    static let danger = Color.dyn(RGBA(0xD23A30), RGBA(0xFF6B57))
+    static let dangerBg = Color.dyn(RGBA(210, 58, 48, 0.1), RGBA(255, 107, 87, 0.14))
+    static let dangerFill = danger
+    static let onDanger = Color.dyn(RGBA(0xFFFFFF), RGBA(0x111113))
 
-    // Data: one natural hue per module, one step darker on white so it holds.
-    /// CPU: moss; its system share the deeper (dark) or paler (light) shade.
-    static let cpu = Color.dyn(RGBA(0x3E8A4E), RGBA(0x7FC48A))
-    static let sys = Color.dyn(RGBA(0xA9D3B0), RGBA(0x4E7F57))
-    /// GPU: olive.
-    static let gpu = Color.dyn(RGBA(0x6F7A1F), RGBA(0xB8C46A))
-    /// Memory: lavender.
-    static let mem = Color.dyn(RGBA(0x6B4FA8), RGBA(0xB39DDB))
-    static let memWired = Color.dyn(RGBA(0x4E3585), RGBA(0x6E5A93))
-    static let memCompressed = Color.dyn(RGBA(0xCBBDEA), RGBA(0xD7CBEE))
-    static let memCache = Color.dyn(RGBA(107, 79, 168, 0.22), RGBA(179, 157, 219, 0.35))
-    /// Network: celadon.
-    static let down = Color.dyn(RGBA(0x2F8A78), RGBA(0x6FC2B0))
-    static let up = Color.dyn(RGBA(0xA6D8CD), RGBA(0x3F7D70))
-    /// Disk: sand.
-    static let read = Color.dyn(RGBA(0x9A7630), RGBA(0xD8B97A))
-    static let write = Color.dyn(RGBA(0xE3CD9E), RGBA(0x8C7445))
-    static let disk = read
-    static let purgeable = Color.dyn(RGBA(154, 118, 48, 0.3), RGBA(216, 185, 122, 0.45))
-    /// Temperature and power: terracotta.
-    static let temp = Color.dyn(RGBA(0xB8602A), RGBA(0xE08E5A))
-    /// Battery and device levels stay neutral until they run low.
-    static let bat = ok
-    static let chargeBand = Color.dyn(RGBA(85, 84, 90, 0.06), RGBA(207, 204, 210, 0.07))
+    // Data: the lead reading wears the accent; the parts around it are greys.
+    static var cpu: Color { accent }
+    /// The battery chart's charging spans.
+    static let chargeBand = Color.dyn(RGBA(0, 0, 0, 0.045), RGBA(255, 255, 255, 0.05))
 
-    // Menu bar items keep Apple's vivid colors: they sit on the system menu bar, not on glass.
+    // Menu bar items keep Apple's vivid colors: they sit on the system menu bar.
     static let barCPU = Color.dyn(RGBA(0x34C759), RGBA(0x34C759))
     static let barMem = Color.dyn(RGBA(0x5E5CE6), RGBA(0x5E5CE6))
     static let barUp = Color.dyn(RGBA(0xFF9F0A), RGBA(0xFF9F0A))
@@ -184,43 +150,10 @@ enum Theme {
         }
     }
 
-    /// The color a module's page wears (sidebar icon, selected row and range, main number, first panel).
-    /// Battery and Bluetooth have none: their readings are colored by state.
-    static func hue(_ module: Module) -> Color? {
-        switch module {
-        case .battery, .bluetooth: return nil
-        default: return color(for: module)
-        }
-    }
-
-    static func color(for module: Module) -> Color {
-        switch module {
-        case .cpu: return cpu
-        case .gpu: return gpu
-        case .memory: return mem
-        case .network: return down
-        case .disk: return disk
-        case .battery: return bat
-        case .bluetooth: return down
-        case .sensors: return temp
-        }
-    }
+    /// A module's lead color: the accent for all of them (battery and device levels go red when low).
+    static func color(for module: Module) -> Color { accent }
 }
 
-/// Soft two-layer shadow under raised controls.
-struct RaisedShadow: ViewModifier {
-    var on = true
-
-    func body(content: Content) -> some View {
-        content
-            .shadow(color: on ? Theme.raisedShadowNear : .clear, radius: 1, y: 1)
-            .shadow(color: on ? Theme.raisedShadowFar : .clear, radius: 5, y: 3)
-    }
-}
-
-extension View {
-    func raisedShadow(_ on: Bool = true) -> some View { modifier(RaisedShadow(on: on)) }
-}
 
 /// The system font (SF Pro, PingFang for Chinese) with tabular figures, for the window and panels.
 enum Fonts {

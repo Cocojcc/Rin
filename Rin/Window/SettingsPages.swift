@@ -27,10 +27,10 @@ struct SettingsPage: View {
         let prefs = settings.prefs
         let g = prefs.general
         let blocked = prefs.menubar.displayMode == .separate ? notch.hidden : []
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 30) {
             PageTitle(title: L10n.Sidebar.settings)
 
-            SettingsGroup {
+            SettingsGroup(title: L10n.Settings.general) {
                 SettingsRow(title: L10n.Settings.launchAtLogin) {
                     RinSwitch(isOn: Binding(get: { launchAtLogin }, set: { setLaunchAtLogin($0) }), label: L10n.Settings.launchAtLogin)
                 }
@@ -39,9 +39,6 @@ struct SettingsPage: View {
                         WellButton(title: L10n.Settings.openLoginItems) { SMAppService.openSystemSettingsLoginItems() }
                     }
                 }
-            }
-
-            SettingsGroup(title: L10n.Settings.appearance) {
                 SettingsRow(title: L10n.Settings.appearance) {
                     Segmented(label: L10n.Settings.appearance,
                               options: [(AppearanceMode.system, L10n.Settings.followSystem), (.light, L10n.Settings.light), (.dark, L10n.Settings.dark)],
@@ -74,83 +71,69 @@ struct SettingsPage: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Text(L10n.Settings.menubarGroup).ui(14, 500).foregroundStyle(Theme.sub).accessibilityAddTraits(.isHeader)
-                    Spacer(minLength: 8)
-                    WellButton(title: L10n.Settings.restoreDefaults, height: 24, radius: 7, horizontalPadding: 10, fontSize: 12) {
-                        settings.resetMenubar()
+            SettingsGroup(title: L10n.Settings.menubarGroup) {
+                VStack(alignment: .leading, spacing: 0) {
+                    if !blocked.isEmpty {
+                        NotchBanner(count: blocked.count).padding(.top, 6)
                     }
-                }
-                .padding(.horizontal, 14)
-                .padding(.bottom, 8)
-                if !blocked.isEmpty {
-                    NotchBanner(count: blocked.count).padding(.bottom, 8)
-                }
-                VStack(spacing: 0) {
                     MenubarPreview(blocked: blocked, systemSpacing: systemSpacing)
-                        .padding(EdgeInsets(top: 10, leading: 14, bottom: 10, trailing: 14))
-                    Hairline().padding(.horizontal, 14)
+                        .padding(.top, 6)
+                        .padding(.bottom, 12)
                     // Moot while the combined item shows an icon.
-                    ModuleChips(blocked: blocked, dragging: $dragging).padding(6)
+                    ModuleChips(blocked: blocked, dragging: $dragging)
+                        .padding(.bottom, 14)
                         .opacity(prefs.barShowsWidgets ? 1 : 0.4)
                         .allowsHitTesting(prefs.barShowsWidgets)
                 }
-                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
-                Color.clear.frame(height: 8)
-                SettingsGroup {
-                    SettingsRow(title: L10n.Settings.displayMode) {
-                        Segmented(label: L10n.Settings.displayMode, options: [(DisplayMode.separate, L10n.Settings.separate), (.combined, L10n.Settings.combined)], selection: pref(\.menubar.displayMode))
-                    }
-                    if prefs.menubar.displayMode == .combined {
-                        SettingsRow(title: L10n.Settings.combinedIconOnly) {
-                            RinSwitch(isOn: pref(\.menubar.combinedIconOnly), label: L10n.Settings.combinedIconOnly)
-                        }
-                        if prefs.menubar.combinedIconOnly {
-                            SettingsRow(title: L10n.Settings.combinedIcon) {
-                                CombinedIconPicker(selection: pref(\.menubar.combinedIcon), runnerID: prefs.menubar.combinedRunner)
-                            }
-                            if prefs.menubar.combinedIcon == .runner {
-                                SettingsRow(title: L10n.Runner.character) { RunnerPicker(selection: pref(\.menubar.combinedRunner)) }
-                            }
-                        }
-                        SettingsRow(title: L10n.Settings.combinedPanelTitle) {
-                            WellButton(title: L10n.Combined.settings) { Navigator.shared.page = .menuBar }
-                        }
-                    }
-                    SettingsRow(title: L10n.Settings.moduleSpacing) {
-                        GlassStepper(label: L10n.Settings.moduleSpacing,
-                                     value: Binding(get: { MenuBarSpacing.moduleGap(settings.prefs) }, set: { settings.prefs.menubar.moduleSpacing = $0 }),
-                                     range: MenuBarSpacing.moduleGapRange, step: MenuBarSpacing.moduleGapStep)
-                    }
-                    SettingsRow(title: L10n.Settings.systemSpacing) {
-                        Segmented(label: L10n.Settings.systemSpacing,
-                                  options: [(MenuBarSpacing.Preset.standard, L10n.Settings.spacingStandard), (.compact, L10n.Settings.spacingCompact), (.tightest, L10n.Settings.spacingTightest)],
-                                  selection: Binding(get: { systemSpacing }, set: { preset in
-                                      systemSpacing = preset
-                                      MenuBarSpacing.setPreset(preset)
-                                      StatusBarController.shared.relayout()
-                                  }))
-                    }
-                    SettingsRow(title: L10n.Settings.barFont) {
-                        Segmented(label: L10n.Settings.barFont, options: [(BarTypeface.system, L10n.Settings.fontSystem), (.monospaced, L10n.Settings.fontMonospaced)], selection: pref(\.menubar.typeface))
-                    }
-                    SettingsRow(title: L10n.Settings.iconColor) {
-                        Segmented(label: L10n.Settings.iconColor, options: [(ColorMode.mono, L10n.Common.mono), (.color, L10n.Common.colored)], selection: pref(\.menubar.iconColor))
-                    }
-                    SettingsRow(title: L10n.Settings.colorOnHighLoad) {
-                        RinSwitch(isOn: pref(\.menubar.colorOnHighLoad), label: L10n.Settings.colorOnHighLoad)
-                    }
-                    RunnerLibraryRow()
+                SettingsRow(title: L10n.Settings.displayMode) {
+                    Segmented(label: L10n.Settings.displayMode, options: [(DisplayMode.separate, L10n.Settings.separate), (.combined, L10n.Settings.combined)], selection: pref(\.menubar.displayMode))
                 }
+                if prefs.menubar.displayMode == .combined {
+                    SettingsRow(title: L10n.Settings.combinedIconOnly) {
+                        RinSwitch(isOn: pref(\.menubar.combinedIconOnly), label: L10n.Settings.combinedIconOnly)
+                    }
+                    if prefs.menubar.combinedIconOnly {
+                        SettingsRow(title: L10n.Settings.combinedIcon) {
+                            CombinedIconPicker(selection: pref(\.menubar.combinedIcon), runnerID: prefs.menubar.combinedRunner)
+                        }
+                        if prefs.menubar.combinedIcon == .runner {
+                            SettingsRow(title: L10n.Runner.character) { RunnerPicker(selection: pref(\.menubar.combinedRunner)) }
+                        }
+                    }
+                    SettingsRow(title: L10n.Settings.combinedPanelTitle) {
+                        WellButton(title: L10n.Combined.settings) { Navigator.shared.page = .menuBar }
+                    }
+                }
+                SettingsRow(title: L10n.Settings.moduleSpacing) {
+                    GlassStepper(label: L10n.Settings.moduleSpacing,
+                                 value: Binding(get: { MenuBarSpacing.moduleGap(settings.prefs) }, set: { settings.prefs.menubar.moduleSpacing = $0 }),
+                                 range: MenuBarSpacing.moduleGapRange, step: MenuBarSpacing.moduleGapStep)
+                }
+                SettingsRow(title: L10n.Settings.systemSpacing) {
+                    Segmented(label: L10n.Settings.systemSpacing,
+                              options: [(MenuBarSpacing.Preset.standard, L10n.Settings.spacingStandard), (.compact, L10n.Settings.spacingCompact), (.tightest, L10n.Settings.spacingTightest)],
+                              selection: Binding(get: { systemSpacing }, set: { preset in
+                                  systemSpacing = preset
+                                  MenuBarSpacing.setPreset(preset)
+                                  StatusBarController.shared.relayout()
+                              }))
+                }
+                SettingsRow(title: L10n.Settings.barFont) {
+                    Segmented(label: L10n.Settings.barFont, options: [(BarTypeface.system, L10n.Settings.fontSystem), (.monospaced, L10n.Settings.fontMonospaced)], selection: pref(\.menubar.typeface))
+                }
+                SettingsRow(title: L10n.Settings.iconColor) {
+                    Segmented(label: L10n.Settings.iconColor, options: [(ColorMode.mono, L10n.Common.mono), (.color, L10n.Common.colored)], selection: pref(\.menubar.iconColor))
+                }
+                SettingsRow(title: L10n.Settings.colorOnHighLoad) {
+                    RinSwitch(isOn: pref(\.menubar.colorOnHighLoad), label: L10n.Settings.colorOnHighLoad)
+                }
+                RunnerLibraryRow()
+            } trailing: {
+                IconAction(d: Icons.reset, label: L10n.Settings.restoreDefaults, inline: true) { settings.resetMenubar() }
             }
 
-            VStack(alignment: .leading, spacing: 0) {
-                Text(L10n.Settings.modulesGroup).ui(14, 500).foregroundStyle(Theme.sub)
-                    .padding(.horizontal, 14).padding(.bottom, 8)
-                    .accessibilityAddTraits(.isHeader)
-                ModuleSwitchChips().padding(6)
-                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
+            SettingsGroup(title: L10n.Settings.modulesGroup) {
+                ModuleSwitchChips().padding(.vertical, 10)
             }
 
             SettingsGroup(title: L10n.Settings.performance) {
@@ -160,9 +143,9 @@ struct SettingsPage: View {
             }
 
             SettingsGroup(title: L10n.Sidebar.about) {
-                SettingsRow(title: L10n.Settings.currentVersion) {
+                SettingsRow(title: L10n.App.name) {
                     HStack(spacing: 12) {
-                        Text(SystemInfo.appVersion).ui(14, 500)
+                        Text(SystemInfo.appVersion).ui(14).foregroundStyle(Theme.sub)
                         WellButton(title: updater.buttonTitle) { updater.check() }
                             .disabled(!updater.isConfigured || updater.state == .checking)
                             .opacity(updater.isConfigured ? 1 : 0.5)
@@ -194,109 +177,44 @@ struct SettingsPage: View {
 /// and the status line, busiest apps and sleep card around them.
 struct MenuBarSettingsPage: View {
     var settings = SettingsStore.shared
-    @State private var dragging: Module?
 
     var body: some View {
         let prefs = settings.prefs
         let bar = prefs.menubar
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 30) {
             PageTitle(title: L10n.Settings.menubarGroup)
 
-            ConsolePanel(padding: EdgeInsets(top: 2, leading: 12, bottom: 2, trailing: 12)) {
-                MenuBarSettingRow(title: L10n.Settings.displayMode) {
+            SettingsGroup(title: L10n.Settings.displayMode) {
+                SettingsRow(title: L10n.Settings.displayMode) {
                     Segmented(label: L10n.Settings.displayMode, options: [(DisplayMode.separate, L10n.Settings.separate), (.combined, L10n.Settings.combined)],
-                              selection: pref(\.menubar.displayMode), style: .range)
+                              selection: pref(\.menubar.displayMode))
                 }
-                ConsoleRule()
-                MenuBarSettingRow(title: L10n.Settings.combinedShows, dimmed: bar.displayMode != .combined) {
+                SettingsRow(title: L10n.Settings.combinedShows, dimmed: bar.displayMode != .combined) {
                     // The icon keeps whichever look was picked in 设置 (her face by default).
                     Segmented(label: L10n.Settings.combinedShows,
                               options: [(true, CombinedIconView.name(bar.combinedIcon)), (false, L10n.Settings.widgetsOption)],
-                              selection: pref(\.menubar.combinedIconOnly), style: .range)
+                              selection: pref(\.menubar.combinedIconOnly))
                 }
             }
 
-            ConsolePanel {
-                PanelTitle(title: L10n.Settings.combinedModulesTitle) {
-                    Button(L10n.Settings.restoreDefaults) {
-                        withAnimation(Motion.slide) {
-                            settings.prefs.menubar.combinedOrder = MenubarPrefs.combinedDefaultOrder
-                            settings.prefs.menubar.combinedHidden = MenubarPrefs.combinedDefaultHidden
-                        }
-                    }
-                    .buttonStyle(.plain)
+            SettingsGroup(title: L10n.Settings.combinedPanelTitle) {
+                SettingsRow(title: L10n.Settings.statusLine) {
+                    RinSwitch(isOn: pref(\.menubar.combinedStatus), label: L10n.Settings.statusLine)
                 }
-                // Switched-off modules are left out; they come back with their module.
-                let modules = bar.combinedOrder.filter(prefs.isEnabled)
-                VStack(spacing: 0) {
-                    ForEach(modules) { m in
-                        moduleRow(m, on: !bar.combinedHidden.contains(m))
-                            .overlay(alignment: .top) { if m != modules.first { ConsoleRule() } }
+                SettingsRow(title: L10n.Overview.topUsage) {
+                    HStack(spacing: 10) {
+                        Segmented(label: L10n.Settings.topUsageSort, options: [(false, L10n.Module.cpu), (true, L10n.Module.memory)],
+                                  selection: pref(\.menubar.combinedTopByMemory))
+                            .opacity(bar.combinedTop ? 1 : 0.4)
+                            .allowsHitTesting(bar.combinedTop)
+                        RinSwitch(isOn: pref(\.menubar.combinedTop), label: L10n.Overview.topUsage)
                     }
                 }
-                .padding(.top, 4)
-            }
-
-            ConsolePanel {
-                PanelTitle(title: L10n.Settings.combinedPanelTitle)
-                VStack(spacing: 0) {
-                    MenuBarSettingRow(title: L10n.Settings.statusLine) {
-                        RinSwitch(isOn: pref(\.menubar.combinedStatus), label: L10n.Settings.statusLine)
-                    }
-                    ConsoleRule()
-                    MenuBarSettingRow(title: L10n.Overview.topUsage) {
-                        HStack(spacing: 10) {
-                            Segmented(label: L10n.Settings.topUsageSort, options: [(false, L10n.Module.cpu), (true, L10n.Module.memory)],
-                                      selection: pref(\.menubar.combinedTopByMemory), style: .inline)
-                                .opacity(bar.combinedTop ? 1 : 0.4)
-                                .allowsHitTesting(bar.combinedTop)
-                            RinSwitch(isOn: pref(\.menubar.combinedTop), label: L10n.Overview.topUsage)
-                        }
-                    }
-                    ConsoleRule()
-                    MenuBarSettingRow(title: L10n.Settings.sleepBlockingApps) {
-                        RinSwitch(isOn: pref(\.menubar.combinedSleep), label: L10n.Settings.sleepBlockingApps)
-                    }
+                SettingsRow(title: L10n.Settings.sleepBlockingApps) {
+                    RinSwitch(isOn: pref(\.menubar.combinedSleep), label: L10n.Settings.sleepBlockingApps)
                 }
-                .padding(.top, 4)
             }
         }
-    }
-
-    /// Grip, icon (its color while shown), name, switch; drag to reorder.
-    private func moduleRow(_ m: Module, on: Bool) -> some View {
-        HStack(spacing: 10) {
-            LineIcon(d: Icons.drag, size: 14, lineWidth: 2.2).foregroundStyle(Theme.sub).frame(width: 16)
-            LineIcon(d: Icons.module(m), size: 16, lineWidth: 1.5)
-                .foregroundStyle(on ? (m == .bluetooth ? Theme.neutral : Theme.color(for: m)) : Theme.sub)
-                .frame(width: 18)
-            Text(m == .sensors ? L10n.Panel.temperature : m.title).ui(14).foregroundStyle(on ? Theme.text : Theme.sub)
-            Spacer(minLength: 8)
-            RinSwitch(isOn: Binding(get: { on }, set: { v in withAnimation(Motion.slide) { settings.prefs.setInCombined(m, v) } }),
-                      label: L10n.Settings.showInCombined(m.title))
-        }
-        .frame(height: 38)
-        .contentShape(Rectangle())
-        .opacity(dragging == m ? 0.4 : 1)
-        .modifier(ReorderModifier(module: m, dragging: $dragging, order: \.menubar.combinedOrder))
-    }
-}
-
-/// A settings row on the console's panels, 38 tall; rules go between rows, not under the last.
-private struct MenuBarSettingRow<Control: View>: View {
-    var title: String
-    var dimmed = false
-    @ViewBuilder var control: Control
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Text(title).ui(14).lineLimit(1)
-            Spacer(minLength: 8)
-            control
-        }
-        .opacity(dimmed ? 0.4 : 1)
-        .allowsHitTesting(!dimmed)
-        .frame(height: 38)
     }
 }
 
@@ -316,7 +234,7 @@ struct CombinedIconPicker: View {
                 } label: {
                     CombinedIconView(icon: icon, runnerID: runnerID, size: 14)
                         .foregroundStyle(on ? Theme.text : Theme.sub)
-                        .frame(width: 32, height: 24)
+                        .frame(width: 34, height: 26)
                         .thumbAnchor(on)
                         .contentShape(Rectangle())
                 }
@@ -327,7 +245,7 @@ struct CombinedIconPicker: View {
             }
         }
         .slidingThumb(selection) { GlassThumb() }
-        .padding(2)
+        .padding(3)
         .background(GlassTrack())
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Settings.combinedIcon)
@@ -350,7 +268,7 @@ struct NotchBanner: View {
                     .foregroundStyle(Theme.onAccent)
                     .padding(.horizontal, 12)
                     .frame(height: 26)
-                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.accent))
+                    .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.accent))
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -359,7 +277,7 @@ struct NotchBanner: View {
         .padding(.leading, 14)
         .padding(.trailing, 8)
         .frame(height: 40)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.warnBg))
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.warnBg))
         .accessibilityElement(children: .contain)
     }
 }
@@ -378,11 +296,11 @@ struct ModuleChips: View {
         let hidden = prefs.menubar.order.filter { !prefs.showsInMenubar($0) && prefs.isEnabled($0) }
         // One list, so a chip keeps its identity and slides across when it changes sides.
         let items = shown.map { ChipSlot.module($0) } + (shown.isEmpty || hidden.isEmpty ? [] : [.divider]) + hidden.map { .module($0) }
-        FlowLayout(spacing: 4) {
+        FlowLayout(spacing: 8) {
             ForEach(items) { item in
                 switch item {
                 case .module(let m): chip(m, shown: shown.contains(m))
-                case .divider: Rectangle().fill(Theme.cross).frame(width: 1, height: 18).padding(.horizontal, 6).frame(height: 30)
+                case .divider: EmptyView()
                 }
             }
         }
@@ -397,17 +315,12 @@ struct ModuleChips: View {
             withAnimation(Motion.slide) { settings.prefs.setInMenubar(m, !shown) }
         } label: {
             HStack(spacing: 6) {
-                LineIcon(d: Icons.module(m), size: 14, lineWidth: 1.5)
-                Text(m.title).ui(12).lineLimit(1)
+                Text(m.title).ui(13).lineLimit(1)
                 if isBlocked {
                     LineIcon(d: Icons.notch, size: 12, lineWidth: 1.5).foregroundStyle(Theme.warn)
                 }
             }
-            .foregroundStyle(shown ? Theme.text : Theme.sub)
-            .padding(.horizontal, 10)
-            .frame(height: 30)
-            .background { if shown { GlassThumb() } }
-            .contentShape(Capsule())
+            .modifier(ChipLook(on: shown))
         }
         .buttonStyle(.plain)
         .opacity(dragging == m ? 0.4 : 1)
@@ -423,21 +336,14 @@ struct ModuleSwitchChips: View {
     var settings = SettingsStore.shared
 
     var body: some View {
-        FlowLayout(spacing: 4) {
+        FlowLayout(spacing: 8) {
             ForEach(Sidebar.moduleOrder, id: \.self) { m in
                 let shown = settings.prefs.isEnabled(m)
                 Button {
                     withAnimation(Motion.slide) { settings.prefs.setEnabled(m, !shown) }
                 } label: {
-                    HStack(spacing: 6) {
-                        LineIcon(d: Icons.module(m), size: 14, lineWidth: 1.5)
-                        Text(m.title).ui(12).lineLimit(1)
-                    }
-                    .foregroundStyle(shown ? Theme.text : Theme.sub)
-                    .padding(.horizontal, 10)
-                    .frame(height: 30)
-                    .background { if shown { GlassThumb() } }
-                    .contentShape(Capsule())
+                    Text(m.title).ui(13).lineLimit(1)
+                        .modifier(ChipLook(on: shown))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(m.title)
@@ -447,6 +353,22 @@ struct ModuleSwitchChips: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Settings.modulesOn)
+    }
+}
+
+/// A module chip: grey and text-colored when on, an outline and grey words when off.
+struct ChipLook: ViewModifier {
+    var on: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .foregroundStyle(on ? Theme.text : Theme.sub)
+            .padding(.horizontal, 12)
+            .frame(height: 28)
+            .background {
+                if on { Capsule().fill(Theme.chip) } else { Capsule().strokeBorder(Theme.line, lineWidth: 1) }
+            }
+            .contentShape(Capsule())
     }
 }
 
@@ -558,21 +480,21 @@ struct MenubarPreview: View {
             Text(Format.time(Date())).font(BarFont.value().font)
         }
         .foregroundStyle(Theme.barFg)
-        .padding(.horizontal, 10)
-        .frame(height: 28)
+        .padding(.horizontal, 14)
+        .frame(height: 40)
         .frame(maxWidth: .infinity)
         .background(alignment: .leading) {
             if !blocked.isEmpty {
                 GeometryReader { geo in
                     UnevenRoundedRectangle(bottomLeadingRadius: 9, bottomTrailingRadius: 9, style: .continuous)
                         .fill(Color.black)
-                        .frame(width: 110, height: 28)
+                        .frame(width: 110, height: 40)
                         .offset(x: geo.size.width * 0.24)
                 }
             }
         }
-        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.bar))
-        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.raise))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(L10n.Settings.previewA11y(modules.map { MenuBarText.accessibility($0, monitor.snapshot, prefs) }.joined(separator: L10n.A11y.separator)))
     }
@@ -580,24 +502,7 @@ struct MenubarPreview: View {
 
 // MARK: - Module settings (from a monitor page's settings button)
 
-/// Title row of a monitor page and of its settings, with the "监视器 | 设置" switch.
-struct ModuleHeader<Extra: View>: View {
-    let module: Module
-    var settingsActive = false
-    @ViewBuilder var extra: Extra
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(module.title).ui(22, 600).kerning(-0.2).accessibilityAddTraits(.isHeader)
-            Spacer(minLength: 0)
-            extra
-            ModuleViewToggle(module: module, settingsActive: settingsActive)
-        }
-        .frame(height: Sidebar.titleBand)
-    }
-}
-
-/// Monitor / settings icons for one module on a glass track.
+/// Monitor / settings icons for one module, in the title bar; the thumb slides between them.
 struct ModuleViewToggle: View {
     let module: Module
     var settingsActive: Bool
@@ -611,7 +516,8 @@ struct ModuleViewToggle: View {
                 Navigator.shared.page = .moduleSettings(module)
             }
         }
-        .padding(2)
+        .slidingThumb(settingsActive) { GlassThumb() }
+        .padding(3)
         .background(GlassTrack())
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Settings.moduleViews(module.title))
@@ -624,20 +530,13 @@ private struct ViewSegment: View {
     var on: Bool
     var action: () -> Void
     @State private var hovering = false
-    @Environment(\.pageGlass) private var pageGlass
 
     var body: some View {
         Button(action: action) {
-            LineIcon(d: d, size: 14, lineWidth: 1.5)
+            LineIcon(d: d, size: 16, lineWidth: 1.5)
                 .foregroundStyle(on || hovering ? Theme.text : Theme.sub)
-                .frame(width: 30, height: 22)
-                .background {
-                    if on {
-                        if let pageGlass { GlassThumb().matchedGeometryEffect(id: "viewToggle", in: pageGlass) } else { GlassThumb() }
-                    } else if hovering {
-                        RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.lgHover)
-                    }
-                }
+                .frame(width: 34, height: 26)
+                .thumbAnchor(on)
                 .hoverAnimation(hovering)
                 .contentShape(Rectangle())
         }
@@ -649,42 +548,49 @@ private struct ViewSegment: View {
     }
 }
 
-extension ModuleHeader where Extra == EmptyView {
-    init(module: Module, settingsActive: Bool = false) {
-        self.init(module: module, settingsActive: settingsActive) { EmptyView() }
-    }
-}
-
 enum ModuleSettingsTab: Int, CaseIterable { case module, widgets, panel }
 
+/// A module's settings, from the title bar's switch: whether it shows in the menu bar, its
+/// widgets as they look there, then three tabs: general, widgets, dropdown. Alert rules live on
+/// the Alerts page; 常规 has a row that goes there.
 struct ModuleSettingsPage: View {
     let module: Module
+    var settings = SettingsStore.shared
     @State private var tab: ModuleSettingsTab = ModuleSettingsPage.initialTab
 
     /// Lets the snapshot tool render each tab.
     static var initialTab: ModuleSettingsTab = .module
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            ModuleHeader(module: module, settingsActive: true)
-            WidgetStrip(module: module)
-            VStack(alignment: .leading, spacing: 12) {
-                Segmented(label: L10n.Settings.tabsA11y,
-                          options: [(ModuleSettingsTab.module, L10n.Settings.tabModule), (.widgets, L10n.Settings.tabWidgets),
-                                    (.panel, L10n.Settings.tabPanel)],
-                          selection: $tab, style: .tabs)
+        VStack(alignment: .leading, spacing: 0) {
+            PageHeader(title: module.title, spec: L10n.Settings.settingsSpec)
+            SettingsRow(title: L10n.Settings.showInMenubar) {
+                RinSwitch(isOn: Binding(get: { settings.prefs.showsInMenubar(module) }, set: { settings.prefs.setInMenubar(module, $0) }),
+                          label: L10n.Settings.showInMenubar)
+            }
+            .padding(.top, 18)
+            WidgetStrip(module: module).padding(.top, 6)
+            Segmented(label: L10n.Settings.tabsA11y,
+                      options: [(ModuleSettingsTab.module, L10n.Settings.tabModule), (.widgets, L10n.Settings.tabWidgets),
+                                (.panel, L10n.Settings.tabPanel)],
+                      selection: $tab, style: .tabs)
+                .fixedSize()
+                .padding(.top, 26)
+            Group {
                 switch tab {
                 case .module: ModuleTab(module: module)
                 case .widgets: WidgetsTab(module: module)
                 case .panel: PanelTab(module: module)
                 }
             }
+            .padding(.top, 10)
         }
     }
 }
 
-/// "在菜单栏显示" over the module's widgets as they look in the menu bar: picked (glass) |
-/// available. Click a widget to toggle it; the widgets fade and lock while the switch is off.
+/// The module's widgets as they look in the menu bar, picked ones first on raised chips, a
+/// rule, then the rest. Click a widget to toggle it; drag picked ones to reorder. The strip
+/// fades and locks while the module isn't in the menu bar.
 struct WidgetStrip: View {
     let module: Module
     var settings = SettingsStore.shared
@@ -695,33 +601,25 @@ struct WidgetStrip: View {
         let shown = prefs.showsInMenubar(module)
         let on = prefs.widgets(module)
         let off = module.widgetKinds.filter { !on.contains($0) }
-        VStack(spacing: 0) {
-            SettingsRow(title: L10n.Settings.showInMenubar) {
-                RinSwitch(isOn: Binding(get: { settings.prefs.showsInMenubar(module) }, set: { settings.prefs.setInMenubar(module, $0) }),
-                          label: L10n.Settings.showInMenubar)
-            }
-            .padding(.horizontal, 14)
-            Hairline().padding(.horizontal, 14)
-            // One list, so a chip keeps its identity and slides across when it changes sides.
-            FlowLayout(spacing: 4) {
-                ForEach(on.map { WidgetSlot.widget($0) } + [.divider] + off.map { .widget($0) }) { item in
-                    switch item {
-                    case .widget(let kind):
-                        WidgetChip(module: module, kind: kind, on: on.contains(kind), prefs: prefs)
-                            .opacity(dragging == kind ? 0.4 : 1)
-                            .modifier(WidgetReorder(module: module, kind: kind, picked: on.contains(kind), dragging: $dragging))
-                    case .divider: Rectangle().fill(Theme.cross).frame(width: 1, height: 22).padding(.horizontal, 6).frame(height: 36)
-                    }
+        // One list, so a chip keeps its identity and slides across when it changes sides.
+        FlowLayout(spacing: 4) {
+            ForEach(on.map { WidgetSlot.widget($0) } + (on.isEmpty || off.isEmpty ? [] : [.divider]) + off.map { .widget($0) }) { item in
+                switch item {
+                case .widget(let kind):
+                    WidgetChip(module: module, kind: kind, on: on.contains(kind), prefs: prefs)
+                        .opacity(dragging == kind ? 0.4 : 1)
+                        .modifier(WidgetReorder(module: module, kind: kind, picked: on.contains(kind), dragging: $dragging))
+                case .divider: Rectangle().fill(Theme.faint).frame(width: 1, height: 22).padding(.horizontal, 6).frame(height: 34)
                 }
             }
-            .padding(6)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .opacity(shown ? 1 : 0.4)
-            .allowsHitTesting(shown)
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel(L10n.Settings.widgetStripA11y)
         }
-        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
+        .padding(5)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.raise))
+        .opacity(shown ? 1 : 0.45)
+        .allowsHitTesting(shown)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L10n.Settings.widgetStripA11y)
     }
 }
 
@@ -741,14 +639,14 @@ private struct WidgetChip: View {
                 .environment(\.widgetUIFont, true)
                 .foregroundStyle(on ? Theme.text : Theme.sub)
                 .opacity(on ? 1 : 0.6)
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 10)
                 .frame(minWidth: 40)
-                .frame(height: 36)
+                .frame(height: 34)
                 .background {
-                    if on { GlassThumb() } else if hovering { Capsule().fill(Theme.well) }
+                    if on { GlassThumb(cornerRadius: 8) } else if hovering { RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.lgHover) }
                 }
                 .hoverAnimation(hovering)
-                .contentShape(Capsule())
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
@@ -861,7 +759,7 @@ struct WidgetsTab: View {
     var body: some View {
         let prefs = settings.prefs
         let widgets = prefs.widgets(module)
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 18) {
             if widgets.count > 1 {
                 SettingsGroup {
                     SettingsRow(title: L10n.Settings.widgetGap) {
@@ -872,17 +770,11 @@ struct WidgetsTab: View {
                 }
             }
             if widgets.isEmpty {
-                Text(L10n.Settings.noWidgets).foregroundStyle(Theme.sub)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 64)
-                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
+                Text(L10n.Settings.noWidgets).ui(14).foregroundStyle(Theme.sub).padding(.vertical, 28)
             }
             ForEach(widgets) { kind in
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(L10n.Widget.name(kind, module)).ui(14, 500).foregroundStyle(Theme.sub)
-                        .padding(.horizontal, 14)
-                        .padding(.bottom, 8)
-                        .accessibilityAddTraits(.isHeader)
+                    HeadRow(title: L10n.Widget.name(kind, module))
                     if module == .network && kind == .speed {
                         NetworkSpeedOptions()
                     } else if WidgetOptionsGroup.hasOptions(module, kind) {
@@ -910,7 +802,7 @@ struct NetworkSpeedOptions: View {
     var body: some View {
         let o = settings.prefs.options(.network, .speed)
         let noGlyph = o.glyph == .none
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 18) {
             OptionsSection {
                 SettingsRow(title: L10n.Settings.displayMode) {
                     Segmented(label: L10n.Settings.displayMode, options: [(ValueLayout.twoLine, L10n.Widget.twoLine), (.singleLine, L10n.Widget.singleLine)], selection: bind(\.layout))
@@ -959,14 +851,8 @@ private struct OptionsSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let title {
-                Text(title).ui(12).foregroundStyle(Theme.sub)
-                    .padding(.horizontal, 14).padding(.bottom, 6)
-                    .accessibilityAddTraits(.isHeader)
-            }
+            if let title { HeadRow(title: title) }
             VStack(spacing: 0) { DividedRows { content } }
-                .padding(.horizontal, 14)
-                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
         }
     }
 }
@@ -1025,15 +911,14 @@ private struct DevicePicker: View {
                 }
             }
         } label: {
-            HStack(spacing: 8) {
-                Text(Self.summary(shown)).ui(14).lineLimit(1)
-                LineIcon(d: Icons.upDown, width: 8, height: 12, viewBox: CGSize(width: 8, height: 12), lineWidth: 1.4)
+            HStack(spacing: 6) {
+                Text(Self.summary(shown)).ui(13).lineLimit(1)
+                LineIcon(d: Icons.chevronDown, size: 10, viewBox: 16, lineWidth: 2)
             }
             .foregroundStyle(Theme.text)
-            .padding(.leading, 10)
-            .padding(.trailing, 8)
-            .frame(height: 26)
-            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.well))
+            .padding(.horizontal, 10)
+            .frame(height: 28)
+            .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.raise))
         }
         .menuStyle(.button)
         .menuIndicator(.hidden)
@@ -1341,10 +1226,9 @@ struct InlineChoice<Value: Hashable>: View {
         } label: {
             Text(options.first { $0.0 == selection }?.1 ?? "")
                 .ui(14, 500)
-                .foregroundStyle(Theme.text)
-                .padding(.horizontal, 9)
-                .frame(height: 24)
-                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.raised).raisedShadow())
+                .padding(.horizontal, 6)
+                .frame(height: 22)
+                .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Theme.chip))
         }
         .menuStyle(.button)
         .buttonStyle(.plain)

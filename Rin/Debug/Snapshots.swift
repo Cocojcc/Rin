@@ -41,8 +41,8 @@ enum Snapshots {
         for dark in [false, true] {
             let tag = dark ? "dark" : "light"
             let appearance = NSAppearance(named: dark ? .darkAqua : .aqua)!
-            // A soft wallpaper (Theme.wall's values), so the glass reads as it does on a desktop.
-            let wall = dark ? Color(red: 0.137, green: 0.133, blue: 0.149) : Color(red: 0.910, green: 0.910, blue: 0.922)
+            // The design's desk behind the window and dropdowns.
+            let wall = dark ? Color(red: 0.165, green: 0.165, blue: 0.180) : Color(red: 0.894, green: 0.894, blue: 0.906)
             func want(_ name: String) -> Bool { only == nil || name.hasPrefix(only!) }
             if want("menubar") { save(MenubarSheet(dark: dark), appearance, dir.appendingPathComponent("menubar-\(tag).png")) }
             for m in Module.allCases where want("panel") {
@@ -69,16 +69,17 @@ enum Snapshots {
             ] + Module.allCases.map { (.moduleSettings($0), "module-\($0.rawValue)") }
             for (page, name) in pages where want("page") || want("page-\(name)") {
                 Navigator.shared.page = page
-                // The overview fills the window, so it is drawn at the window's height.
-                save(MainView().frame(width: pageWidth, height: UIScale.of(page == .overview ? 700 : 1400)).background(wall), appearance, dir.appendingPathComponent("page-\(name)-\(tag).png"))
+                // Drawn at the window's height, like the design's boards; settings scroll, so they get room.
+                let tall = page == .settings || { if case .moduleSettings = page { return true }; return false }()
+                save(MainView().frame(width: pageWidth, height: UIScale.of(tall ? 1400 : 700)).background(wall), appearance, dir.appendingPathComponent("page-\(name)-\(tag).png"))
             }
             if want("page") || want("page-processes") {
                 Navigator.shared.page = .processes
                 ProcessesPage.initialSelection = nil
-                save(MainView().frame(width: pageWidth, height: UIScale.of(760)).background(wall), appearance, dir.appendingPathComponent("page-processes-\(tag).png"))
+                save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-processes-\(tag).png"))
                 let busiest = Monitor.shared.snapshot.processes.all.filter { !$0.isSystem && $0.bundlePath != nil }.max { $0.cpu < $1.cpu }
                 ProcessesPage.initialSelection = busiest?.id
-                save(MainView().frame(width: pageWidth, height: UIScale.of(760)).background(wall), appearance, dir.appendingPathComponent("page-processes-open-\(tag).png"))
+                save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-processes-open-\(tag).png"))
                 ProcessesPage.initialSelection = nil
             }
             if want("page") || want("page-menubar") {
@@ -101,7 +102,7 @@ enum Snapshots {
             if want("page") || want("page-sleep") {
                 KeepAwake.shared.start(.minutes(30))
                 Navigator.shared.page = .sleep
-                save(MainView().frame(width: pageWidth, height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-sleep-on-\(tag).png"))
+                save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-sleep-on-\(tag).png"))
                 if let out = try? Process.run(URL(fileURLWithPath: "/usr/bin/pmset"), arguments: ["-g", "assertions"]) { out.waitUntilExit() }
                 KeepAwake.shared.stop()
             }
@@ -110,9 +111,6 @@ enum Snapshots {
                 SettingsStore.shared.prefs.setEnabled(.bluetooth, false)
                 Navigator.shared.page = .overview
                 save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-overview-off-\(tag).png"))
-                OverviewPage.initialEditing = true
-                save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-overview-edit-\(tag).png"))
-                OverviewPage.initialEditing = false
                 save(PanelRoot(kind: .combined).padding(20).background(wall), appearance, dir.appendingPathComponent("panel-combined-off-\(tag).png"))
                 SettingsStore.shared.prefs.setEnabled(.gpu, true)
                 SettingsStore.shared.prefs.setEnabled(.bluetooth, true)
@@ -120,7 +118,7 @@ enum Snapshots {
             if want("page") || want("page-alerts") {
                 seedAlerts()
                 Navigator.shared.page = .alerts
-                save(MainView().frame(width: pageWidth, height: UIScale.of(1100)).background(wall), appearance, dir.appendingPathComponent("page-alerts-\(tag).png"))
+                save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-alerts-\(tag).png"))
                 seedAlerts()
                 Navigator.shared.page = .overview
                 save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-overview-alert-\(tag).png"))

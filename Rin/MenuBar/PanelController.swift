@@ -60,7 +60,7 @@ final class PanelController {
     private var closedAt = Date.distantPast
     private var closedKind: PanelKind?
 
-    static let width: CGFloat = 320
+    static let width: CGFloat = 330
 
     #if DEBUG
     var debugContentView: NSView? { panel?.contentView }
@@ -155,17 +155,16 @@ struct PanelRoot: View {
 
     var body: some View {
         UIScaled {
-            VStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 0) {
                 switch kind {
                 case .module(let m):
                     ModulePanel(module: m)
                     PanelFooter()
                 case .combined:
-                    // Its own footer: settings on the left, keep awake, pause and quit on the right.
                     CombinedPanel()
                 }
             }
-            .padding(EdgeInsets(top: 14, leading: 14, bottom: kind == .combined ? 14 : 10, trailing: 14))
+            .padding(20)
             .frame(width: PanelController.width)
             .ui(14)
             .foregroundStyle(Theme.text)

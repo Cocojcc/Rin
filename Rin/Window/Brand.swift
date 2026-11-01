@@ -16,12 +16,3 @@ struct AppMark: View {
             .accessibilityHidden(true)
     }
 }
-
-/// The mark as things stand now. Its own view, so only the face redraws with each reading.
-struct MoodMark: View {
-    var size: CGFloat
-
-    var body: some View {
-        AppMark(size: size, mood: Status.now().mood)
-    }
-}

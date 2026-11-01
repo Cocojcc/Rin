@@ -1,48 +1,51 @@
 import AppKit
 import SwiftUI
 
-/// Keep-awake on top, then everything currently holding the Mac awake.
+/// Keep-awake on top (its clock in the accent while on), how long and its two options on rows,
+/// then everything currently holding the Mac awake.
 struct SleepPage: View {
     var keepAwake = KeepAwake.shared
     var settings = SettingsStore.shared
     @State private var blockers: [SleepBlocker] = []
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 0) {
             PageTitle(title: L10n.Sidebar.sleep)
-            Section(title: L10n.Sleep.keepAwake) {
-                VStack(spacing: 0) {
-                    ticking { status($0) }
-                    ModeChips(keepAwake: keepAwake)
-                        .padding(EdgeInsets(top: 0, leading: 14, bottom: 14, trailing: 14))
-                    toggleRow(L10n.Sleep.keepDisplay, isOn: Binding(
-                        get: { settings.prefs.sleep.keepDisplay },
-                        set: { settings.prefs.sleep.keepDisplay = $0; keepAwake.preferencesChanged() }))
-                    toggleRow(L10n.Sleep.lowBattery(Format.percent(KeepAwake.lowBattery)), isOn: Binding(
-                        get: { settings.prefs.sleep.offWhenLow },
-                        set: { settings.prefs.sleep.offWhenLow = $0 }))
+            ticking { status($0) }.padding(.top, 30)
+            VStack(spacing: 0) {
+                DividedRows {
+                    SettingsRow(title: L10n.Sleep.duration) { DurationControl(keepAwake: keepAwake) }
+                    SettingsRow(title: L10n.Sleep.keepDisplay) {
+                        RinSwitch(isOn: Binding(get: { settings.prefs.sleep.keepDisplay },
+                                                set: { settings.prefs.sleep.keepDisplay = $0; keepAwake.preferencesChanged() }), label: L10n.Sleep.keepDisplay)
+                    }
+                    let low = L10n.Sleep.lowBattery(Format.percent(KeepAwake.lowBattery))
+                    SettingsRow(title: low) {
+                        RinSwitch(isOn: Binding(get: { settings.prefs.sleep.offWhenLow }, set: { settings.prefs.sleep.offWhenLow = $0 }), label: low)
+                    }
                 }
-                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
             }
-            Section(title: L10n.Sleep.blockers) {
-                ticking { now in
+            .overlay(alignment: .top) { Hairline() }
+            .padding(.top, 22)
+            ticking { now in
+                VStack(alignment: .leading, spacing: 0) {
+                    HeadRow(title: L10n.Sleep.blockers) { Text(L10n.Sleep.blockerCount(blockers.count + (keepAwake.isOn ? 1 : 0))) }
                     VStack(spacing: 0) {
                         DividedRows {
                             if keepAwake.isOn, let started = keepAwake.started {
                                 BlockerRow(name: L10n.App.name, detail: detail(L10n.Sleep.keepAwake, display: keepAwake.holdsDisplay),
-                                           held: now.timeIntervalSince(started)) { AppMark(size: 18) }
+                                           held: now.timeIntervalSince(started))
                             }
                             ForEach(blockers) { b in blockerRow(b, now: now) }
                         }
-                        if !keepAwake.isOn && blockers.isEmpty {
-                            Text(L10n.Sleep.nothing).ui(14).foregroundStyle(Theme.faint)
-                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                        }
                     }
-                    .padding(.horizontal, 14)
-                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
+                    if !keepAwake.isOn && blockers.isEmpty {
+                        Text(L10n.Sleep.nothing).ui(14).foregroundStyle(Theme.sub)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    }
                 }
             }
+            .padding(.top, 26)
         }
         .task {
             // Assertions come and go with media playback and syncing; re-read while the page is up.
@@ -65,33 +68,24 @@ struct SleepPage: View {
 
     // MARK: Keep awake
 
-    @ViewBuilder private func status(_ now: Date) -> some View {
-        HStack(spacing: 16) {
-            LineIcon(d: Icons.cup, size: 22, lineWidth: 1.5)
-                .foregroundStyle(keepAwake.isOn ? Theme.ok : Theme.sub)
-                .frame(width: 48, height: 48)
-                .background(Circle().fill(keepAwake.isOn ? Theme.okBg : Theme.well))
-                .accessibilityHidden(true)
-            if keepAwake.isOn {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(caption).ui(12).foregroundStyle(Theme.sub)
-                    Text(Format.hms(clockSeconds(now))).ui(36, 500).kerning(-1.08).frame(height: 40).monospacedDigit()
-                    Text(endLine).ui(12).foregroundStyle(Theme.sub)
+    private func status(_ now: Date) -> some View {
+        HStack(alignment: .bottom, spacing: 16) {
+            VStack(alignment: .leading, spacing: 0) {
+                SmallLabel(text: keepAwake.isOn ? caption : L10n.Sleep.keepAwake)
+                if keepAwake.isOn {
+                    BigValue(value: Format.hms(clockSeconds(now)), size: 44, color: Theme.accent).padding(.top, 10)
+                    Text(endLine).ui(12).foregroundStyle(Theme.sub).padding(.top, 12)
+                } else {
+                    BigValue(value: L10n.Sleep.offShort, size: 44).padding(.top, 10)
+                    Text(L10n.Sleep.offSub).ui(12).foregroundStyle(Theme.sub).padding(.top, 12)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .accessibilityElement(children: .combine)
-                pillButton(L10n.Sleep.turnOff, fill: Theme.well, text: Theme.text) { keepAwake.stop() }
-            } else {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(L10n.Sleep.offTitle).ui(16, 500)
-                    Text(L10n.Sleep.offSub).ui(12).foregroundStyle(Theme.sub)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .accessibilityElement(children: .combine)
-                AccentPillButton(title: L10n.Sleep.turnOn) { keepAwake.start(keepAwake.mode) }
+            }
+            .accessibilityElement(children: .combine)
+            Spacer(minLength: 0)
+            RoundAction(on: keepAwake.isOn) {
+                if keepAwake.isOn { keepAwake.stop() } else { keepAwake.start(keepAwake.mode) }
             }
         }
-        .padding(14)
     }
 
     private var timed: Bool { keepAwake.endsAt != nil }
@@ -108,28 +102,6 @@ struct SleepPage: View {
         return keepAwake.mode == .whileCharging ? L10n.Sleep.endsUnplugged : L10n.Sleep.untilOff
     }
 
-    private func pillButton(_ title: String, fill: Color, text: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title).ui(12, 500).foregroundStyle(text)
-                .padding(.horizontal, 14)
-                .frame(height: 28)
-                .background(Capsule().fill(fill))
-                .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func toggleRow(_ title: String, isOn: Binding<Bool>) -> some View {
-        HStack(spacing: 12) {
-            Text(title).ui(14)
-            Spacer(minLength: 0)
-            RinSwitch(isOn: isOn, label: title)
-        }
-        .frame(height: 42)
-        .overlay(alignment: .top) { Rectangle().fill(Theme.line).frame(height: 0.5) }
-        .padding(.horizontal, 14)
-    }
-
     // MARK: Blockers
 
     private func detail(_ reason: String, display: Bool) -> String {
@@ -142,22 +114,11 @@ struct SleepPage: View {
         case .app(let app):
             let name = app.localizedName ?? ""
             BlockerRow(name: name, detail: detail(b.reason, display: b.display), held: held,
-                       open: { app.activate() }, openLabel: L10n.Sleep.openNamed(name)) {
-                if let icon = app.icon {
-                    Image(nsImage: icon).resizable().interpolation(.high).frame(width: 18, height: 18)
-                } else {
-                    LetterTile(name: name)
-                }
-            }
+                       open: { app.activate() }, openLabel: L10n.Sleep.openNamed(name))
         case .process(let name, _):
-            BlockerRow(name: name, detail: detail(b.reason, display: b.display), held: held) { LetterTile(name: name) }
+            BlockerRow(name: name, detail: detail(b.reason, display: b.display), held: held)
         case .system:
-            BlockerRow(name: L10n.Sleep.macOS, detail: detail(b.reason, display: b.display), held: held, dimmed: true) {
-                LineIcon(d: Icons.gear, size: 12, lineWidth: 1.3)
-                    .foregroundStyle(Theme.sub)
-                    .frame(width: 18, height: 18)
-                    .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.well))
-            }
+            BlockerRow(name: L10n.Sleep.macOS, detail: detail(b.reason, display: b.display), held: held)
         }
     }
 
@@ -171,65 +132,64 @@ struct SleepPage: View {
     }
 }
 
-private struct BlockerRow<Icon: View>: View {
+/// One holder: its name and why on one line, how long it has held on, Open for apps.
+private struct BlockerRow: View {
     var name: String
     var detail: String
     var held: TimeInterval
     var open: (() -> Void)? = nil
     var openLabel = ""
-    var dimmed = false
-    @ViewBuilder var icon: Icon
 
     var body: some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 10) {
-                icon.accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(name).ui(14).foregroundStyle(dimmed ? Theme.sub : Theme.text).lineLimit(1)
-                    Text(detail).ui(12).foregroundStyle(Theme.sub).lineLimit(1).truncationMode(.tail)
-                }
+        HStack(spacing: 16) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(name).ui(14).lineLimit(1).fixedSize()
+                Text(detail).ui(12).foregroundStyle(Theme.sub).lineLimit(1).truncationMode(.tail)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityElement(children: .combine)
-            HStack(spacing: 12) {
-                if let open {
-                    Button(action: open) {
-                        Text(L10n.Sleep.open).ui(12).foregroundStyle(Theme.text)
-                            .padding(.horizontal, 10)
-                            .frame(height: 24)
-                            .background(Capsule().fill(Theme.well))
-                            .contentShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(openLabel)
-                }
-                Text(SleepPage.held(held)).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
-                    .frame(width: 72, alignment: .trailing)
+            Text(SleepPage.held(held)).ui(14, 500).lineLimit(1).fixedSize()
+            // Holds its column even without a button, so the times line up.
+            ZStack(alignment: .trailing) {
+                Color.clear
+                if let open { IconAction(d: Icons.openExternal, label: openLabel, size: 28, action: open) }
             }
+            .frame(width: 52, height: 28)
         }
-        .frame(minHeight: 44)
+        .frame(height: 44)
+        .accessibilityElement(children: .combine)
     }
 }
 
-/// Accent capsule button ("开启").
-private struct AccentPillButton: View {
-    var title: String
+/// Keep-awake's own button: a round grey stop (a small square) while on, a start (a triangle) while off.
+private struct RoundAction: View {
+    var on: Bool
     var action: () -> Void
+    @State private var hovering = false
 
     var body: some View {
         Button(action: action) {
-            Text(title).ui(12, 500).foregroundStyle(Theme.onAccent)
-                .padding(.horizontal, 14)
-                .frame(height: 28)
-                .background(Capsule().fill(Theme.accent))
-                .contentShape(Capsule())
+            Group {
+                if on {
+                    RoundedRectangle(cornerRadius: 3, style: .continuous).frame(width: 12, height: 12)
+                } else {
+                    SVGShape(d: Icons.play, viewBox: CGSize(width: 16, height: 16)).frame(width: 14, height: 14).offset(x: 1)
+                }
+            }
+            .foregroundStyle(Theme.text)
+            .frame(width: 40, height: 40)
+            .background(Circle().fill(hovering ? Theme.chip : Theme.raise))
+            .hoverAnimation(hovering)
+            .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(on ? L10n.Sleep.turnOffA11y : L10n.Sleep.turnOnA11y)
+        .accessibilityLabel(on ? L10n.Sleep.turnOffA11y : L10n.Sleep.turnOnA11y)
     }
 }
 
-/// The seven "how long" chips, four to a row, the chosen one under a sliding glass thumb.
-private struct ModeChips: View {
+/// How long to keep awake, as one segmented row; the last segment picks a time in a popover.
+private struct DurationControl: View {
     var keepAwake: KeepAwake
     @State private var customOpen = false
     @State private var customTime = Date().addingTimeInterval(2 * 3600)
@@ -241,20 +201,22 @@ private struct ModeChips: View {
 
     var body: some View {
         let chosen = choice(keepAwake.mode)
-        // Four to a row, three when the window is narrow.
-        EvenGrid(maxColumns: 4, minWidth: 128, hSpacing: 6, vSpacing: 6) {
+        HStack(spacing: 2) {
             ForEach(KeepAwake.Mode.presets, id: \.self) { mode in
-                chip(icon(mode), title(mode), on: chosen == .preset(mode)) { keepAwake.select(mode); start() }
+                segment(title(mode), on: chosen == .preset(mode)) { keepAwake.select(mode); start() }
             }
-            chip(Icons.sliders, L10n.Sleep.modeCustom, on: chosen == .custom) { customOpen = true }
+            segment(L10n.Sleep.modeCustomEllipsis, on: chosen == .custom) { customOpen = true }
                 .popover(isPresented: $customOpen, arrowEdge: .bottom) { customPicker }
         }
         .slidingThumb(chosen) { GlassThumb() }
+        .padding(3)
+        .background(GlassTrack())
+        .fixedSize()
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Sleep.modesLabel)
     }
 
-    /// Picking a chip starts keeping awake right away.
+    /// Picking a duration starts keeping awake right away.
     private func start() {
         if !keepAwake.isOn { keepAwake.start(keepAwake.mode) }
     }
@@ -262,16 +224,6 @@ private struct ModeChips: View {
     private func choice(_ mode: KeepAwake.Mode) -> Choice {
         if case .custom = mode { return .custom }
         return .preset(mode)
-    }
-
-    private func icon(_ mode: KeepAwake.Mode) -> String {
-        switch mode {
-        case .indefinite: return Icons.infinity
-        case .minutes: return Icons.clock
-        case .untilHour: return Icons.sunset
-        case .whileCharging: return Icons.plug
-        case .custom: return Icons.sliders
-        }
     }
 
     private func title(_ mode: KeepAwake.Mode) -> String {
@@ -286,8 +238,18 @@ private struct ModeChips: View {
         }
     }
 
-    private func chip(_ d: String, _ title: String, on: Bool, action: @escaping () -> Void) -> some View {
-        ModeChip(d: d, title: title, on: on, action: action)
+    private func segment(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).ui(13).lineLimit(1)
+                .foregroundStyle(on ? Theme.text : Theme.sub)
+                .padding(.horizontal, 10)
+                .frame(height: 26)
+                .thumbAnchor(on)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(on ? [.isSelected] : [])
     }
 
     private var customPicker: some View {
@@ -296,7 +258,7 @@ private struct ModeChips: View {
             DatePicker(L10n.Sleep.customUntil, selection: $customTime, displayedComponents: .hourAndMinute)
                 .labelsHidden()
                 .datePickerStyle(.stepperField)
-            PrimaryButton(title: L10n.Sleep.start, height: 28, radius: 8, fontSize: 12) {
+            PrimaryButton(title: L10n.Sleep.start, height: 28, radius: 7, fontSize: 12) {
                 let parts = Calendar.current.dateComponents([.hour, .minute], from: customTime)
                 let end = KeepAwake.next(hour: parts.hour ?? 0, minute: parts.minute ?? 0, after: Date())
                 keepAwake.start(.custom(end))
@@ -305,36 +267,5 @@ private struct ModeChips: View {
         }
         .padding(14)
         .frame(width: 200)
-    }
-}
-
-private struct ModeChip: View {
-    var d: String
-    var title: String
-    var on: Bool
-    var action: () -> Void
-    @State private var hovering = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                LineIcon(d: d, size: 14, lineWidth: 1.4).foregroundStyle(Theme.sub)
-                Text(title).ui(14, on ? 500 : 400).lineLimit(1)
-                Spacer(minLength: 0)
-            }
-            .foregroundStyle(Theme.text)
-            .padding(.horizontal, 12)
-            .frame(height: 34)
-            .background {
-                if !on { Capsule().fill(hovering ? Theme.lgHover : Theme.panel) }
-            }
-            .hoverAnimation(hovering)
-            .thumbAnchor(on)
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .accessibilityLabel(title)
-        .accessibilityAddTraits(on ? [.isSelected] : [])
     }
 }

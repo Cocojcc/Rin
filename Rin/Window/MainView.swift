@@ -1,19 +1,25 @@
 import SwiftUI
 
-/// The window: sidebar on the left, the page on the right, both on solid surfaces.
+/// The window: a title bar across the top (traffic lights, the page's controls on the right), an
+/// icon rail on the left, the page on the right; one solid surface, hairlines between them.
 struct MainView: View {
-    /// Two overview columns side by side; three rows of overview cards top to bottom.
-    static let minSize = CGSize(width: UIScale.of(720), height: UIScale.of(700))
+    static let minSize = CGSize(width: UIScale.of(760), height: UIScale.of(700))
 
     var navigator = Navigator.shared
     var settings = SettingsStore.shared
     @Namespace private var pageGlass
 
     var body: some View {
-        HStack(spacing: 0) {
-            UIScaled { Sidebar().frame(width: 184) }
-            PageView(page: navigator.page)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        VStack(spacing: 0) {
+            UIScaled { TitleBar().frame(height: Sidebar.titleBand) }
+                .frame(height: UIScale.of(Sidebar.titleBand))
+                .layoutPriority(1)
+            HStack(spacing: 0) {
+                UIScaled { Sidebar().frame(width: Sidebar.width) }
+                PageView(page: navigator.page)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+            }
         }
         // The hosting controller sets the window's minimum from this, overriding contentMinSize.
         .frame(minWidth: MainView.minSize.width, minHeight: MainView.minSize.height)
@@ -24,6 +30,94 @@ struct MainView: View {
         .foregroundStyle(Theme.text)
         .focusEffectDisabled()
         .ignoresSafeArea()
+    }
+}
+
+/// The band across the top: room for the traffic lights on the left, the page's own controls on
+/// the right (time range and the monitor / settings switch, or the process search), a rule under it.
+struct TitleBar: View {
+    var navigator = Navigator.shared
+
+    var body: some View {
+        let page = navigator.page
+        HStack(spacing: 10) {
+            Spacer(minLength: 0)
+            switch page {
+            case .overview:
+                RangeControl(range: Binding(get: { navigator.overviewRange }, set: { navigator.overviewRange = $0 }),
+                             options: Navigator.ranges(for: .cpu))
+            case .monitor(.bluetooth):
+                Segmented(label: L10n.Range.label, options: DeviceRange.allCases.map { ($0, $0.title) },
+                          selection: Binding(get: { navigator.deviceRange }, set: { navigator.deviceRange = $0 }), style: .range)
+                    .fixedSize()
+            case .monitor(let m):
+                if m != .battery || Monitor.shared.snapshot.battery.hasBattery {
+                    RangeControl(range: Binding(get: { navigator.range(m) }, set: { navigator.ranges[m] = $0 }), options: Navigator.ranges(for: m))
+                }
+            case .processes:
+                ProcessSearchField(text: Binding(get: { navigator.processQuery }, set: { navigator.processQuery = $0 }))
+            default:
+                EmptyView()
+            }
+            // Kept apart from the switch above so it keeps its identity, and its thumb slides,
+            // between a module's monitor and its settings.
+            if let module = page.module {
+                ModuleViewToggle(module: module, settingsActive: page.isModuleSettings)
+            }
+        }
+        .padding(.leading, 18)
+        .padding(.trailing, 16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .bottom) { Hairline() }
+    }
+}
+
+private extension Page {
+    var module: Module? {
+        switch self {
+        case .monitor(let m), .moduleSettings(let m): return m
+        default: return nil
+        }
+    }
+
+    var isModuleSettings: Bool {
+        if case .moduleSettings = self { return true }
+        return false
+    }
+}
+
+/// "搜索进程 ⌘K" in the title bar: a grey field, the shortcut in a chip; ⌘K focuses it.
+struct ProcessSearchField: View {
+    @Binding var text: String
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if RenderContext.offscreen {
+                // ImageRenderer can't draw text fields.
+                Text(L10n.Processes.search).ui(13).foregroundStyle(Theme.sub).frame(width: 96, alignment: .leading)
+            } else {
+                TextField(L10n.Processes.search, text: $text, prompt: Text(L10n.Processes.search).foregroundStyle(Theme.sub))
+                    .textFieldStyle(.plain)
+                    .ui(13)
+                    .foregroundStyle(Theme.text)
+                    .focused($focused)
+                    .frame(width: 96)
+            }
+            Text(L10n.Processes.searchShortcut).ui(11).foregroundStyle(Theme.sub)
+                .padding(.horizontal, 6).padding(.vertical, 1)
+                .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Theme.chip))
+        }
+        .padding(.horizontal, 10)
+        .frame(height: 32)
+        .background(GlassTrack())
+        .background {
+            Button("") { focused = true }
+                .keyboardShortcut("k", modifiers: .command)
+                .opacity(0)
+                .accessibilityHidden(true)
+        }
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -54,12 +148,12 @@ struct PageView: View {
         }
     }
 
-    /// The processes table scrolls itself; the overview's tiles share the window's height.
-    private var fillsWindow: Bool { page == .processes || page == .overview }
+    /// The processes table scrolls itself.
+    private var fillsWindow: Bool { page == .processes }
 
     private var stack: some View {
         content
-            .padding(EdgeInsets(top: 0, leading: 20, bottom: Sidebar.bottomInset, trailing: 20))
+            .padding(EdgeInsets(top: 28, leading: 32, bottom: Sidebar.bottomInset, trailing: 32))
             .frame(maxWidth: .infinity, maxHeight: fillsWindow ? .infinity : nil, alignment: .topLeading)
     }
 
@@ -88,169 +182,96 @@ struct PageView: View {
     }
 }
 
+/// The icon rail: overview and processes, the modules, then sleep, alerts and this Mac; settings
+/// at the foot. The current page's icon sits on a grey square.
 struct Sidebar: View {
     var navigator = Navigator.shared
-    var monitor = Monitor.shared
     var alerts = Alerts.shared
-
     var settings = SettingsStore.shared
 
-    /// Three groups: the whole machine, one page per hardware module, then the tools.
-    private let overviewPages: [(Page, String, String)] = [
-        (.overview, Icons.overview, L10n.Sidebar.overview),
-        (.processes, Icons.processes, L10n.Sidebar.processes),
-    ]
-    private let toolPages: [(Page, String, String)] = [
-        (.sleep, Icons.sleep, L10n.Sidebar.sleep),
-        (.alerts, Icons.bell, L10n.Sidebar.alerts),
-        (.about, Icons.mac, L10n.Sidebar.aboutMac),
-    ]
+    static let width: CGFloat = 64
+    /// The title bar's height.
+    static let titleBand: CGFloat = 52
+    /// Under each page's last row.
+    static let bottomInset: CGFloat = 20
 
-    /// The hardware modules in the sidebar's order; switched-off ones are left out.
+    /// The hardware modules in the rail's order; switched-off ones are left out.
     static let moduleOrder: [Module] = [.cpu, .gpu, .memory, .network, .disk, .battery, .bluetooth, .sensors]
 
-    private var modulePages: [(Page, String, String)] {
-        Self.moduleOrder.filter(settings.prefs.isEnabled).map { (.monitor($0), Icons.module($0), $0.title) }
-    }
-
-    /// The band at the top that holds the traffic lights and, across the window, each page's title.
-    static let titleBand: CGFloat = 52
-    /// Below the footer, and below each page's last panel, so their bottoms line up.
-    static let bottomInset: CGFloat = 12
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            // The traffic lights' band; the first item lines up with the first panel on the right.
-            Color.clear.frame(height: Self.titleBand + 8)
-
-            VStack(alignment: .leading, spacing: 2) {
-                ForEach(overviewPages, id: \.0) { item($0) }
-                Color.clear.frame(height: 10)
-                ForEach(modulePages, id: \.0) { entry in
-                    item(entry)
-                        .contextMenu {
-                            if case .monitor(let m) = entry.0 {
-                                Button(L10n.Sidebar.turnOffModule(m.title)) { turnOff(m) }
-                            }
-                        }
-                }
-                Color.clear.frame(height: 10)
-                ForEach(toolPages, id: \.0) { item($0, badge: $0.0 == .alerts ? alerts.unseenCount : 0) }
+        let modules = Self.moduleOrder.filter(settings.prefs.isEnabled)
+        VStack(spacing: 4) {
+            item(.overview, Icons.overview, L10n.Sidebar.overview)
+            item(.processes, Icons.processes, L10n.Sidebar.processes)
+            ForEach(modules, id: \.self) { m in
+                item(.monitor(m), Icons.module(m), m.title)
+                    .padding(.top, m == modules.first ? 10 : 0)
+                    .contextMenu {
+                        Button(L10n.Sidebar.turnOffModule(m.title)) { settings.prefs.setEnabled(m, false) }
+                    }
             }
-            // The selected page sits on the same surface as the panels beside it.
-            .slidingThumb(navigator.page.sidebarPage) { thumb(hue(navigator.page.sidebarPage)) }
-            Spacer(minLength: 12)
-            // Her face and the name at the bottom left, beside settings, pause and quit.
-            HStack(spacing: 8) {
-                MoodMark(size: 22)
-                Text(L10n.App.name).ui(16, 600).fixedSize()
-                Spacer(minLength: 0)
-                HStack(spacing: 2) {
-                    footerButton(Icons.gear, lineWidth: 1.3, label: L10n.Sidebar.settings, selected: navigator.page == .settings || navigator.page == .menuBar) {
-                        navigator.page = .settings
-                    }
-                    footerButton(monitor.isPaused ? Icons.play : Icons.pause, lineWidth: monitor.isPaused ? 1.5 : 1.8,
-                                 label: monitor.isPaused ? L10n.Sidebar.resume : L10n.Sidebar.pause, selected: false) {
-                        monitor.togglePause()
-                    }
-                    footerButton(Icons.power, lineWidth: 1.5, label: L10n.Menu.quit, selected: false) {
-                        NSApp.terminate(nil)
-                    }
-                }
-            }
-            .frame(height: 30)
-            .padding(.leading, 8)
+            item(.sleep, Icons.sleep, L10n.Sidebar.sleep).padding(.top, 10)
+            item(.alerts, Icons.bell, L10n.Sidebar.alerts, badge: alerts.unseenCount)
+            item(.about, Icons.mac, L10n.Sidebar.aboutMac)
+            Spacer(minLength: 10)
+            item(.settings, Icons.gear, L10n.Sidebar.settings, lineWidth: 1.3)
         }
-        .padding(EdgeInsets(top: 0, leading: 12, bottom: Self.bottomInset, trailing: 12))
-        .frame(maxHeight: .infinity, alignment: .top)
-        .background(Theme.windowGlass)
-        .overlay(alignment: .trailing) { Rectangle().fill(Theme.panelEdge).frame(width: 1) }
+        .padding(.top, 10)
+        .padding(.bottom, 14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .overlay(alignment: .trailing) { Rectangle().fill(Theme.line).frame(width: 1) }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Sidebar.label)
     }
 
-    /// A module page's color, for its row; nil for the other pages (and battery, Bluetooth).
-    private func hue(_ page: Page) -> Color? {
-        if case .monitor(let m) = page { return Theme.hue(m) }
-        return nil
-    }
-
-    @ViewBuilder private func thumb(_ hue: Color?) -> some View {
-        if let hue {
-            RoundedRectangle(cornerRadius: 8, style: .continuous).fill(hue.opacity(0.16))
-        } else {
-            PanelBackground(radius: 8)
-        }
-    }
-
-    private func turnOff(_ m: Module) {
-        settings.prefs.setEnabled(m, false)
-    }
-
-    /// `badge`: new alerts, a red count on the right.
-    private func item(_ entry: (Page, String, String), badge: Int = 0) -> some View {
-        let on = navigator.page.sidebarPage == entry.0
-        return Button {
-            navigator.page = entry.0
-        } label: {
-            HStack(spacing: 10) {
-                LineIcon(d: entry.1, size: 16, lineWidth: 1.5)
-                    .foregroundStyle(hue(entry.0) ?? (on ? Theme.text : Theme.sub))
-                Text(entry.2).ui(14, on ? 500 : 400)
-                Spacer(minLength: 0)
-                if badge > 0 {
-                    Text("\(badge)").ui(12, 500).foregroundStyle(Theme.onDanger)
-                        .padding(.horizontal, 5)
-                        .frame(minWidth: 18, minHeight: 18)
-                        .background(Capsule().fill(Theme.danger))
-                        .accessibilityLabel(L10n.Alerts.badgeA11y(badge))
-                }
-            }
-            .foregroundStyle(on ? Theme.text : Theme.sub)
-            .padding(.horizontal, 10)
-            .frame(height: 30)
-            .thumbAnchor(on)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(on ? [.isSelected] : [])
-    }
-
-    private func footerButton(_ d: String, lineWidth: CGFloat, label: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        FooterButton(d: d, lineWidth: lineWidth, label: label, selected: selected, action: action)
+    private func item(_ page: Page, _ d: String, _ title: String, badge: Int = 0, lineWidth: CGFloat = 1.5) -> some View {
+        let on = navigator.page.sidebarPage == page || (page == .settings && navigator.page == .menuBar)
+        return RailButton(d: d, title: title, on: on, badge: badge, lineWidth: lineWidth) { navigator.page = page }
     }
 }
 
-/// Sidebar footer button: the selection fill when selected, a grey square under the pointer.
-private struct FooterButton: View {
+/// One rail item: 36 pt square, 10 pt corners, grey behind it when current or under the pointer;
+/// new alerts as a red count at its corner.
+private struct RailButton: View {
     var d: String
+    var title: String
+    var on: Bool
+    var badge: Int
     var lineWidth: CGFloat
-    var label: String
-    var selected: Bool
     var action: () -> Void
     @State private var hovering = false
 
     var body: some View {
         Button(action: action) {
-            LineIcon(d: d, size: 15, lineWidth: lineWidth)
-                .foregroundStyle(selected ? Theme.text : Theme.sub)
-                .frame(width: 28, height: 28)
+            LineIcon(d: d, size: 18, lineWidth: lineWidth)
+                .foregroundStyle(on ? Theme.text : Theme.sub)
+                .frame(width: 36, height: 36)
                 .background {
-                    if selected || hovering { RoundedRectangle(cornerRadius: 6, style: .continuous).fill(selected ? Theme.selection : Theme.lgHover) }
+                    if on || hovering { RoundedRectangle(cornerRadius: 10, style: .continuous).fill(on ? Theme.selection : Theme.lgHover) }
+                }
+                .overlay(alignment: .topTrailing) {
+                    if badge > 0 {
+                        Text("\(badge)").ui(10, 600).foregroundStyle(Theme.onDanger)
+                            .padding(.horizontal, 4)
+                            .frame(minWidth: 15, minHeight: 15)
+                            .background(Capsule().fill(Theme.danger))
+                            .offset(x: 3, y: -2)
+                            .accessibilityLabel(L10n.Alerts.badgeA11y(badge))
+                    }
                 }
                 .hoverAnimation(hovering)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .help(label)
-        .accessibilityLabel(label)
-        .accessibilityAddTraits(selected ? [.isSelected] : [])
+        .help(title)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(on ? [.isSelected] : [])
     }
 }
 
-/// Shared by every page, so the glass thumb of a module's monitor / settings toggle can slide
-/// across while one page fades into the other.
+/// Shared by every page, so the thumb of a module's monitor / settings switch can slide across
+/// while one page fades into the other.
 private struct PageGlassKey: EnvironmentKey {
     static let defaultValue: Namespace.ID? = nil
 }

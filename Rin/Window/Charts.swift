@@ -12,17 +12,21 @@ struct ChartSeries: Identifiable {
 }
 
 extension ChartSeries {
-    /// CPU as a stack (the small charts): the total washed in the user color with its edge, the
-    /// system share solid beneath it.
-    static func cpuStack(total: [ChartPoint], system: [ChartPoint]) -> [ChartSeries] {
-        [ChartSeries(id: "t", points: total, color: Theme.cpu, fill: 0.22, lineWidth: 1.5),
-         ChartSeries(id: "s", points: system, color: Theme.sys, fill: 0.7, lineWidth: 0)]
+    /// CPU: the system share as a grey line, the total in the accent over the neutral wash.
+    static func cpuStack(total: [ChartPoint], system: [ChartPoint], lineWidth: CGFloat = 2) -> [ChartSeries] {
+        [ChartSeries(id: "s", points: system, color: Theme.faint, fill: 0, lineWidth: max(1.3, lineWidth - 0.5)),
+         ChartSeries(id: "t", points: total, color: Theme.accent, fill: 1, lineWidth: lineWidth)]
     }
 
-    /// A reading's two directions for `.mirroredArea`: the first up, washed with its edge; the second down.
-    static func mirrored(_ top: [ChartPoint], _ topColor: Color, _ bottom: [ChartPoint], _ bottomColor: Color) -> [ChartSeries] {
-        [ChartSeries(id: "a", points: top, color: topColor, fill: 0.22, lineWidth: 1.5),
-         ChartSeries(id: "b", points: bottom, color: bottomColor, fill: 0.3, lineWidth: 1.2)]
+    /// One reading as a line over the wash (`fill: false` for a bare line, the overview's sparks).
+    static func line(_ points: [ChartPoint], _ color: Color = Theme.accent, width: CGFloat = 2, fill: Bool = true) -> [ChartSeries] {
+        [ChartSeries(id: "l", points: points, color: color, fill: fill ? 1 : 0, lineWidth: width)]
+    }
+
+    /// A reading's two directions for `.mirroredArea`: the first up, the second down, each over the wash.
+    static func mirrored(_ top: [ChartPoint], _ topColor: Color, _ bottom: [ChartPoint], _ bottomColor: Color, lineWidth: CGFloat = 2) -> [ChartSeries] {
+        [ChartSeries(id: "a", points: top, color: topColor, fill: 1, lineWidth: lineWidth),
+         ChartSeries(id: "b", points: bottom, color: bottomColor, fill: 1, lineWidth: lineWidth)]
     }
 }
 
@@ -46,6 +50,7 @@ struct ChartTooltip: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .frame(width: 176, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.raised).raisedShadow())
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.glass).shadow(color: .black.opacity(0.14), radius: 8, y: 4))
+        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Theme.line, lineWidth: 1))
     }
 }

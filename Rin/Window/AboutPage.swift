@@ -1,66 +1,74 @@
 import AppKit
 import SwiftUI
 
-/// About This Mac: the model with its drawing, hardware and software facts, and volumes.
+/// About This Mac: the model, how long it has been up and its volumes as figures, then the
+/// hardware and software facts side by side.
 struct AboutPage: View {
     @State private var info = MacInfo.read()
-    @State private var wallpaper: NSImage?
     @State private var copied = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            PageTitle(title: L10n.Sidebar.aboutMac) {
-                WellButton(title: copied ? L10n.About.copied : L10n.About.copy, height: 28, radius: 8, fontSize: 12) { copy() }
-                    .help(L10n.About.copyA11y)
-                    .accessibilityLabel(L10n.About.copyA11y)
+        VStack(alignment: .leading, spacing: 0) {
+            PageHeader(title: info.modelName, spec: subtitle) {
+                IconAction(d: copied ? Icons.check : Icons.copy, label: copied ? L10n.About.copied : L10n.About.copyA11y, size: 32, raised: true) { copy() }
             }
-            hero
-            CardGrid(minWidth: 240, spacing: 12, minHeight: 0, columns: 2, minColumns: 1) {
-                Section(title: L10n.About.hardware) { rows(hardware) }
-                Section(title: L10n.About.software) { rows(software) }
-            }
-            if !info.volumes.isEmpty {
-                Section(title: L10n.About.storage) {
-                    rows(info.volumes.map { ($0.name, L10n.About.volume(Format.storage($0.available), Format.storage($0.total))) })
+            HStack(alignment: .top, spacing: 0) {
+                cell(L10n.About.uptimeLabel, first: true) {
+                    let up = uptime
+                    BigValue(value: up.0, unit: up.1, size: 44)
+                }
+                ForEach(info.volumes.prefix(2), id: \.name) { v in
+                    cell(v.name) {
+                        let free = Format.parts(Format.storage(v.available))
+                        BigValue(value: free.0, unit: L10n.Monitor.unitFree(free.1), size: 44)
+                        LevelBar(fraction: v.total > 0 ? Double(v.total - v.available) / Double(v.total) : 0, color: Theme.mid)
+                            .frame(maxWidth: 180).padding(.top, 12)
+                        Text(L10n.Monitor.totalOf(Format.storage(v.total))).ui(12).foregroundStyle(Theme.sub).padding(.top, 10)
+                    }
                 }
             }
+            .padding(.horizontal, -20)
+            .padding(.top, 34)
+            Columns(gap: 44) {
+                VStack(alignment: .leading, spacing: 0) {
+                    HeadRow(title: L10n.About.hardware)
+                    rows(hardware)
+                }
+            } b: {
+                VStack(alignment: .leading, spacing: 0) {
+                    HeadRow(title: L10n.About.software)
+                    rows(software)
+                }
+            }
+            .padding(.top, 40)
         }
-        .task {
-            info = MacInfo.read()
-            wallpaper = await Task.detached(priority: .utility) { MacInfo.wallpaperThumbnail() }.value
-        }
+        .task { info = MacInfo.read() }
     }
 
-    private var hero: some View {
-        HStack(spacing: 24) {
-            LaptopDrawing(wallpaper: wallpaper).frame(width: 132, height: 84)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(info.modelName).ui(22, 600).kerning(-0.2).frame(height: 26)
-                if let subtitle { Text(subtitle).ui(14).foregroundStyle(Theme.sub) }
-                HStack(spacing: 6) {
-                    chip(L10n.About.macOS(info.osVersion))
-                    chip(Format.uptime(since: info.bootTime))
-                }
-                .padding(.top, 12)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityElement(children: .combine)
+    /// One figure in the strip under the title, a rule on its left after the first.
+    private func cell<Content: View>(_ label: String, first: Bool = false, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SmallLabel(text: label)
+            VStack(alignment: .leading, spacing: 0) { content() }.padding(.top, 10)
         }
-        .padding(EdgeInsets(top: 18, leading: 14, bottom: 18, trailing: 14))
+        .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
+        .overlay(alignment: .leading) { if !first { Rectangle().fill(Theme.line).frame(width: 1) } }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// "3" and "天 4 小时": the biggest unit as the figure, the rest beside it.
+    private var uptime: (String, String) {
+        let minutes = Int(Date().timeIntervalSince(info.bootTime) / 60)
+        let days = minutes / 1440, hours = (minutes % 1440) / 60
+        if days > 0 { return ("\(days)", L10n.About.uptimeDaysUnit(hours)) }
+        if hours > 0 { return ("\(hours)", L10n.About.uptimeHoursUnit(minutes % 60)) }
+        return ("\(max(1, minutes))", L10n.About.uptimeMinutesUnit)
     }
 
     private var subtitle: String? {
         let parts = [info.inches.map(L10n.About.inches), info.year.map(L10n.About.year)].compactMap { $0 }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-
-    private func chip(_ text: String) -> some View {
-        Text(text).ui(12).lineLimit(1)
-            .padding(.horizontal, 9)
-            .frame(height: 22)
-            .background(Capsule().fill(Theme.well))
     }
 
     private var hardware: [(String, String)] {
@@ -101,14 +109,12 @@ struct AboutPage: View {
                         Text(item.1).fontWeight(.medium).lineLimit(1).truncationMode(.middle)
                     }
                     .ui(14)
-                    .frame(minHeight: 34)
+                    .frame(height: 58)
                     .accessibilityElement(children: .combine)
                     .textSelection(.enabled)
                 }
             }
         }
-        .padding(.horizontal, 14)
-        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
     }
 
     private func copy() {
@@ -123,41 +129,5 @@ struct AboutPage: View {
         NSPasteboard.general.setString(lines.joined(separator: "\n"), forType: .string)
         copied = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
-    }
-}
-
-/// A laptop: ink lid with the desktop picture (or a plain wall) on the screen, notch, faint base.
-private struct LaptopDrawing: View {
-    var wallpaper: NSImage?
-
-    var body: some View {
-        ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.ink)
-                .frame(width: 108, height: 70).offset(x: 12, y: 2)
-            screen.frame(width: 100, height: 62)
-                .clipShape(RoundedRectangle(cornerRadius: 3.5, style: .continuous))
-                .offset(x: 16, y: 6)
-            Capsule().fill(Theme.ink).frame(width: 16, height: 4).offset(x: 58, y: 6)
-            BaseShape().fill(Theme.faint).frame(width: 132, height: 84)
-            Capsule().fill(Theme.ink.opacity(0.35)).frame(width: 20, height: 2.5).offset(x: 56, y: 74)
-        }
-        .frame(width: 132, height: 84, alignment: .topLeading)
-        .accessibilityHidden(true)
-    }
-
-    @ViewBuilder private var screen: some View {
-        if let wallpaper {
-            Image(nsImage: wallpaper).resizable().aspectRatio(contentMode: .fill)
-        } else {
-            Theme.wall
-        }
-    }
-
-    /// "M2 74h128l-3.5 6.5a3 3 0 0 1-2.6 1.5H8.1a3 3 0 0 1-2.6-1.5z" in a 132 × 84 box.
-    private struct BaseShape: Shape {
-        func path(in rect: CGRect) -> Path {
-            Path(SVGPath.path("M2 74h128l-3.5 6.5a3 3 0 0 1-2.6 1.5H8.1a3 3 0 0 1-2.6-1.5z"))
-                .applying(CGAffineTransform(scaleX: rect.width / 132, y: rect.height / 84))
-        }
     }
 }

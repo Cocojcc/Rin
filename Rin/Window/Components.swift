@@ -72,27 +72,25 @@ private struct ScaleLayout: Layout {
 
 // MARK: - Liquid glass
 
-/// Flat track behind a group of segments (7 pt corners).
+/// The grey behind a group of segments (9 pt corners).
 struct GlassTrack: View {
-    var cornerRadius: CGFloat? = 7
+    var cornerRadius: CGFloat? = 9
 
     var body: some View {
-        GlassShape(cornerRadius: cornerRadius)
-            .fill(Theme.lgFill.shadow(.inner(color: Theme.lgEdgeLight, radius: 0, x: 0, y: 1)))
-            .overlay(GlassShape(cornerRadius: cornerRadius).inset(by: -0.25).stroke(Theme.lgEdgeLine, lineWidth: 0.5))
+        GlassShape(cornerRadius: cornerRadius).fill(Theme.raise)
     }
 }
 
-/// The flat piece behind a selected segment or chip (6 pt corners).
+/// The selected segment: a raised white chip with a soft shadow and a hairline ring (light), a
+/// lighter step (dark); 6 pt corners.
 struct GlassThumb: View {
     var cornerRadius: CGFloat? = 6
 
     var body: some View {
         GlassShape(cornerRadius: cornerRadius)
-            .fill(Theme.lgThumb.shadow(.inner(color: Theme.lgThumbLight, radius: 0, x: 0, y: 1)))
-            .overlay(GlassShape(cornerRadius: cornerRadius).strokeBorder(Theme.lgThumbRing, lineWidth: 0.5))
-            .overlay(GlassShape(cornerRadius: cornerRadius).inset(by: -0.25).stroke(Theme.lgThumbLine, lineWidth: 0.5))
-            .shadow(color: Theme.lgThumbShadow, radius: 1.5, x: 0, y: 1)
+            .fill(Theme.raised)
+            .overlay(GlassShape(cornerRadius: cornerRadius).inset(by: -0.25).stroke(Theme.raisedRing, lineWidth: 0.5))
+            .shadow(color: Theme.raisedShadowNear, radius: 1, x: 0, y: 1)
     }
 }
 
@@ -156,37 +154,25 @@ struct GlassShape: InsettableShape {
 
 // MARK: - Containers
 
-/// Subtle filled area that groups content on glass (no border).
-struct Panel<Content: View>: View {
-    var radius: CGFloat = 16
-    var padding: EdgeInsets = EdgeInsets(top: 14, leading: 14, bottom: 14, trailing: 14)
-    var fill: Color = Theme.panel
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) { content }
-            .padding(padding)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill))
-    }
-}
-
-/// Settings group: rows on a panel, separated by hairlines.
-struct SettingsGroup<Content: View>: View {
+/// Settings group: a small grey title, then rows with hairlines between them; no card.
+struct SettingsGroup<Content: View, Trailing: View>: View {
     var title: String? = nil
     @ViewBuilder var content: Content
+    @ViewBuilder var trailing: Trailing
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let title {
-                Text(title).ui(14, 500).foregroundStyle(Theme.sub)
-                    .padding(.horizontal, 14).padding(.bottom, 8)
-                    .accessibilityAddTraits(.isHeader)
+                HeadRow(title: title) { trailing }
             }
             VStack(spacing: 0) { DividedRows { content } }
-                .padding(.horizontal, 14)
-                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.panel))
         }
+    }
+}
+
+extension SettingsGroup where Trailing == EmptyView {
+    init(title: String? = nil, @ViewBuilder content: () -> Content) {
+        self.init(title: title, content: content) { EmptyView() }
     }
 }
 
@@ -210,17 +196,17 @@ struct DividedRows<Content: View>: View {
     }
 }
 
-/// 0.5 pt rule in a 1 pt box so rows below stay on whole points.
+/// A 1 pt rule.
 struct Hairline: View {
     var body: some View {
-        Rectangle().fill(Theme.line).frame(height: 0.5).frame(height: 1, alignment: .top)
+        Rectangle().fill(Theme.line).frame(height: 1)
     }
 }
 
-/// Label on the left, control on the right (42 pt rows in settings).
+/// Label on the left, control on the right (44 pt rows in settings).
 struct SettingsRow<Control: View>: View {
     var title: String
-    var height: CGFloat = 42
+    var height: CGFloat = 44
     /// Faded and locked while another setting makes it moot (the rule above stays as it is).
     var dimmed = false
     @ViewBuilder var control: Control
@@ -240,7 +226,7 @@ struct SettingsRow<Control: View>: View {
 
 // MARK: - Controls
 
-/// 32 × 20 switch. On: an ink track with a light knob. Off: a grey track with a grey knob.
+/// 34 × 20 switch. On: the accent with a white knob. Off: a grey track with a white knob.
 struct RinSwitch: View {
     @Binding var isOn: Bool
     var label: String
@@ -253,9 +239,10 @@ struct RinSwitch: View {
                 Capsule().fill(isOn ? Theme.switchOn : Theme.switchOff)
                 Circle().fill(isOn ? Theme.switchOnKnob : Theme.switchKnob)
                     .frame(width: 16, height: 16)
+                    .shadow(color: .black.opacity(0.2), radius: 1, y: 1)
                     .padding(2)
             }
-            .frame(width: 32, height: 20)
+            .frame(width: 34, height: 20)
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -265,11 +252,8 @@ struct RinSwitch: View {
     }
 }
 
-/// Glass track with a glass thumb on the selected segment (`.tab`, used in dropdowns, keeps
-/// the grey well and white thumb). `.compact` for settings rows (24 pt),
-/// `.range` for the time ranges on monitor pages (26 pt, 12 pt side padding),
-/// `.tab` for small inline switches (22 pt, 11 pt text), `.tabs` for a page's tab bar
-/// (26 pt, full width), `.sort` for the overview's sort switch (26 pt).
+/// Segments on a grey track, the selected one on a raised chip: 26 tall, 13 pt text. `.tab` is
+/// the dropdowns' smaller 22 pt version, `.tabs` a page's tab bar (12 pt side padding).
 struct Segmented<Value: Hashable>: View {
     /// `inline`: the range's look at 22 tall, beside a switch in a settings row.
     enum Style { case compact, range, inline, tab, tabs, sort }
@@ -284,7 +268,7 @@ struct Segmented<Value: Hashable>: View {
     /// A module page's time range: the selected segment washed in the module's color.
     var tint: Color? = nil
 
-    private var fills: Bool { style == .tabs }
+    private var fills: Bool { false }
 
     var body: some View {
         HStack(spacing: 2) {
@@ -297,11 +281,11 @@ struct Segmented<Value: Hashable>: View {
                         if let glyph {
                             glyph(option.0).frame(width: glyphWidth)
                         } else {
-                            Text(option.1).ui(fontSize, on ? 500 : 400).lineLimit(1)
+                            Text(option.1).ui(fontSize).lineLimit(1)
                         }
                     }
-                    .foregroundStyle(on ? tint ?? Theme.text : Theme.sub)
-                    .padding(.horizontal, style == .range ? 10 : style == .inline ? 8 : 7)
+                    .foregroundStyle(on ? Theme.text : Theme.sub)
+                    .padding(.horizontal, style == .tabs ? 12 : glyph == nil ? 10 : 8)
                     .frame(maxWidth: fills ? .infinity : nil)
                     .frame(height: height)
                     .thumbAnchor(on)
@@ -313,41 +297,19 @@ struct Segmented<Value: Hashable>: View {
                 .accessibilityAddTraits(on ? [.isSelected] : [])
             }
         }
-        .slidingThumb(selection) {
-            if let tint {
-                RoundedRectangle(cornerRadius: 6, style: .continuous).fill(tint.opacity(0.22))
-            } else if glass {
-                GlassThumb()
-            } else {
-                RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.raised).raisedShadow()
-            }
-        }
-        .padding(fills ? 3 : 2)
-        .background {
-            if glass {
-                GlassTrack()
-            } else {
-                RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.well)
-            }
-        }
+        .slidingThumb(selection) { GlassThumb() }
+        .padding(style == .tab ? 2 : 3)
+        .background(GlassTrack(cornerRadius: style == .tab ? 7 : 9))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(label)
     }
 
-    private var height: CGFloat {
-        switch style {
-        case .range: return 26
-        case .tab, .inline: return 22
-        case .tabs, .sort: return 26
-        case .compact: return 24
-        }
-    }
+    private var height: CGFloat { style == .tab ? 22 : 26 }
 
-    private var glass: Bool { style != .tab }
-    private var fontSize: CGFloat { style == .tab ? 12 : 14 }
+    private var fontSize: CGFloat { style == .tab ? 12 : 13 }
 }
 
-/// "− 12 pt +" on a glass track.
+/// "− 12 pt +": two small grey buttons around the value.
 struct GlassStepper: View {
     var label: String
     @Binding var value: Int
@@ -355,17 +317,15 @@ struct GlassStepper: View {
     var step = 1
 
     var body: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 4) {
             StepButton(d: Icons.minusSmall, label: L10n.Settings.decrease(label), enabled: value > range.lowerBound) {
                 value = max(range.lowerBound, value - step)
             }
-            Text(L10n.Settings.points(value)).ui(12, 500).monospacedDigit().frame(minWidth: 40)
+            Text(L10n.Settings.points(value)).ui(13).monospacedDigit().frame(width: 44)
             StepButton(d: Icons.plusSmall, label: L10n.Settings.increase(label), enabled: value < range.upperBound) {
                 value = min(range.upperBound, value + step)
             }
         }
-        .padding(2)
-        .background(GlassTrack())
         .accessibilityElement(children: .contain)
         .accessibilityLabel(label)
         .accessibilityValue(L10n.Settings.points(value))
@@ -390,10 +350,10 @@ private struct StepButton: View {
         Button(action: action) {
             LineIcon(d: d, size: 10, viewBox: 10, lineWidth: 1.4)
                 .foregroundStyle(Theme.text)
-                .frame(width: 28, height: 24)
-                .background { if hovering && enabled { Capsule().fill(Theme.lgHover) } }
+                .frame(width: 26, height: 26)
+                .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(hovering && enabled ? Theme.chip : Theme.raise))
                 .hoverAnimation(hovering)
-                .contentShape(Capsule())
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .opacity(enabled ? 1 : 0.35)
@@ -404,7 +364,7 @@ private struct StepButton: View {
     }
 }
 
-/// Well-coloured pill that opens a menu ("5 个 ⌃⌄").
+/// A grey popup button that opens a menu ("5 个 ⌄").
 struct MenuPill<Value: Hashable>: View {
     var label: String
     var options: [(Value, String)]
@@ -422,16 +382,15 @@ struct MenuPill<Value: Hashable>: View {
                 }
             }
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 if let dot { Circle().fill(dot(selection)).frame(width: 9, height: 9) }
-                Text(options.first(where: { $0.0 == selection })?.1 ?? "").ui(14)
-                LineIcon(d: Icons.upDown, width: 8, height: 12, viewBox: CGSize(width: 8, height: 12), lineWidth: 1.4)
+                Text(options.first(where: { $0.0 == selection })?.1 ?? "").ui(13)
+                LineIcon(d: Icons.chevronDown, size: 10, viewBox: 16, lineWidth: 2)
             }
             .foregroundStyle(Theme.text)
-            .padding(.leading, 10)
-            .padding(.trailing, 8)
-            .frame(height: 26)
-            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.well))
+            .padding(.horizontal, 10)
+            .frame(height: 28)
+            .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.raise))
         }
         .menuStyle(.button)
         .menuIndicator(.hidden)
@@ -445,17 +404,18 @@ struct MenuPill<Value: Hashable>: View {
 struct WellButton: View {
     var title: String
     var height: CGFloat = 28
-    var radius: CGFloat = 8
+    var radius: CGFloat = 7
     var horizontalPadding: CGFloat = 12
     var fontSize: CGFloat = 13
     var expands = false
+    var color: Color = Theme.text
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Text(title).ui(fontSize)
                 .lineLimit(1)
-                .foregroundStyle(Theme.text)
+                .foregroundStyle(color)
                 .padding(.horizontal, horizontalPadding)
                 .fixedSize(horizontal: !expands, vertical: false)
                 .frame(maxWidth: expands ? .infinity : nil)
@@ -517,90 +477,6 @@ struct IconButton: View {
 }
 
 // MARK: - Data display
-
-/// A level as a thin rounded bar, 4 pt tall (see `LevelBar`).
-struct MeterBar: View {
-    var fraction: Double
-    var color: Color
-    var height: CGFloat = 4
-
-    var body: some View {
-        LevelBar(fraction: fraction, color: color, height: height)
-    }
-}
-
-/// App icon for a process row, or a letter tile when it has no bundle (18 pt, 5 radius).
-struct ProcessIcon: View {
-    var process: ProcessUsage
-    var size: CGFloat = 18
-
-    var body: some View {
-        if let image = ProcessActions.icon(for: process) {
-            Image(nsImage: image).resizable().interpolation(.high).frame(width: size, height: size)
-                .accessibilityHidden(true)
-        } else {
-            LetterTile(name: process.name, size: size)
-        }
-    }
-}
-
-struct LetterTile: View {
-    var name: String
-    var size: CGFloat = 18
-
-    var body: some View {
-        Text(String(name.prefix(1)).uppercased())
-            .ui(12, 600)
-            .foregroundStyle(Theme.sub)
-            .frame(width: size, height: size)
-            .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.well))
-            .accessibilityHidden(true)
-    }
-}
-
-/// Grid lines plus area + line series, the chart look used in panels (no axes).
-struct MiniChart: View {
-    struct Series {
-        var values: [Double]      // 0...1
-        var color: Color
-        var fill: Double = 0.13
-        var lineWidth: CGFloat = 1.5
-    }
-
-    var series: [Series]
-    var gridLines = 3
-    var minCount = 30
-
-    var body: some View {
-        Canvas { ctx, size in
-            for i in stride(from: 1, through: gridLines, by: 1) {
-                let y = size.height * CGFloat(i) / CGFloat(gridLines + 1)
-                var p = Path()
-                p.move(to: CGPoint(x: 0, y: y))
-                p.addLine(to: CGPoint(x: size.width, y: y))
-                ctx.stroke(p, with: .color(Theme.grid), lineWidth: 1)
-            }
-            for s in series where !s.values.isEmpty {
-                let count = max(s.values.count, minCount)
-                let step = size.width / CGFloat(max(count - 1, 1))
-                let offset = CGFloat(count - s.values.count) * step
-                var line = Path()
-                for (i, v) in s.values.enumerated() {
-                    let pt = CGPoint(x: offset + CGFloat(i) * step, y: size.height - CGFloat(min(1, max(0, v))) * (size.height - 2) - 1)
-                    if i == 0 { line.move(to: pt) } else { line.addLine(to: pt) }
-                }
-                if s.fill > 0 {
-                    var area = line
-                    area.addLine(to: CGPoint(x: offset + CGFloat(s.values.count - 1) * step, y: size.height))
-                    area.addLine(to: CGPoint(x: offset, y: size.height))
-                    area.closeSubpath()
-                    ctx.fill(area, with: .color(s.color.opacity(s.fill)))
-                }
-                ctx.stroke(line, with: .color(s.color), style: StrokeStyle(lineWidth: s.lineWidth, lineCap: .round, lineJoin: .round))
-            }
-        }
-    }
-}
 
 /// Frosted glass for windows and panels: system blur behind, design tint on top.
 struct GlassBackground: View {

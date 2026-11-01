@@ -40,6 +40,18 @@ final class Navigator {
 
     /// The Processes page's sort column, set by the "全部" links on the way in.
     var processSort: ProcessSort = .cpu
+    /// What the title bar's search field filters the Processes page by.
+    var processQuery = ""
+    /// Each monitor page's time range; the title bar switches it.
+    var ranges: [Module: TimeRange] = [:]
+    var overviewRange: TimeRange = .m5
+    /// The Bluetooth page's range, which reaches back 30 days.
+    var deviceRange: DeviceRange = .h24
+
+    func range(_ m: Module) -> TimeRange { ranges[m] ?? (m == .battery ? .h24 : .m5) }
+
+    /// The ranges a page offers in the title bar.
+    static func ranges(for m: Module) -> [TimeRange] { m == .battery ? [.h24, .d7] : [.m5, .h1, .h24, .d7] }
     /// A rule the Alerts page should point out when it opens (from a chart or module settings).
     var alertFocus: Alerts.Rule?
     var page: Page = .overview {
@@ -107,8 +119,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         placeTrafficLights()
     }
 
-    /// Centres the traffic lights in the title band beside each page's title, 20 in from the left
-    /// like the sidebar's items. AppKit puts them back on its own layouts, so this runs again after those.
+    /// Centres the traffic lights in the title bar, 18 in from the left. AppKit puts them back on its own layouts, so this runs again after those.
     private func placeTrafficLights() {
         guard let window, !window.styleMask.contains(.fullScreen),
               let close = window.standardWindowButton(.closeButton),
@@ -123,7 +134,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         container.frame = frame
         let y = ((band - close.frame.height) / 2).rounded()
         for (i, button) in [close, mini, zoom].enumerated() {
-            button.setFrameOrigin(NSPoint(x: UIScale.of(20) + CGFloat(i) * pitch, y: y))
+            button.setFrameOrigin(NSPoint(x: UIScale.of(18) + CGFloat(i) * pitch, y: y))
         }
     }
 
