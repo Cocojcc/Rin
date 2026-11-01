@@ -451,8 +451,6 @@
 /* v3 */
 "battery.minutesShort" = "%d 分钟";
 "disk.internal" = "内置";
-"sidebar.pause" = "暂停监控";
-"sidebar.resume" = "继续监控";
 "overview.gpu.videoDecode" = "视频解码 %@";
 "monitor.idleState" = "空闲";
 "monitor.idle" = "闲置";
@@ -1070,8 +1068,6 @@
 "processes.userLabel" = "用户";
 "panel.perfAverageValue" = "性能核 平均 %@";
 "panel.effAverageValue" = "能效核 平均 %@";
-"panel.openOverview" = "打开概览";
-"panel.openProcesses" = "打开进程";
 "panel.quitRin" = "退出 Rin";
 "combined.openRin" = "打开 Rin";
 "combined.topUsageRow" = "占用最多";

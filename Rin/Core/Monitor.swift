@@ -18,8 +18,6 @@ final class Monitor {
     private(set) var tick = 0
     private(set) var publicIP: String?
     private(set) var interfaces: [(name: String, kind: InterfaceKind)] = []
-    /// Sampling stopped from the sidebar's pause button; everything keeps its last values.
-    private(set) var isPaused = false
     /// The screen is off or locked, or another user's session is in front: nobody sees the menu
     /// bar or a window, so only what alert rules need is read, slowly.
     private(set) var isResting = false
@@ -66,11 +64,6 @@ final class Monitor {
     func stop() {
         sampler.stop()
         history.save()
-    }
-
-    func togglePause() {
-        isPaused.toggle()
-        if isPaused { sampler.pause() } else { sampler.resume() }
     }
 
     func setRest(_ reason: RestReason, _ on: Bool) {
@@ -270,7 +263,6 @@ final class Sampler {
                 || (config.processes.networkLive && !old.networkLive)
                 || (config.processes.full && !old.full) || (config.processesWanted && !oldWanted) {
                 self.queue.asyncAfter(deadline: .now() + 1) {
-                    guard !self.paused else { return }
                     self.processesDue = true
                     self.sample()
                 }
@@ -294,26 +286,7 @@ final class Sampler {
 
     /// An immediate full read, e.g. when a dropdown opens.
     func sampleNow() {
-        queue.async { if !self.paused { self.sample(force: true) } }
-    }
-
-    private var paused = false
-
-    func pause() {
-        queue.async {
-            self.paused = true
-            self.timer?.cancel()
-            self.timer = nil
-        }
-    }
-
-    func resume() {
-        queue.async {
-            self.paused = false
-            self.currentInterval = 0
-            self.sample(force: true)
-            self.reschedule()
-        }
+        queue.async { self.sample(force: true) }
     }
 
     func volumesChanged() {
@@ -332,7 +305,6 @@ final class Sampler {
     private func interval(_ m: Module) -> Double { (config.intervals[m] ?? 2) * slowFactor }
 
     private func reschedule() {
-        guard !paused else { return }
         let active = Module.allCases.filter(config.monitored.contains)
         let interval = (active.isEmpty ? 10 : active.map(interval).min() ?? 2)
         guard interval != currentInterval || timer == nil else { return }

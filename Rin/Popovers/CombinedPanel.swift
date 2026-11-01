@@ -23,13 +23,21 @@ struct CombinedPanel: View {
             HStack(spacing: 10) {
                 Text(L10n.App.name).ui(16, 600).accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 0)
-                // Only something that needs attention earns a line here.
-                if bar.combinedStatus, let event = alerts.current {
-                    Button { alerts.show(event) } label: { Attention(text: AlertText.headline(event)).ui(12).contentShape(Rectangle()) }
-                        .buttonStyle(.plain)
+                // The same three places as every module's dropdown, here for the whole app.
+                HStack(spacing: 2) {
+                    HeaderButton(d: Icons.overview, label: L10n.Combined.openRin) { MainWindowController.shared.show(.overview) }
+                    HeaderButton(d: Icons.gear, lineWidth: 1.3, label: L10n.Sidebar.settings) { MainWindowController.shared.show(.settings) }
+                    HeaderButton(d: Icons.power, label: L10n.Panel.quitRin) { NSApp.terminate(nil) }
                 }
+                .padding(.trailing, -6)
             }
-            .frame(height: 22)
+            .frame(height: 26)
+            // Only something that needs attention earns a line here.
+            if bar.combinedStatus, let event = alerts.current {
+                Button { alerts.show(event) } label: { Attention(text: AlertText.headline(event)).ui(12).contentShape(Rectangle()) }
+                    .buttonStyle(.plain)
+                    .padding(.top, 8)
+            }
             if let hero = modules.first {
                 CombinedHero(module: hero).padding(.top, 22)
             }
@@ -54,17 +62,6 @@ struct CombinedPanel: View {
                 }
                 .padding(.top, busiest == nil ? 4 : 0)
             }
-            HStack(spacing: 4) {
-                Spacer(minLength: 0)
-                FooterIcon(d: Icons.overview, label: L10n.Combined.openRin) { MainWindowController.shared.show(.overview) }
-                FooterIcon(d: Icons.gear, label: L10n.Sidebar.settings, lineWidth: 1.3) { MainWindowController.shared.show(.settings) }
-                FooterIcon(d: monitor.isPaused ? Icons.play : Icons.pause, label: monitor.isPaused ? L10n.Sidebar.resume : L10n.Sidebar.pause,
-                           lineWidth: monitor.isPaused ? 1.5 : 1.8) { monitor.togglePause() }
-                FooterIcon(d: Icons.power, label: L10n.Panel.quitRin) { NSApp.terminate(nil) }
-            }
-            .padding(.top, 10)
-            .overlay(alignment: .top) { Hairline() }
-            .padding(.top, 14)
         }
         .task(id: bar.combinedSleep) {
             guard bar.combinedSleep else { return }

@@ -76,8 +76,6 @@ enum L10n {
         static var menubar: String { tr("sidebar.menubar") }
         static var alerts: String { tr("sidebar.alerts") }
         static var about: String { tr("sidebar.about") }
-        static var pause: String { tr("sidebar.pause") }
-        static var resume: String { tr("sidebar.resume") }
         static var processes: String { tr("sidebar.processes") }
         static var sleep: String { tr("sidebar.sleep") }
         static var aboutMac: String { tr("sidebar.aboutMac") }
@@ -377,8 +375,6 @@ enum L10n {
         static func unitUsed(_ a: String) -> String { tr("panel.unitUsed", a) }
         static func perfAverageValue(_ a: String) -> String { tr("panel.perfAverageValue", a) }
         static func effAverageValue(_ a: String) -> String { tr("panel.effAverageValue", a) }
-        static var openOverview: String { tr("panel.openOverview") }
-        static var openProcesses: String { tr("panel.openProcesses") }
         static var quitRin: String { tr("panel.quitRin") }
     }
 

@@ -451,8 +451,6 @@
 /* v3 */
 "battery.minutesShort" = "%d min";
 "disk.internal" = "Internal";
-"sidebar.pause" = "Pause monitoring";
-"sidebar.resume" = "Resume monitoring";
 "overview.gpu.videoDecode" = "Video decode %@";
 "monitor.idleState" = "Idle";
 "monitor.idle" = "Idle";
@@ -1070,8 +1068,6 @@
 "processes.userLabel" = "User";
 "panel.perfAverageValue" = "Performance avg. %@";
 "panel.effAverageValue" = "Efficiency avg. %@";
-"panel.openOverview" = "Overview";
-"panel.openProcesses" = "Processes";
 "panel.quitRin" = "Quit Rin";
 "combined.openRin" = "Open Rin";
 "combined.topUsageRow" = "Using the most";

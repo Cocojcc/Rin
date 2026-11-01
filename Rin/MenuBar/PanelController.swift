@@ -159,7 +159,6 @@ struct PanelRoot: View {
                 switch kind {
                 case .module(let m):
                     ModulePanel(module: m)
-                    PanelFooter()
                 case .combined:
                     CombinedPanel()
                 }

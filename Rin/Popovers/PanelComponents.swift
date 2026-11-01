@@ -28,51 +28,12 @@ struct PanelHeader: View {
                 HStack(spacing: 2) {
                     HeaderButton(d: Icons.monitorWindow, label: buttons.openLabel, action: buttons.open)
                     HeaderButton(d: Icons.general, label: buttons.settingsLabel, action: buttons.settings)
+                    HeaderButton(d: Icons.power, label: L10n.Panel.quitRin) { NSApp.terminate(nil) }
                 }
                 .padding(.trailing, -6)
             }
         }
         .frame(height: 26)
-    }
-}
-
-/// Every dropdown's last row: other places to go and quitting, as grey words on the right.
-struct PanelFooter: View {
-    var body: some View {
-        HStack(spacing: 4) {
-            Spacer(minLength: 0)
-            FooterIcon(d: Icons.overview, label: L10n.Panel.openOverview) { MainWindowController.shared.show(.overview) }
-            FooterIcon(d: Icons.processes, label: L10n.Panel.openProcesses) { MainWindowController.shared.show(.processes) }
-            FooterIcon(d: Icons.gear, label: L10n.Sidebar.settings, lineWidth: 1.3) { MainWindowController.shared.show(.settings) }
-            FooterIcon(d: Icons.power, label: L10n.Panel.quitRin) { NSApp.terminate(nil) }
-        }
-        .padding(.top, 10)
-        .overlay(alignment: .top) { Hairline() }
-        .padding(.top, 14)
-    }
-}
-
-/// An icon in a dropdown's footer, named by its tooltip; grey square under the pointer.
-struct FooterIcon: View {
-    var d: String
-    var label: String
-    var lineWidth: CGFloat = 1.5
-    var action: () -> Void
-    @State private var hovering = false
-
-    var body: some View {
-        Button(action: action) {
-            LineIcon(d: d, size: 16, lineWidth: lineWidth)
-                .foregroundStyle(hovering ? Theme.text : Theme.sub)
-                .frame(width: 40, height: 32)
-                .background { if hovering { RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.lgHover) } }
-                .hoverAnimation(hovering)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .help(label)
-        .accessibilityLabel(label)
     }
 }
 
