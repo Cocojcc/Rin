@@ -81,7 +81,7 @@ struct AlertRuleSentence: View {
                              selection: pref(\.alerts.tempThreshold))
             }
         }
-        .ui(13)
+        .ui(14)
         .padding(.vertical, 7)
     }
 

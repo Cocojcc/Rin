@@ -28,6 +28,12 @@ enum Format {
         return "\(Int((bytes / 1024).rounded())) KB"
     }
 
+    /// "9.9 / 16 GB": what is used of the whole, in the whole's unit.
+    static func memory(used: UInt64, of total: UInt64) -> String {
+        let gb = 1_073_741_824.0
+        return String(format: "%.1f / %d GB", Double(used) / gb, Int((Double(total) / gb).rounded()))
+    }
+
     /// Storage and traffic use decimal units (what Finder shows).
     static func storage(_ bytes: Int64) -> String { storage(Double(bytes)) }
     static func storage(_ bytes: UInt64) -> String { storage(Double(bytes)) }

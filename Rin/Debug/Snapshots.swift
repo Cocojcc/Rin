@@ -81,6 +81,14 @@ enum Snapshots {
                 save(MainView().frame(width: pageWidth, height: UIScale.of(760)).background(wall), appearance, dir.appendingPathComponent("page-processes-open-\(tag).png"))
                 ProcessesPage.initialSelection = nil
             }
+            if want("page") || want("page-menubar") {
+                let saved = SettingsStore.shared.prefs
+                SettingsStore.shared.prefs.menubar.displayMode = .combined
+                SettingsStore.shared.prefs.menubar.combinedIconOnly = true
+                Navigator.shared.page = .menuBar
+                save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-menubar-\(tag).png"))
+                SettingsStore.shared.prefs = saved
+            }
             if want("page-settings-icon") {
                 let saved = SettingsStore.shared.prefs
                 SettingsStore.shared.prefs.menubar.displayMode = .combined

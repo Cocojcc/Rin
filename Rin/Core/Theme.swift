@@ -4,8 +4,9 @@ import SwiftUI
 
 /// Design tokens (light / dark pairs) for the monitoring console: solid neutral surfaces (charcoal
 /// with a trace of warmth when dark, white and light grey when light) and color only for data and
-/// state. Each module owns one hue and its parts (user / system, down / up, read / write) are
-/// shades of it; green, amber and red only ever mean status.
+/// state. Each module owns one soft, natural hue (moss, lavender, celadon, sand, olive, terracotta)
+/// and its parts (user / system, down / up, read / write) are shades of it. All-is-well is not
+/// colored: only amber (running high) and red (an alert) draw the eye.
 struct RGBA {
     let r: CGFloat, g: CGFloat, b: CGFloat, a: CGFloat
 
@@ -73,6 +74,9 @@ enum Theme {
     static let well = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.08))
     static let switchOff = Color.dyn(RGBA(0, 0, 0, 0.12), RGBA(255, 255, 255, 0.14))
     static let switchKnob = Color.dyn(RGBA(0xFFFFFF), RGBA(0x9C99A1))
+    /// A switch that is on: moss with a white knob.
+    static var switchOn: Color { cpu }
+    static let switchOnKnob = Color.white
     static let panel = Color.dyn(RGBA(0xF4F4F6), RGBA(0x1D1C1F))
     /// A clickable panel under the pointer (the overview's tiles).
     static let panelHover = Color.dyn(RGBA(0xECECEF), RGBA(0x242326))
@@ -105,35 +109,40 @@ enum Theme {
     /// A plain wallpaper for the About page's laptop when the desktop picture can't be read.
     static let wall = Color.dyn(RGBA(0xE8E8EB), RGBA(0x232226))
 
-    // Status
-    static let ok = Color.dyn(RGBA(0x17844A), RGBA(0x5ED38C))
-    static let okBg = Color.dyn(RGBA(23, 132, 74, 0.1), RGBA(94, 211, 140, 0.14))
-    static let warn = Color.dyn(RGBA(0xC78A00), RGBA(0xF5C24C))
-    static let warnBg = Color.dyn(RGBA(199, 138, 0, 0.12), RGBA(245, 194, 76, 0.14))
-    static let danger = Color.dyn(RGBA(0xD93A31), RGBA(0xFF5A52))
-    static let dangerBg = Color.dyn(RGBA(217, 58, 49, 0.1), RGBA(255, 90, 82, 0.14))
-    static let dangerFill = Color.dyn(RGBA(0xD93A31), RGBA(0xFF5A52))
+    // Status: all is well is a neutral grey; only running high and an alert are colored.
+    static let ok = Color.dyn(RGBA(0x5E5D63), RGBA(0xA8A5AD))
+    static let okBg = Color.dyn(RGBA(94, 93, 99, 0.1), RGBA(168, 165, 173, 0.14))
+    static let warn = Color.dyn(RGBA(0xB07800), RGBA(0xF5B83D))
+    static let warnBg = Color.dyn(RGBA(176, 120, 0, 0.12), RGBA(245, 184, 61, 0.14))
+    static let danger = Color.dyn(RGBA(0xD23A30), RGBA(0xF05A4F))
+    static let dangerBg = Color.dyn(RGBA(210, 58, 48, 0.1), RGBA(240, 90, 79, 0.14))
+    static let dangerFill = Color.dyn(RGBA(0xD23A30), RGBA(0xF05A4F))
     static let onDanger = Color.dyn(RGBA(0xFFFFFF), RGBA(0x151416))
 
-    // Data: one hue per module, one step darker on white so it holds.
-    static let cpu = Color.dyn(RGBA(0x2B6BE8), RGBA(0x4D8EFF))
-    static let sys = Color.dyn(RGBA(0xA9C5FB), RGBA(0x2F5FC4))
-    static let gpu = Color.dyn(RGBA(0x6E9A12), RGBA(0xB6DB4C))
-    static let mem = Color.dyn(RGBA(0x8A4FE6), RGBA(0xB47CFF))
-    static let memWired = Color.dyn(RGBA(0x5E2FB8), RGBA(0x7E4FD0))
-    static let memCompressed = Color.dyn(RGBA(0xC7A6F5), RGBA(0xD6B8FF))
-    static let memCache = Color.dyn(RGBA(138, 79, 230, 0.25), RGBA(180, 124, 255, 0.35))
-    static let down = Color.dyn(RGBA(0x0B9BB8), RGBA(0x3FCBE3))
-    static let up = Color.dyn(RGBA(0x8EDCEB), RGBA(0x1E8FA6))
-    static let read = Color.dyn(RGBA(0x4F58E0), RGBA(0x7C86FF))
-    static let write = Color.dyn(RGBA(0xA9AEF7), RGBA(0x4B55C9))
+    // Data: one natural hue per module, one step darker on white so it holds.
+    /// CPU: moss; its system share the deeper (dark) or paler (light) shade.
+    static let cpu = Color.dyn(RGBA(0x3E8A4E), RGBA(0x7FC48A))
+    static let sys = Color.dyn(RGBA(0xA9D3B0), RGBA(0x4E7F57))
+    /// GPU: olive.
+    static let gpu = Color.dyn(RGBA(0x6F7A1F), RGBA(0xB8C46A))
+    /// Memory: lavender.
+    static let mem = Color.dyn(RGBA(0x6B4FA8), RGBA(0xB39DDB))
+    static let memWired = Color.dyn(RGBA(0x4E3585), RGBA(0x6E5A93))
+    static let memCompressed = Color.dyn(RGBA(0xCBBDEA), RGBA(0xD7CBEE))
+    static let memCache = Color.dyn(RGBA(107, 79, 168, 0.22), RGBA(179, 157, 219, 0.35))
+    /// Network: celadon.
+    static let down = Color.dyn(RGBA(0x2F8A78), RGBA(0x6FC2B0))
+    static let up = Color.dyn(RGBA(0xA6D8CD), RGBA(0x3F7D70))
+    /// Disk: sand.
+    static let read = Color.dyn(RGBA(0x9A7630), RGBA(0xD8B97A))
+    static let write = Color.dyn(RGBA(0xE3CD9E), RGBA(0x8C7445))
     static let disk = read
-    static let purgeable = Color.dyn(RGBA(79, 88, 224, 0.3), RGBA(124, 134, 255, 0.45))
-    /// Temperature and power.
-    static let temp = Color.dyn(RGBA(0xEE7A1E), RGBA(0xFF9B54))
-    /// Battery and device levels use the status colors.
+    static let purgeable = Color.dyn(RGBA(154, 118, 48, 0.3), RGBA(216, 185, 122, 0.45))
+    /// Temperature and power: terracotta.
+    static let temp = Color.dyn(RGBA(0xB8602A), RGBA(0xE08E5A))
+    /// Battery and device levels stay neutral until they run low.
     static let bat = ok
-    static let chargeBand = Color.dyn(RGBA(23, 132, 74, 0.08), RGBA(94, 211, 140, 0.1))
+    static let chargeBand = Color.dyn(RGBA(85, 84, 90, 0.06), RGBA(207, 204, 210, 0.07))
 
     // Menu bar items keep Apple's vivid colors: they sit on the system menu bar, not on glass.
     static let barCPU = Color.dyn(RGBA(0x34C759), RGBA(0x34C759))
@@ -175,6 +184,15 @@ enum Theme {
         }
     }
 
+    /// The color a module's page wears (sidebar icon, selected row and range, main number, first panel).
+    /// Battery and Bluetooth have none: their readings are colored by state.
+    static func hue(_ module: Module) -> Color? {
+        switch module {
+        case .battery, .bluetooth: return nil
+        default: return color(for: module)
+        }
+    }
+
     static func color(for module: Module) -> Color {
         switch module {
         case .cpu: return cpu
@@ -204,16 +222,10 @@ extension View {
     func raisedShadow(_ on: Bool = true) -> some View { modifier(RaisedShadow(on: on)) }
 }
 
-/// Space Grotesk for the window and panels (bundled, OFL); the menu bar keeps the system font.
+/// The system font (SF Pro, PingFang for Chinese) with tabular figures, for the window and panels.
 enum Fonts {
-    private static var registered = false
     private static var cache: [String: Font] = [:]
     private static let lock = NSLock()
-
-    static func register() {
-        guard !registered, let url = Bundle.main.url(forResource: "SpaceGrotesk", withExtension: "ttf") else { return }
-        registered = CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
-    }
 
     /// How much larger than the design's sizes the main window draws its text. The console's
     /// type ramp (13 for body text) already reads well at 85%, so it is 1; kept as a knob.
@@ -227,21 +239,25 @@ enum Fonts {
         return scale == 1 ? ui(size, weight) : ui((size * scale * 2).rounded() / 2, weight)
     }
 
-    /// Space Grotesk at an exact weight (variable font, 300...700), tabular figures. Menu bar
+    /// The system font at a CSS weight (300...700, in between allowed), tabular figures. Menu bar
     /// previews use this directly so they keep the menu bar's own sizes.
     static func ui(_ size: CGFloat, _ weight: CGFloat = 400) -> Font {
         let key = "\(size)-\(weight)"
         lock.lock(); defer { lock.unlock() }
         if let f = cache[key] { return f }
-        register()
-        let wght: UInt32 = 0x7767_6874 // 'wght'
-        let base = CTFontDescriptorCreateWithAttributes([
-            kCTFontFamilyNameAttribute: "Space Grotesk",
-            kCTFontVariationAttribute: [NSNumber(value: wght): NSNumber(value: Double(weight))],
-        ] as CFDictionary)
-        let tabular = CTFontDescriptorCreateCopyWithFeature(base, kNumberSpacingType as CFNumber, kMonospacedNumbersSelector as CFNumber)
-        let font = Font(CTFontCreateWithFontDescriptor(tabular, size, nil))
+        let font = Font(NSFont.monospacedDigitSystemFont(ofSize: size, weight: systemWeight(weight)) as CTFont)
         cache[key] = font
         return font
+    }
+
+    /// CSS weights onto AppKit's scale, straight between the named stops.
+    private static func systemWeight(_ css: CGFloat) -> NSFont.Weight {
+        let stops: [(CGFloat, NSFont.Weight)] = [(300, .light), (400, .regular), (500, .medium), (600, .semibold), (700, .bold)]
+        guard css > stops[0].0 else { return stops[0].1 }
+        for (a, b) in zip(stops, stops.dropFirst()) where css <= b.0 {
+            let t = (css - a.0) / (b.0 - a.0)
+            return NSFont.Weight(a.1.rawValue + (b.1.rawValue - a.1.rawValue) * t)
+        }
+        return stops[stops.count - 1].1
     }
 }

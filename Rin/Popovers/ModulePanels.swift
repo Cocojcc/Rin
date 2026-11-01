@@ -119,7 +119,7 @@ struct PanelChart: View {
 
     var body: some View {
         ConsoleChart(kind: kind, series: series, span: seconds, maxValue: maxValue, bottomMax: bottomMax, height: height,
-                     xLabels: labels ?? [L10n.Chart.secondsAgo(Int(seconds)), L10n.Range.now], baseline: kind != .mirrored, bands: bands)
+                     xLabels: labels ?? [L10n.Chart.secondsAgo(Int(seconds)), L10n.Range.now], baseline: kind == .bars || kind == .area, bands: bands)
     }
 }
 
@@ -133,7 +133,7 @@ struct PanelStat<Value: View>: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 if let key { RoundedRectangle(cornerRadius: 2, style: .continuous).fill(key).frame(width: 8, height: 8) }
-                Text(label).ui(13).foregroundStyle(Theme.sub).lineLimit(1)
+                Text(label).ui(14).foregroundStyle(Theme.sub).lineLimit(1)
             }
             HStack(alignment: .firstTextBaseline, spacing: 4) { value }
         }
@@ -168,7 +168,7 @@ struct CPUPanel: View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(L10n.Monitor.totalUsage).ui(12).foregroundStyle(Theme.sub)
-                BigValue(value: Format.percent(s.cpu.total), size: 40)
+                BigValue(value: Format.percent(s.cpu.total), size: 40, color: Theme.cpu)
             }
             Spacer(minLength: 8)
             VStack(alignment: .leading, spacing: 4) {
@@ -178,8 +178,7 @@ struct CPUPanel: View {
             .padding(.bottom, 4)
         }
         .accessibilityElement(children: .combine)
-        PanelChart(kind: .bars, series: [ChartSeries(id: "t", points: monitor.history.points(.cpu, range: .m5), color: Theme.cpu),
-                                         ChartSeries(id: "s", points: monitor.history.points(.cpuSystem, range: .m5), color: Theme.sys)])
+        PanelChart(kind: .area, series: ChartSeries.cpuStack(total: monitor.history.points(.cpu, range: .m5), system: monitor.history.points(.cpuSystem, range: .m5)))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(L10n.Panel.cpuChartA11y)
         if p.showCores, !s.cpu.perCore.isEmpty {
@@ -200,12 +199,14 @@ struct CPUPanel: View {
         }
         if p.showLoad {
             ConsoleRule()
-            HStack(spacing: 12) {
-                Text(L10n.Panel.loadAverage).ui(13).foregroundStyle(Theme.sub).fixedSize()
-                Spacer(minLength: 0)
-                KeyValue(label: L10n.Panel.load1, value: Format.load(s.cpu.load.0))
-                KeyValue(label: L10n.Panel.load5, value: Format.load(s.cpu.load.1))
-                KeyValue(label: L10n.Panel.load15, value: Format.load(s.cpu.load.2))
+            HStack(spacing: 0) {
+                Text(L10n.Panel.loadAverage).ui(14).foregroundStyle(Theme.sub).fixedSize()
+                Spacer(minLength: 8)
+                HStack(spacing: 12) {
+                    KeyValue(label: L10n.Panel.load1, value: Format.load(s.cpu.load.0))
+                    KeyValue(label: L10n.Panel.load5, value: Format.load(s.cpu.load.1))
+                    KeyValue(label: L10n.Panel.load15, value: Format.load(s.cpu.load.2))
+                }
             }
             .frame(height: 22)
         }
@@ -275,7 +276,7 @@ struct GPUPanel: View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(L10n.Panel.utilization).ui(12).foregroundStyle(Theme.sub)
-                BigValue(value: Format.percent(g.utilization), size: 40)
+                BigValue(value: Format.percent(g.utilization), size: 40, color: Theme.gpu)
             }
             Spacer(minLength: 8)
             VStack(alignment: .leading, spacing: 4) {
@@ -285,7 +286,7 @@ struct GPUPanel: View {
             .padding(.bottom, 4)
         }
         .accessibilityElement(children: .combine)
-        PanelChart(kind: .bars, series: [ChartSeries(id: "g", points: monitor.history.points(.gpu, range: .m5), color: Theme.gpu)])
+        PanelChart(kind: .area, series: [ChartSeries(id: "g", points: monitor.history.points(.gpu, range: .m5), color: Theme.gpu, fill: 0.2, lineWidth: 1.5)])
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(L10n.Panel.gpuChartA11y)
         if p.showMemory || p.showFrequency || p.showVideo || p.showTempPower {
@@ -294,22 +295,22 @@ struct GPUPanel: View {
                 if p.showMemory {
                     PanelStat(label: g.memoryLimit > 0 ? L10n.Panel.vramLimit(Format.memory(g.memoryLimit)) : L10n.Panel.vram) {
                         let used = Format.parts(Format.memory(g.memoryUsed))
-                        BigValue(value: used.0, unit: L10n.Panel.unitUsed(used.1), size: 20)
+                        BigValue(value: used.0, unit: L10n.Panel.unitUsed(used.1), size: 22)
                     }
                 }
                 if p.showFrequency {
                     PanelStat(label: L10n.Panel.frequency) {
                         let f = Format.parts(g.frequencyMHz.map(Format.frequency) ?? L10n.Common.dash)
-                        BigValue(value: f.0, unit: f.1, size: 20)
+                        BigValue(value: f.0, unit: f.1, size: 22)
                     }
                 }
                 if p.showVideo {
-                    PanelStat(label: L10n.Monitor.videoDecode) { BigValue(value: MediaText.state(g.decodeWatts), size: 20) }
+                    PanelStat(label: L10n.Monitor.videoDecode) { BigValue(value: MediaText.state(g.decodeWatts), size: 22) }
                 }
                 if p.showTempPower {
                     PanelStat(label: L10n.Panel.power) {
                         let w = Format.parts(g.power.map(Format.watts) ?? L10n.Common.dash)
-                        BigValue(value: w.0, unit: w.1, size: 20)
+                        BigValue(value: w.0, unit: w.1, size: 22)
                     }
                 }
             }
@@ -335,7 +336,7 @@ struct MemoryPanel: View {
         PanelHeader(module: .memory, subtitle: L10n.Monitor.unifiedMemory)
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 4) {
-                BigValue(value: Format.percent(m.usedFraction), size: 40)
+                BigValue(value: Format.percent(m.usedFraction), size: 40, color: Theme.mem)
                 Text(L10n.Monitor.usedOfTotal(Format.memory(m.used), Format.memory(m.total))).ui(12).foregroundStyle(Theme.sub)
             }
             Spacer(minLength: 8)
@@ -357,7 +358,7 @@ struct MemoryPanel: View {
                 PanelTitle(title: L10n.Panel.pressure) {
                     if p.showSwap { KeyValue(label: L10n.Memory.swap, value: Format.memory(m.swapUsed)) }
                 }
-                PanelChart(kind: .area, series: [ChartSeries(id: "p", points: monitor.history.points(.memoryPressure, range: .m5), color: Theme.ok, fill: 0.18, lineWidth: 1.5)],
+                PanelChart(kind: .area, series: [ChartSeries(id: "p", points: monitor.history.points(.memoryPressure, range: .m5), color: Theme.mem, fill: 0.18, lineWidth: 1.5)],
                            height: 44)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(L10n.Panel.pressureChartA11y)
@@ -403,7 +404,7 @@ struct NetworkPanel: View {
                     LineIcon(d: Icons.slash, size: 24, viewBox: 16, lineWidth: 1.6)
                 }
                 .foregroundStyle(Theme.sub)
-                Text(L10n.Panel.notConnected).ui(15, 500).foregroundStyle(Theme.sub)
+                Text(L10n.Panel.notConnected).ui(16, 500).foregroundStyle(Theme.sub)
                 Button {
                     if let url = URL(string: "x-apple.systempreferences:com.apple.Network-Settings.extension") { NSWorkspace.shared.open(url) }
                     PanelController.shared.close()
@@ -420,7 +421,7 @@ struct NetworkPanel: View {
             .frame(maxWidth: .infinity)
             .frame(height: 100)
         }
-        PanelChart(kind: .mirrored, series: [ChartSeries(id: "d", points: down, color: Theme.down), ChartSeries(id: "u", points: up, color: Theme.up)],
+        PanelChart(kind: .mirroredArea, series: ChartSeries.mirrored(down, Theme.down, up, Theme.up),
                    seconds: seconds, maxValue: dMax, bottomMax: uMax)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(L10n.Panel.networkChartA11y)
@@ -443,9 +444,10 @@ struct NetworkPanel: View {
         }
     }
 
+    /// Download and upload alike, in the network's color.
     private func speed(_ v: Double, _ unit: SpeedUnit) -> some View {
         let parts = Format.rateParts(v, unit: unit)
-        return BigValue(value: parts.0, unit: parts.1)
+        return BigValue(value: parts.0, unit: parts.1, color: Theme.down)
     }
 }
 
@@ -464,12 +466,12 @@ struct DiskPanel: View {
         HStack(alignment: .top, spacing: 12) {
             PanelStat(label: L10n.Disk.read, key: Theme.read) { rate(d.read) }
             PanelStat(label: L10n.Disk.write, key: Theme.write) { rate(d.write) }
-            PanelStat(label: L10n.Disk.used) { BigValue(value: volume.map { Format.percent($0.usedFraction) } ?? L10n.Common.dash) }
+            PanelStat(label: L10n.Disk.used) { BigValue(value: volume.map { Format.percent($0.usedFraction) } ?? L10n.Common.dash, color: Theme.disk) }
         }
         if p.showGraph {
             let reads = monitor.history.points(.diskRead, range: .m5), writes = monitor.history.points(.diskWrite, range: .m5)
             let from = Date().addingTimeInterval(-60)
-            PanelChart(kind: .mirrored, series: [ChartSeries(id: "r", points: reads, color: Theme.read), ChartSeries(id: "w", points: writes, color: Theme.write)],
+            PanelChart(kind: .mirroredArea, series: ChartSeries.mirrored(reads, Theme.read, writes, Theme.write),
                        maxValue: ConsoleChart.niceMax(max(reads.filter { $0.date >= from }.map(\.value).max() ?? 0, 1_000_000) * 1.1),
                        bottomMax: ConsoleChart.niceMax(max(writes.filter { $0.date >= from }.map(\.value).max() ?? 0, 1_000_000) * 1.1), height: 56)
                 .accessibilityElement(children: .ignore)
@@ -499,7 +501,7 @@ struct DiskPanel: View {
 
     private func rate(_ v: Double) -> some View {
         let parts = Format.rateParts(v)
-        return BigValue(value: parts.0, unit: parts.1)
+        return BigValue(value: parts.0, unit: parts.1, color: Theme.disk)
     }
 }
 
@@ -510,11 +512,11 @@ struct VolumeBlock: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Text(volume.name).ui(13, 600).lineLimit(1)
+                Text(volume.name).ui(14, 600).lineLimit(1)
                 TagText(text: volume.isInternal ? L10n.Disk.internalDrive : L10n.Disk.external)
                 if volume.isEjectable && !volume.isRoot { EjectButton(volume: volume, size: 20) }
                 Spacer(minLength: 4)
-                Text(L10n.Disk.available(Format.storage(volume.available))).ui(13, 500).lineLimit(1)
+                Text(L10n.Disk.available(Format.storage(volume.available))).ui(14, 500).lineLimit(1)
             }
             .frame(height: 20)
             CapacityCells(used: Double(max(0, volume.used - volume.purgeable)), purgeable: Double(volume.purgeable), total: Double(max(volume.total, 1)), height: 6)
@@ -558,16 +560,16 @@ struct BatteryPanel: View {
             PanelStatGrid {
                 let watts: Double? = b.isCharging ? b.power.flatMap { $0 > 0 ? $0 : nil } : (b.onAC ? b.systemPowerIn : b.power.map(abs))
                 PanelStat(label: b.isCharging ? L10n.Battery.chargingPower : L10n.Battery.power) {
-                    BigValue(value: watts.map { "\(Int($0.rounded()))" } ?? L10n.Common.dash, unit: watts == nil ? nil : L10n.Common.wattUnit, size: 20)
+                    BigValue(value: watts.map { "\(Int($0.rounded()))" } ?? L10n.Common.dash, unit: watts == nil ? nil : L10n.Common.wattUnit, size: 22)
                 }
                 if p.showHealth, let h = b.health {
-                    PanelStat(label: L10n.Battery.health) { BigValue(value: Format.percent(h), size: 20) }
+                    PanelStat(label: L10n.Battery.health) { BigValue(value: Format.percent(h), size: 22) }
                 }
                 if p.showCycles, let c = b.cycles {
-                    PanelStat(label: L10n.Battery.cycles) { BigValue(value: "\(c)", unit: L10n.Monitor.ofTotal("\(b.designCycles ?? 1000)"), size: 20) }
+                    PanelStat(label: L10n.Battery.cycles) { BigValue(value: "\(c)", unit: L10n.Monitor.ofTotal("\(b.designCycles ?? 1000)"), size: 22) }
                 }
                 if p.showTemperature, let t = b.temperature ?? monitor.snapshot.sensors.value(.battery) {
-                    PanelStat(label: L10n.Battery.temperature) { BigValue(value: Format.temperatureNumber(t, unit: unit), unit: Format.temperatureSymbol(unit), size: 20) }
+                    PanelStat(label: L10n.Battery.temperature) { BigValue(value: Format.temperatureNumber(t, unit: unit), unit: Format.temperatureSymbol(unit), size: 22) }
                 }
             }
             ConsoleRule()
@@ -612,8 +614,8 @@ struct PanelDeviceRow: View {
                 if let detail { Text(detail).ui(12).foregroundStyle(Theme.sub).lineLimit(1) }
             }
             Spacer(minLength: 4)
-            DotMeter(fraction: level, color: low ? Theme.danger : Theme.bat, count: 16).frame(width: 72)
-            Text(Format.percent(level)).ui(13, 500).foregroundStyle(low ? Theme.danger : Theme.text)
+            LevelBar(fraction: level, color: low ? Theme.danger : Theme.bat).frame(width: 72)
+            Text(Format.percent(level)).ui(14, 500).foregroundStyle(low ? Theme.danger : Theme.text)
                 .frame(width: 40, alignment: .trailing)
         }
         .frame(minHeight: 36)
@@ -637,7 +639,7 @@ struct SensorsPanel: View {
         ShareRow(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(L10n.Sensors.choice(p.sensor)).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
-                BigValue(value: deg(MenuBarText.sensorValue(s, p.sensor)), size: 40)
+                BigValue(value: deg(MenuBarText.sensorValue(s, p.sensor)), size: 40, color: Theme.temp)
             }
             .share(1.4)
             VStack(alignment: .leading, spacing: 4) {
@@ -657,7 +659,7 @@ struct SensorsPanel: View {
         if p.showThermal {
             let th = PanelText.thermal(s.thermal)
             HStack {
-                Text(L10n.Sensors.thermalState).ui(13).foregroundStyle(Theme.sub)
+                Text(L10n.Sensors.thermalState).ui(14).foregroundStyle(Theme.sub)
                 Spacer(minLength: 8)
                 StatusText(text: th.0, color: th.1)
             }

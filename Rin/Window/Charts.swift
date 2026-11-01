@@ -11,6 +11,21 @@ struct ChartSeries: Identifiable {
     var dash: [CGFloat] = []
 }
 
+extension ChartSeries {
+    /// CPU as a stack (the small charts): the total washed in the user color with its edge, the
+    /// system share solid beneath it.
+    static func cpuStack(total: [ChartPoint], system: [ChartPoint]) -> [ChartSeries] {
+        [ChartSeries(id: "t", points: total, color: Theme.cpu, fill: 0.22, lineWidth: 1.5),
+         ChartSeries(id: "s", points: system, color: Theme.sys, fill: 0.7, lineWidth: 0)]
+    }
+
+    /// A reading's two directions for `.mirroredArea`: the first up, washed with its edge; the second down.
+    static func mirrored(_ top: [ChartPoint], _ topColor: Color, _ bottom: [ChartPoint], _ bottomColor: Color) -> [ChartSeries] {
+        [ChartSeries(id: "a", points: top, color: topColor, fill: 0.22, lineWidth: 1.5),
+         ChartSeries(id: "b", points: bottom, color: bottomColor, fill: 0.3, lineWidth: 1.2)]
+    }
+}
+
 /// Raised readout: first line is the time with the value on the right, then process rows.
 struct ChartTooltip: View {
     var lines: [String]

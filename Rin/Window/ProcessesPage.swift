@@ -80,7 +80,7 @@ struct AllProcessesLink: View {
             MainWindowController.shared.showProcesses(sortedBy: sort)
         } label: {
             HStack(spacing: 4) {
-                Text(L10n.Processes.viewAll).ui(13)
+                Text(L10n.Processes.viewAll).ui(14)
                 LineIcon(d: Icons.linkChevron, width: 6, height: 10, viewBox: CGSize(width: 6, height: 10), lineWidth: 1.4)
             }
             .foregroundStyle(Theme.text)
@@ -270,7 +270,7 @@ private struct ProcessGrid: View {
     private func list(_ rows: [ProcessUsage]) -> some View {
         LazyVStack(spacing: 1) {
             if rows.isEmpty {
-                Text(L10n.Panel.noProcesses).ui(13).foregroundStyle(Theme.faint)
+                Text(L10n.Panel.noProcesses).ui(14).foregroundStyle(Theme.faint)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 10)
                     .frame(height: 30)
@@ -312,7 +312,7 @@ private struct ProcessGridRow: View {
                     .frame(width: column.width, alignment: .trailing)
                 }
             }
-            .ui(13)
+            .ui(14)
             .foregroundStyle(Theme.text)
             .padding(.horizontal, 10)
             .frame(height: 30)
@@ -399,7 +399,7 @@ private struct ProcessInspector: View {
         return HStack(alignment: .top, spacing: 10) {
             ProcessIcon(process: p, size: 28)
             VStack(alignment: .leading, spacing: 0) {
-                Text(p.name).ui(15, 500).lineLimit(1).frame(height: 20)
+                Text(p.name).ui(16, 500).lineLimit(1).frame(height: 20)
                 Text(subtitle).ui(12).foregroundStyle(Theme.sub).lineLimit(1).frame(height: 16)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -7,11 +7,11 @@ struct PageTitle<Trailing: View>: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(title).ui(20, 600).kerning(-0.2).accessibilityAddTraits(.isHeader)
+            Text(title).ui(22, 600).kerning(-0.2).accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
             trailing
         }
-        .frame(height: 32)
+        .frame(height: Sidebar.titleBand)
     }
 }
 
@@ -22,27 +22,11 @@ extension PageTitle where Trailing == EmptyView {
 struct RangeControl: View {
     @Binding var range: TimeRange
     var options: [TimeRange] = TimeRange.allCases
+    var tint: Color? = nil
 
     var body: some View {
-        Segmented(label: L10n.Range.label, options: options.map { ($0, $0.title) }, selection: $range, style: .range)
+        Segmented(label: L10n.Range.label, options: options.map { ($0, $0.title) }, selection: $range, style: .range, tint: tint)
             .fixedSize()
-    }
-}
-
-/// Ring with a centered value (rings on the overview, CPU, GPU and memory pages).
-struct PageRing: View {
-    var segments: [Ring.Segment]
-    var size: CGFloat
-    var lineWidth: CGFloat
-    var text: String
-    var textSize: CGFloat = 15
-
-    var body: some View {
-        ZStack {
-            Ring(segments: segments, size: size, lineWidth: lineWidth, forceButt: true)
-            Text(text).ui(textSize, 500).lineLimit(1)
-        }
-        .frame(width: size, height: size)
     }
 }
 
@@ -71,7 +55,7 @@ struct ProcessTable: View {
             if !rest.isEmpty || stuck.isEmpty {
                 VStack(spacing: 0) {
                     if processes.isEmpty {
-                        Text(L10n.Panel.noProcesses).ui(13).foregroundStyle(Theme.faint)
+                        Text(L10n.Panel.noProcesses).ui(14).foregroundStyle(Theme.faint)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .frame(height: rowHeight)
                     }
@@ -110,12 +94,13 @@ struct ProcessTable: View {
             } else {
                 MeterBar(fraction: fraction(p), color: color)
             }
-            Text(value(p)).ui(13, 500).lineLimit(1).frame(width: valueWidth, alignment: .trailing)
+            Text(value(p)).ui(14, 500).lineLimit(1).frame(width: valueWidth, alignment: .trailing)
+            // The other direction of the same reading (upload, write), so it looks the same.
             if let secondary {
-                Text(secondary(p)).foregroundStyle(Theme.sub).lineLimit(1).frame(width: secondaryWidth, alignment: .trailing)
+                Text(secondary(p)).ui(14, 500).lineLimit(1).frame(width: secondaryWidth, alignment: .trailing)
             }
         }
-        .ui(13)
+        .ui(14)
         .frame(height: rowHeight)
         .padding(.horizontal, 6)
         .background { if hovered == p.id { RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.lgHover) } }

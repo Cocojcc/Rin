@@ -35,7 +35,7 @@ struct SleepPage: View {
                             ForEach(blockers) { b in blockerRow(b, now: now) }
                         }
                         if !keepAwake.isOn && blockers.isEmpty {
-                            Text(L10n.Sleep.nothing).ui(13).foregroundStyle(Theme.faint)
+                            Text(L10n.Sleep.nothing).ui(14).foregroundStyle(Theme.faint)
                                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                         }
                     }
@@ -83,7 +83,7 @@ struct SleepPage: View {
                 pillButton(L10n.Sleep.turnOff, fill: Theme.well, text: Theme.text) { keepAwake.stop() }
             } else {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(L10n.Sleep.offTitle).ui(15, 500)
+                    Text(L10n.Sleep.offTitle).ui(16, 500)
                     Text(L10n.Sleep.offSub).ui(12).foregroundStyle(Theme.sub)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -121,7 +121,7 @@ struct SleepPage: View {
 
     private func toggleRow(_ title: String, isOn: Binding<Bool>) -> some View {
         HStack(spacing: 12) {
-            Text(title).ui(13)
+            Text(title).ui(14)
             Spacer(minLength: 0)
             RinSwitch(isOn: isOn, label: title)
         }
@@ -185,7 +185,7 @@ private struct BlockerRow<Icon: View>: View {
             HStack(spacing: 10) {
                 icon.accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(name).ui(13).foregroundStyle(dimmed ? Theme.sub : Theme.text).lineLimit(1)
+                    Text(name).ui(14).foregroundStyle(dimmed ? Theme.sub : Theme.text).lineLimit(1)
                     Text(detail).ui(12).foregroundStyle(Theme.sub).lineLimit(1).truncationMode(.tail)
                 }
             }
@@ -319,7 +319,7 @@ private struct ModeChip: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 LineIcon(d: d, size: 14, lineWidth: 1.4).foregroundStyle(Theme.sub)
-                Text(title).ui(13, on ? 500 : 400).lineLimit(1)
+                Text(title).ui(14, on ? 500 : 400).lineLimit(1)
                 Spacer(minLength: 0)
             }
             .foregroundStyle(Theme.text)

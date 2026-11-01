@@ -76,7 +76,7 @@ struct SettingsPage: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
-                    Text(L10n.Settings.menubarGroup).ui(13, 500).foregroundStyle(Theme.sub).accessibilityAddTraits(.isHeader)
+                    Text(L10n.Settings.menubarGroup).ui(14, 500).foregroundStyle(Theme.sub).accessibilityAddTraits(.isHeader)
                     Spacer(minLength: 8)
                     WellButton(title: L10n.Settings.restoreDefaults, height: 24, radius: 7, horizontalPadding: 10, fontSize: 12) {
                         settings.resetMenubar()
@@ -114,6 +114,9 @@ struct SettingsPage: View {
                                 SettingsRow(title: L10n.Runner.character) { RunnerPicker(selection: pref(\.menubar.combinedRunner)) }
                             }
                         }
+                        SettingsRow(title: L10n.Settings.combinedPanelTitle) {
+                            WellButton(title: L10n.Combined.settings) { Navigator.shared.page = .menuBar }
+                        }
                     }
                     SettingsRow(title: L10n.Settings.moduleSpacing) {
                         GlassStepper(label: L10n.Settings.moduleSpacing,
@@ -143,7 +146,7 @@ struct SettingsPage: View {
             }
 
             VStack(alignment: .leading, spacing: 0) {
-                Text(L10n.Settings.modulesGroup).ui(13, 500).foregroundStyle(Theme.sub)
+                Text(L10n.Settings.modulesGroup).ui(14, 500).foregroundStyle(Theme.sub)
                     .padding(.horizontal, 14).padding(.bottom, 8)
                     .accessibilityAddTraits(.isHeader)
                 ModuleSwitchChips().padding(6)
@@ -159,7 +162,7 @@ struct SettingsPage: View {
             SettingsGroup(title: L10n.Sidebar.about) {
                 SettingsRow(title: L10n.Settings.currentVersion) {
                     HStack(spacing: 12) {
-                        Text(SystemInfo.appVersion).ui(13, 500)
+                        Text(SystemInfo.appVersion).ui(14, 500)
                         WellButton(title: updater.buttonTitle) { updater.check() }
                             .disabled(!updater.isConfigured || updater.state == .checking)
                             .opacity(updater.isConfigured ? 1 : 0.5)
@@ -185,6 +188,118 @@ struct SettingsPage: View {
 }
 
 /// Swatches in a well; the chosen one sits on a raised tile.
+// MARK: - 设置 › 菜单栏
+
+/// Separate items or one, and what the combined dropdown shows: which modules, in what order,
+/// and the status line, busiest apps and sleep card around them.
+struct MenuBarSettingsPage: View {
+    var settings = SettingsStore.shared
+    @State private var dragging: Module?
+
+    var body: some View {
+        let prefs = settings.prefs
+        let bar = prefs.menubar
+        VStack(alignment: .leading, spacing: 10) {
+            PageTitle(title: L10n.Settings.menubarGroup)
+
+            ConsolePanel(padding: EdgeInsets(top: 2, leading: 12, bottom: 2, trailing: 12)) {
+                MenuBarSettingRow(title: L10n.Settings.displayMode) {
+                    Segmented(label: L10n.Settings.displayMode, options: [(DisplayMode.separate, L10n.Settings.separate), (.combined, L10n.Settings.combined)],
+                              selection: pref(\.menubar.displayMode), style: .range)
+                }
+                ConsoleRule()
+                MenuBarSettingRow(title: L10n.Settings.combinedShows, dimmed: bar.displayMode != .combined) {
+                    // The icon keeps whichever look was picked in 设置 (her face by default).
+                    Segmented(label: L10n.Settings.combinedShows,
+                              options: [(true, CombinedIconView.name(bar.combinedIcon)), (false, L10n.Settings.widgetsOption)],
+                              selection: pref(\.menubar.combinedIconOnly), style: .range)
+                }
+            }
+
+            ConsolePanel {
+                PanelTitle(title: L10n.Settings.combinedModulesTitle) {
+                    Button(L10n.Settings.restoreDefaults) {
+                        withAnimation(Motion.slide) {
+                            settings.prefs.menubar.combinedOrder = MenubarPrefs.combinedDefaultOrder
+                            settings.prefs.menubar.combinedHidden = MenubarPrefs.combinedDefaultHidden
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+                // Switched-off modules are left out; they come back with their module.
+                let modules = bar.combinedOrder.filter(prefs.isEnabled)
+                VStack(spacing: 0) {
+                    ForEach(modules) { m in
+                        moduleRow(m, on: !bar.combinedHidden.contains(m))
+                            .overlay(alignment: .top) { if m != modules.first { ConsoleRule() } }
+                    }
+                }
+                .padding(.top, 4)
+            }
+
+            ConsolePanel {
+                PanelTitle(title: L10n.Settings.combinedPanelTitle)
+                VStack(spacing: 0) {
+                    MenuBarSettingRow(title: L10n.Settings.statusLine) {
+                        RinSwitch(isOn: pref(\.menubar.combinedStatus), label: L10n.Settings.statusLine)
+                    }
+                    ConsoleRule()
+                    MenuBarSettingRow(title: L10n.Overview.topUsage) {
+                        HStack(spacing: 10) {
+                            Segmented(label: L10n.Settings.topUsageSort, options: [(false, L10n.Module.cpu), (true, L10n.Module.memory)],
+                                      selection: pref(\.menubar.combinedTopByMemory), style: .inline)
+                                .opacity(bar.combinedTop ? 1 : 0.4)
+                                .allowsHitTesting(bar.combinedTop)
+                            RinSwitch(isOn: pref(\.menubar.combinedTop), label: L10n.Overview.topUsage)
+                        }
+                    }
+                    ConsoleRule()
+                    MenuBarSettingRow(title: L10n.Settings.sleepBlockingApps) {
+                        RinSwitch(isOn: pref(\.menubar.combinedSleep), label: L10n.Settings.sleepBlockingApps)
+                    }
+                }
+                .padding(.top, 4)
+            }
+        }
+    }
+
+    /// Grip, icon (its color while shown), name, switch; drag to reorder.
+    private func moduleRow(_ m: Module, on: Bool) -> some View {
+        HStack(spacing: 10) {
+            LineIcon(d: Icons.drag, size: 14, lineWidth: 2.2).foregroundStyle(Theme.sub).frame(width: 16)
+            LineIcon(d: Icons.module(m), size: 16, lineWidth: 1.5)
+                .foregroundStyle(on ? (m == .bluetooth ? Theme.neutral : Theme.color(for: m)) : Theme.sub)
+                .frame(width: 18)
+            Text(m == .sensors ? L10n.Panel.temperature : m.title).ui(14).foregroundStyle(on ? Theme.text : Theme.sub)
+            Spacer(minLength: 8)
+            RinSwitch(isOn: Binding(get: { on }, set: { v in withAnimation(Motion.slide) { settings.prefs.setInCombined(m, v) } }),
+                      label: L10n.Settings.showInCombined(m.title))
+        }
+        .frame(height: 38)
+        .contentShape(Rectangle())
+        .opacity(dragging == m ? 0.4 : 1)
+        .modifier(ReorderModifier(module: m, dragging: $dragging, order: \.menubar.combinedOrder))
+    }
+}
+
+/// A settings row on the console's panels, 38 tall; rules go between rows, not under the last.
+private struct MenuBarSettingRow<Control: View>: View {
+    var title: String
+    var dimmed = false
+    @ViewBuilder var control: Control
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(title).ui(14).lineLimit(1)
+            Spacer(minLength: 8)
+            control
+        }
+        .opacity(dimmed ? 0.4 : 1)
+        .allowsHitTesting(!dimmed)
+        .frame(height: 38)
+    }
+}
+
 /// The combined item's icon, picked on a glass track.
 struct CombinedIconPicker: View {
     @Binding var selection: CombinedIcon
@@ -226,7 +341,7 @@ struct NotchBanner: View {
     var body: some View {
         HStack(spacing: 10) {
             LineIcon(d: Icons.notch, size: 16, lineWidth: 1.5)
-            Text(L10n.Notch.hiddenCount(count)).ui(13, 500).lineLimit(1)
+            Text(L10n.Notch.hiddenCount(count)).ui(14, 500).lineLimit(1)
             Spacer(minLength: 8)
             Button {
                 SettingsStore.shared.prefs.menubar.displayMode = .combined
@@ -339,6 +454,7 @@ struct ModuleSwitchChips: View {
 struct ReorderModifier: ViewModifier {
     let module: Module
     @Binding var dragging: Module?
+    var order: WritableKeyPath<Preferences, [Module]> = \.menubar.order
 
     func body(content: Content) -> some View {
         if RenderContext.offscreen {
@@ -349,7 +465,7 @@ struct ReorderModifier: ViewModifier {
                     dragging = module
                     return NSItemProvider(object: module.rawValue as NSString)
                 }
-                .onDrop(of: [UTType.text], delegate: ModuleDropDelegate(target: module, dragging: $dragging))
+                .onDrop(of: [UTType.text], delegate: ModuleDropDelegate(target: module, dragging: $dragging, order: order))
         }
     }
 }
@@ -357,14 +473,15 @@ struct ReorderModifier: ViewModifier {
 struct ModuleDropDelegate: DropDelegate {
     let target: Module
     @Binding var dragging: Module?
+    var order: WritableKeyPath<Preferences, [Module]> = \.menubar.order
 
     func dropEntered(info: DropInfo) {
         guard let dragging, dragging != target else { return }
-        var order = SettingsStore.shared.prefs.menubar.order
-        guard let from = order.firstIndex(of: dragging), let to = order.firstIndex(of: target) else { return }
+        var list = SettingsStore.shared.prefs[keyPath: order]
+        guard let from = list.firstIndex(of: dragging), let to = list.firstIndex(of: target) else { return }
         withAnimation(.easeOut(duration: 0.15)) {
-            order.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
-            SettingsStore.shared.prefs.menubar.order = order
+            list.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+            SettingsStore.shared.prefs[keyPath: order] = list
         }
     }
 
@@ -471,12 +588,12 @@ struct ModuleHeader<Extra: View>: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(module.title).ui(20, 600).kerning(-0.2).accessibilityAddTraits(.isHeader)
+            Text(module.title).ui(22, 600).kerning(-0.2).accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
             extra
             ModuleViewToggle(module: module, settingsActive: settingsActive)
         }
-        .frame(height: 32)
+        .frame(height: Sidebar.titleBand)
     }
 }
 
@@ -762,7 +879,7 @@ struct WidgetsTab: View {
             }
             ForEach(widgets) { kind in
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(L10n.Widget.name(kind, module)).ui(13, 500).foregroundStyle(Theme.sub)
+                    Text(L10n.Widget.name(kind, module)).ui(14, 500).foregroundStyle(Theme.sub)
                         .padding(.horizontal, 14)
                         .padding(.bottom, 8)
                         .accessibilityAddTraits(.isHeader)
@@ -909,7 +1026,7 @@ private struct DevicePicker: View {
             }
         } label: {
             HStack(spacing: 8) {
-                Text(Self.summary(shown)).ui(13).lineLimit(1)
+                Text(Self.summary(shown)).ui(14).lineLimit(1)
                 LineIcon(d: Icons.upDown, width: 8, height: 12, viewBox: CGSize(width: 8, height: 12), lineWidth: 1.4)
             }
             .foregroundStyle(Theme.text)
@@ -972,7 +1089,7 @@ struct WidgetOptionsGroup: View {
                     TextField(module.widgetLabel, text: bind(\.labelText))
                         .textFieldStyle(.plain)
                         .multilineTextAlignment(.center)
-                        .ui(13)
+                        .ui(14)
                         .frame(width: 64)
                         .padding(.horizontal, 10)
                         .frame(height: 28)
@@ -1223,7 +1340,7 @@ struct InlineChoice<Value: Hashable>: View {
             }
         } label: {
             Text(options.first { $0.0 == selection }?.1 ?? "")
-                .ui(13, 500)
+                .ui(14, 500)
                 .foregroundStyle(Theme.text)
                 .padding(.horizontal, 9)
                 .frame(height: 24)

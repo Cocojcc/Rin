@@ -83,7 +83,7 @@ struct OnboardingView: View {
             Text(L10n.Onboarding.greeting).ui(24, 500).kerning(-0.48)
                 .accessibilityAddTraits(.isHeader)
                 .padding(.top, 16)
-            Text(L10n.Onboarding.intro).ui(13).foregroundStyle(Theme.sub)
+            Text(L10n.Onboarding.intro).ui(14).foregroundStyle(Theme.sub)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 6)
             VStack(spacing: 0) {
@@ -101,7 +101,7 @@ struct OnboardingView: View {
         }
         .padding(EdgeInsets(top: 18, leading: 22, bottom: 22, trailing: 22))
         .frame(width: 480)
-        .ui(13)
+        .ui(14)
         .foregroundStyle(Theme.text)
         .focusEffectDisabled()
         .ignoresSafeArea()

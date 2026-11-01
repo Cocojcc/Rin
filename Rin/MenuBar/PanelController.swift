@@ -157,14 +157,17 @@ struct PanelRoot: View {
         UIScaled {
             VStack(spacing: 12) {
                 switch kind {
-                case .module(let m): ModulePanel(module: m)
-                case .combined: CombinedPanel()
+                case .module(let m):
+                    ModulePanel(module: m)
+                    PanelFooter()
+                case .combined:
+                    // Its own footer: settings on the left, keep awake, pause and quit on the right.
+                    CombinedPanel()
                 }
-                PanelFooter()
             }
-            .padding(EdgeInsets(top: 14, leading: 14, bottom: 10, trailing: 14))
+            .padding(EdgeInsets(top: 14, leading: 14, bottom: kind == .combined ? 14 : 10, trailing: 14))
             .frame(width: PanelController.width)
-            .ui(13)
+            .ui(14)
             .foregroundStyle(Theme.text)
         }
         .background(GlassBackground(radius: UIScale.of(14)))

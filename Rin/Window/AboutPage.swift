@@ -35,8 +35,8 @@ struct AboutPage: View {
         HStack(spacing: 24) {
             LaptopDrawing(wallpaper: wallpaper).frame(width: 132, height: 84)
             VStack(alignment: .leading, spacing: 0) {
-                Text(info.modelName).ui(20, 600).kerning(-0.2).frame(height: 26)
-                if let subtitle { Text(subtitle).ui(13).foregroundStyle(Theme.sub) }
+                Text(info.modelName).ui(22, 600).kerning(-0.2).frame(height: 26)
+                if let subtitle { Text(subtitle).ui(14).foregroundStyle(Theme.sub) }
                 HStack(spacing: 6) {
                     chip(L10n.About.macOS(info.osVersion))
                     chip(Format.uptime(since: info.bootTime))
@@ -100,7 +100,7 @@ struct AboutPage: View {
                         Spacer(minLength: 0)
                         Text(item.1).fontWeight(.medium).lineLimit(1).truncationMode(.middle)
                     }
-                    .ui(13)
+                    .ui(14)
                     .frame(minHeight: 34)
                     .accessibilityElement(children: .combine)
                     .textSelection(.enabled)

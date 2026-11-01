@@ -115,7 +115,7 @@ final class Monitor {
         for consumer in consumers {
             switch consumer {
             case .popover(let m), .window(.monitor(let m)), .window(.moduleSettings(let m)): shown.insert(m)
-            case .combinedPanel: shown.formUnion(CombinedPanel.modules)
+            case .combinedPanel: shown.formUnion(prefs.combinedModules)
             case .window(.overview): shown = Set(Module.allCases)
             default: break
             }

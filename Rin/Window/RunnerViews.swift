@@ -24,7 +24,7 @@ struct RunnerPicker: View {
         } label: {
             HStack(spacing: 8) {
                 RunnerStill(runner: current).frame(width: (16 * current.aspect).rounded(), height: 16)
-                Text(library.name(current)).ui(13)
+                Text(library.name(current)).ui(14)
                 LineIcon(d: Icons.upDown, width: 8, height: 12, viewBox: CGSize(width: 8, height: 12), lineWidth: 1.4)
             }
             .foregroundStyle(Theme.text)

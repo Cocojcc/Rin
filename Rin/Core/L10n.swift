@@ -139,6 +139,8 @@ enum L10n {
         static var allOff: String { tr("overview.allOff") }
         static var localShort: String { tr("overview.localShort") }
         static var publicShort: String { tr("overview.publicShort") }
+        static var cyclesLabel: String { tr("overview.cyclesLabel") }
+        static func cycleCount(_ a: Int) -> String { tr("overview.cycleCount", a) }
     }
 
     enum Battery {
@@ -745,6 +747,14 @@ enum L10n {
         static var iconChart: String { tr("settings.icon.chart") }
         static var iconChip: String { tr("settings.icon.chip") }
         static var iconRunner: String { tr("settings.icon.runner") }
+        static var combinedShows: String { tr("settings.combinedShows") }
+        static var widgetsOption: String { tr("settings.widgetsOption") }
+        static var combinedModulesTitle: String { tr("settings.combinedModulesTitle") }
+        static var combinedPanelTitle: String { tr("settings.combinedPanelTitle") }
+        static var statusLine: String { tr("settings.statusLine") }
+        static var topUsageSort: String { tr("settings.topUsageSort") }
+        static var sleepBlockingApps: String { tr("settings.sleepBlockingApps") }
+        static func showInCombined(_ a: String) -> String { tr("settings.showInCombined", a) }
     }
 
     enum Notch {
@@ -945,6 +955,14 @@ enum L10n {
         static func sortedBy(_ a: String) -> String { tr("processes.sortedBy", a) }
         static var topEnergy: String { tr("processes.topEnergy") }
         static func wholeMac(_ a: String) -> String { tr("processes.wholeMac", a) }
+    }
+
+    enum Combined {
+        static var settings: String { tr("combined.settings") }
+        static func topCPU(_ a: String, _ b: String) -> String { tr("combined.topCPU", a, b) }
+        static func topMemory(_ a: String, _ b: String) -> String { tr("combined.topMemory", a, b) }
+        static func blockingSleep(_ a: String) -> String { tr("combined.blockingSleep", a) }
+        static func more(_ a: Int) -> String { tr("combined.more", a) }
     }
 
     enum Sleep {

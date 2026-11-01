@@ -23,7 +23,7 @@ struct AlertsPage: View {
                 PanelTitle(title: L10n.Alerts.rules) { Text(L10n.Alerts.rulesOn(enabledCount)) }
                 VStack(spacing: 0) {
                     DividedRows {
-                        ForEach(Alerts.Rule.allCases, id: \.self) { AlertRuleRow(rule: $0, highlighted: highlighted == $0) }
+                        ForEach(Alerts.Rule.allCases, id: \.self) { AlertRuleRow(rule: $0, minHeight: 34, highlighted: highlighted == $0) }
                         addRow
                     }
                 }
@@ -37,11 +37,13 @@ struct AlertsPage: View {
                     }
                     VStack(spacing: 0) {
                         if alerts.events.isEmpty {
-                            Text(L10n.Alerts.noneYet).ui(13).foregroundStyle(Theme.sub)
+                            Text(L10n.Alerts.noneYet).ui(14).foregroundStyle(Theme.sub)
                                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                         }
-                        ForEach(alerts.events.prefix(Self.recentShown)) { e in
-                            EventRow(event: e, fresh: fresh.contains(e.id)) { alerts.show(e) }
+                        DividedRows {
+                            ForEach(alerts.events.prefix(Self.recentShown)) { e in
+                                EventRow(event: e, fresh: fresh.contains(e.id)) { alerts.show(e) }
+                            }
                         }
                     }
                     .padding(.top, 6)
@@ -108,7 +110,7 @@ struct AlertsPage: View {
         } label: {
             HStack(spacing: 10) {
                 LineIcon(d: Icons.plus, size: 14, viewBox: 14, lineWidth: 1.5).foregroundStyle(Theme.sub)
-                Text(L10n.Alerts.add).ui(13).foregroundStyle(Theme.sub)
+                Text(L10n.Alerts.add).ui(14).foregroundStyle(Theme.sub)
             }
             .frame(maxWidth: .infinity, minHeight: 34, alignment: .leading)
             .contentShape(Rectangle())
@@ -128,7 +130,7 @@ struct AlertsPage: View {
 
     private func row<Control: View>(_ title: String, @ViewBuilder control: () -> Control) -> some View {
         HStack(spacing: 12) {
-            Text(title).ui(13)
+            Text(title).ui(14)
             Spacer(minLength: 8)
             control()
         }
@@ -164,7 +166,7 @@ private struct EventRow: View {
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
-                            Text(AlertText.headline(event)).ui(13, fresh ? 500 : 400).lineLimit(1)
+                            Text(AlertText.headline(event)).ui(14, fresh ? 500 : 400).lineLimit(1)
                                 .accessibilityLabel(fresh ? L10n.Alerts.newA11y + AlertText.headline(event) : AlertText.headline(event))
                         }
                         if let detail = AlertText.detail(event) {
@@ -201,7 +203,7 @@ struct AlertBanner: View {
     var body: some View {
         HStack(spacing: 10) {
             LineIcon(d: Icons.bell, size: 15, lineWidth: 1.5).accessibilityHidden(true)
-            Text(AlertText.banner(event)).ui(15, 500).lineLimit(1).truncationMode(.tail)
+            Text(AlertText.banner(event)).ui(16, 500).lineLimit(1).truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button { alerts.snooze(event.rule) } label: {
                 Text(L10n.Alerts.snooze).ui(12)

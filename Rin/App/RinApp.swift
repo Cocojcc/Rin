@@ -22,7 +22,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        Fonts.register()
         #if DEBUG
         if Snapshots.runIfRequested() { return }
         #endif

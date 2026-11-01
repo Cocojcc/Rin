@@ -9,10 +9,14 @@ import SwiftUI
 struct PanelBackground: View {
     var radius: CGFloat = 10
     var fill: Color = Theme.panel
+    /// A page's first panel: washed in its module's color.
+    var tint: Color? = nil
 
+    /// Told apart from the window by tone alone; outlines everywhere read as a wireframe.
     var body: some View {
-        RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill)
-            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Theme.panelEdge, lineWidth: 1))
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        shape.fill(fill)
+            .overlay { if let tint { shape.fill(tint.opacity(0.06)) } }
     }
 }
 
@@ -20,13 +24,14 @@ struct PanelBackground: View {
 struct ConsolePanel<Content: View>: View {
     var padding = EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12)
     var spacing: CGFloat = 0
+    var tint: Color? = nil
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: spacing) { content }
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            .background(PanelBackground())
+            .background(PanelBackground(tint: tint))
     }
 }
 
@@ -37,11 +42,11 @@ struct PanelTitle<Trailing: View>: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(title).ui(15, 600).lineLimit(1).accessibilityAddTraits(.isHeader)
+            Text(title).ui(16, 600).lineLimit(1).accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
-            HStack(spacing: 12) { trailing }.ui(13).foregroundStyle(Theme.sub).lineLimit(1)
+            HStack(spacing: 12) { trailing }.ui(14).foregroundStyle(Theme.sub).lineLimit(1)
         }
-        .frame(height: 20)
+        .frame(height: 22)
     }
 }
 
@@ -52,6 +57,24 @@ extension PanelTitle where Trailing == EmptyView {
 /// A 1 pt rule between parts of a panel or dropdown.
 struct ConsoleRule: View {
     var body: some View { Rectangle().fill(Theme.grid).frame(height: 1) }
+}
+
+/// Rows with a `ConsoleRule` above every row but the first (none under the last).
+struct RuledRows<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        _VariadicView.Tree(Layout()) { content }
+    }
+
+    private struct Layout: _VariadicView_MultiViewRoot {
+        func body(children: _VariadicView.Children) -> some View {
+            let first = children.first?.id
+            ForEach(children) { child in
+                child.overlay(alignment: .top) { if child.id != first { ConsoleRule() } }
+            }
+        }
+    }
 }
 
 // MARK: - Numbers
@@ -66,7 +89,7 @@ struct BigValue: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 5) {
-            Text(value).ui(size, 500).kerning(-0.03 * size).foregroundStyle(color).lineLimit(1).fixedSize()
+            Text(value).ui(size, 500).kerning(-0.02 * size).foregroundStyle(color).lineLimit(1).fixedSize()
             // The unit gives way first when room runs out (a long process name on the overview).
             if let unit, !unit.isEmpty { Text(unit).ui(12).foregroundStyle(Theme.sub).lineLimit(1).truncationMode(.tail) }
         }
@@ -83,8 +106,8 @@ struct KeyValue: View {
     var body: some View {
         HStack(spacing: 6) {
             if let key { RoundedRectangle(cornerRadius: 2, style: .continuous).fill(key).frame(width: 8, height: 8) }
-            Text(label).ui(13).foregroundStyle(Theme.sub)
-            if !value.isEmpty { Text(value).ui(13, 500).foregroundStyle(valueColor) }
+            Text(label).ui(14).foregroundStyle(Theme.sub)
+            if !value.isEmpty { Text(value).ui(14, 500).foregroundStyle(valueColor) }
         }
         .lineLimit(1)
         .fixedSize()
@@ -100,7 +123,7 @@ struct StatusText: View {
     var body: some View {
         HStack(spacing: 6) {
             Circle().fill(color).frame(width: 6, height: 6)
-            Text(text).ui(13)
+            Text(text).ui(14)
         }
         .foregroundStyle(color)
         .lineLimit(1)
@@ -158,12 +181,12 @@ struct KPICell<Value: View, Extra: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(label).ui(13).foregroundStyle(Theme.sub).lineLimit(1).frame(height: 18)
+            Text(label).ui(14).foregroundStyle(Theme.sub).lineLimit(1).frame(height: 20)
             HStack(alignment: .firstTextBaseline, spacing: 5) { value }
                 .frame(height: 28, alignment: .leading)
                 .padding(.top, 8)
             HStack(spacing: 12) { extra }
-                .frame(height: 18, alignment: .leading)
+                .frame(height: 20, alignment: .leading)
                 .padding(.top, 6)
         }
         .padding(.horizontal, 12)
@@ -180,25 +203,20 @@ extension KPICell where Extra == EmptyView {
 
 // MARK: - Levels
 
-/// A level as a row of short cells lit from the left (process lists, devices, temperatures).
-/// Wide rows use about 9.5 pt per cell; narrow ones split into 16 thin ticks.
-struct DotMeter: View {
+/// A level as one thin rounded bar on a track (process lists, devices, temperatures); 4 tall
+/// by default, the overview's device rows 6.
+struct LevelBar: View {
     var fraction: Double
     var color: Color
-    var count: Int? = nil
-    var height: CGFloat = 6
-    var gap: CGFloat = 2
+    var height: CGFloat = 4
     var trackColor: Color = Theme.track
 
     var body: some View {
-        Canvas { ctx, size in
-            let n = max(1, count ?? (size.width >= 160 ? Int(size.width / 9.5) : 16))
-            let w = max(0.5, (size.width - gap * CGFloat(n - 1)) / CGFloat(n))
-            let lit = Int((min(max(fraction, 0), 1) * Double(n)).rounded())
-            for i in 0..<n {
-                let r = CGRect(x: CGFloat(i) * (w + gap), y: 0, width: w, height: size.height)
-                ctx.fill(Path(roundedRect: r, cornerRadius: min(1, w / 2)), with: .color(i < lit ? color : trackColor))
-            }
+        GeometryReader { geo in
+            Capsule().fill(trackColor)
+                .overlay(alignment: .leading) {
+                    Capsule().fill(color).frame(width: geo.size.width * min(max(fraction, 0), 1))
+                }
         }
         .frame(height: height)
         .accessibilityHidden(true)
@@ -274,9 +292,9 @@ struct StackLegend: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 6) {
                                     RoundedRectangle(cornerRadius: 2, style: .continuous).fill(item.color).frame(width: 8, height: 8)
-                                    Text(item.label).ui(13).foregroundStyle(Theme.sub).lineLimit(1)
+                                    Text(item.label).ui(14).foregroundStyle(Theme.sub).lineLimit(1)
                                 }
-                                Text(item.value).ui(13, 500).lineLimit(1)
+                                Text(item.value).ui(14, 500).lineLimit(1)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .accessibilityElement(children: .combine)
@@ -333,7 +351,8 @@ struct ChartRule {
 /// A chart with its scale. Bars (one per time slot, series drawn from the baseline back to
 /// front), an area, or mirrored bars (the first series up from the middle, the second down).
 struct ConsoleChart: View {
-    enum Kind { case bars, area, mirrored }
+    /// `mirroredArea`: the first series' area up from the middle, the second's down (the small charts).
+    enum Kind { case bars, area, mirrored, mirroredArea }
 
     var kind: Kind
     var series: [ChartSeries]
@@ -350,6 +369,8 @@ struct ConsoleChart: View {
     var gutter: CGFloat = 32
     var grid: [Double] = [0.25, 0.5, 0.75]
     var baseline = true
+    /// A mirrored chart's line through the middle.
+    var midline = true
     var xLabels: [String]? = nil
     var rules: [ChartRule] = []
     var bands: [ClosedRange<Date>] = []
@@ -393,7 +414,7 @@ struct ConsoleChart: View {
 
     /// A short window (the dropdowns' last minute) with its own labels.
     init(kind: Kind, series: [ChartSeries], span: TimeInterval, maxValue: Double, bottomMax: Double = 1, height: CGFloat,
-         xLabels: [String]?, grid: [Double] = [0.25, 0.75], baseline: Bool = true, bands: [ClosedRange<Date>] = [], slot: CGFloat = 5) {
+         xLabels: [String]?, grid: [Double] = [0.25, 0.75], baseline: Bool = true, midline: Bool = true, bands: [ClosedRange<Date>] = [], slot: CGFloat = 5) {
         self.kind = kind
         self.series = series
         self.span = span
@@ -404,6 +425,7 @@ struct ConsoleChart: View {
         gutter = 0
         self.grid = grid
         self.baseline = baseline
+        self.midline = midline
         self.xLabels = xLabels
         self.bands = bands
         self.slot = slot
@@ -482,6 +504,7 @@ struct ConsoleChart: View {
                     case .bars: drawBars(&ctx, size, start: start)
                     case .area: drawArea(&ctx, size, start: start)
                     case .mirrored: drawMirrored(&ctx, size, start: start)
+                    case .mirroredArea: drawMirroredArea(&ctx, size, start: start)
                     }
                     drawMarkers(&ctx, size, start: start)
                     if let hoverX {
@@ -563,7 +586,7 @@ struct ConsoleChart: View {
     private func drawGrid(_ ctx: inout GraphicsContext, _ size: CGSize) {
         for g in grid { dashed(&ctx, y: (size.height * (1 - g)).rounded() + 0.5, width: size.width, color: Theme.grid) }
         if baseline { ctx.fill(Path(CGRect(x: 0, y: size.height - 1, width: size.width, height: 1)), with: .color(Theme.grid)) }
-        if kind == .mirrored {
+        if midline && (kind == .mirrored || kind == .mirroredArea) {
             ctx.fill(Path(CGRect(x: 0, y: (size.height / 2).rounded() - 0.5, width: size.width, height: 1)), with: .color(Theme.grid))
         }
     }
@@ -622,32 +645,55 @@ struct ConsoleChart: View {
         }
     }
 
+    /// Series drawn in order, so a stack is the total first and its lower part over it.
     private func drawArea(_ ctx: inout GraphicsContext, _ size: CGSize, start: Date) {
-        let top = max(maxValue, 0.0001)
         for s in series {
-            var runs: [[CGPoint]] = []
-            var last: Date?
-            for p in s.points where !p.value.isNaN {
-                let x = CGFloat(p.date.timeIntervalSince(start) / span) * size.width
-                guard x >= -1 else { continue }
-                let y = size.height - CGFloat(min(max(p.value / top, 0), 1)) * size.height
-                if let l = last, p.date.timeIntervalSince(l) <= maxGap, !runs.isEmpty {
-                    runs[runs.count - 1].append(CGPoint(x: x, y: y))
-                } else {
-                    runs.append([CGPoint(x: x, y: y)])
-                }
-                last = p.date
+            drawRuns(&ctx, s, runs(s, top: maxValue, width: size.width, start: start), base: size.height, extent: size.height)
+        }
+    }
+
+    private func drawMirroredArea(_ ctx: inout GraphicsContext, _ size: CGSize, start: Date) {
+        let half = size.height / 2 - 1
+        for (k, s) in series.prefix(2).enumerated() {
+            let r = runs(s, top: k == 0 ? maxValue : bottomMax, width: size.width, start: start)
+            drawRuns(&ctx, s, r, base: size.height / 2, extent: k == 0 ? half : -half)
+        }
+    }
+
+    /// A series' readings as (x, share of `top`), split into runs where readings stop for longer than `maxGap`.
+    private func runs(_ s: ChartSeries, top: Double, width: CGFloat, start: Date) -> [[(x: CGFloat, level: CGFloat)]] {
+        let top = max(top, 0.0001)
+        var out: [[(x: CGFloat, level: CGFloat)]] = []
+        var last: Date?
+        for p in s.points where !p.value.isNaN {
+            let x = CGFloat(p.date.timeIntervalSince(start) / span) * width
+            guard x >= -1 else { continue }
+            let level = CGFloat(min(max(p.value / top, 0), 1))
+            if let l = last, p.date.timeIntervalSince(l) <= maxGap, !out.isEmpty {
+                out[out.count - 1].append((x, level))
+            } else {
+                out.append([(x, level)])
             }
-            for run in runs where run.count > 1 {
-                var line = Path()
-                line.addLines(run)
-                if s.fill > 0 {
-                    var fill = line
-                    fill.addLine(to: CGPoint(x: run.last!.x, y: size.height))
-                    fill.addLine(to: CGPoint(x: run.first!.x, y: size.height))
-                    fill.closeSubpath()
-                    ctx.fill(fill, with: .color(s.color.opacity(s.fill)))
-                }
+            last = p.date
+        }
+        return out
+    }
+
+    /// Fills each run back to `base` and strokes its edge; `extent` is how far a full level reaches
+    /// (negative draws downward). A series with no line width is a fill alone.
+    private func drawRuns(_ ctx: inout GraphicsContext, _ s: ChartSeries, _ runs: [[(x: CGFloat, level: CGFloat)]], base: CGFloat, extent: CGFloat) {
+        for run in runs where run.count > 1 {
+            let points = run.map { CGPoint(x: $0.x, y: base - $0.level * extent) }
+            var line = Path()
+            line.addLines(points)
+            if s.fill > 0 {
+                var fill = line
+                fill.addLine(to: CGPoint(x: points[points.count - 1].x, y: base))
+                fill.addLine(to: CGPoint(x: points[0].x, y: base))
+                fill.closeSubpath()
+                ctx.fill(fill, with: .color(s.color.opacity(s.fill)))
+            }
+            if s.lineWidth > 0 {
                 ctx.stroke(line, with: .color(s.color.opacity(s.opacity)),
                            style: StrokeStyle(lineWidth: s.lineWidth, lineCap: .round, lineJoin: .round, dash: s.dash))
             }
@@ -698,7 +744,7 @@ struct PageHero<Leading: View, Trailing: View>: View {
         HStack(alignment: .bottom, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 16) { leading }
             Spacer(minLength: 0)
-            HStack(spacing: 12) { trailing }.ui(13).foregroundStyle(Theme.sub).lineLimit(1).padding(.bottom, 4)
+            HStack(spacing: 12) { trailing }.ui(14).foregroundStyle(Theme.sub).lineLimit(1).padding(.bottom, 4)
         }
         .frame(minHeight: 32)
         .padding(.bottom, 12)

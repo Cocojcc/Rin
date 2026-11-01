@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - Typography
 
 extension View {
-    /// Space Grotesk at a design size and weight (the type ramp: 12 / 13 / 15 / 18 / 24 / 44; nothing smaller),
+    /// The UI font at a design size and weight (the type ramp: 12 / 14 / 16 / 22 / 28 / 40; nothing smaller),
     /// enlarged by the surface's `textScale`.
     func ui(_ size: CGFloat, _ weight: CGFloat = 400) -> some View { modifier(UIFont(size: size, weight: weight)) }
 }
@@ -83,9 +83,9 @@ struct GlassTrack: View {
     }
 }
 
-/// The flat piece behind a selected segment or chip (5 pt corners).
+/// The flat piece behind a selected segment or chip (6 pt corners).
 struct GlassThumb: View {
-    var cornerRadius: CGFloat? = 5
+    var cornerRadius: CGFloat? = 6
 
     var body: some View {
         GlassShape(cornerRadius: cornerRadius)
@@ -179,7 +179,7 @@ struct SettingsGroup<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let title {
-                Text(title).ui(13, 500).foregroundStyle(Theme.sub)
+                Text(title).ui(14, 500).foregroundStyle(Theme.sub)
                     .padding(.horizontal, 14).padding(.bottom, 8)
                     .accessibilityAddTraits(.isHeader)
             }
@@ -227,7 +227,7 @@ struct SettingsRow<Control: View>: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(title).ui(13).lineLimit(1)
+            Text(title).ui(14).lineLimit(1)
             Spacer(minLength: 8)
             control
         }
@@ -250,8 +250,8 @@ struct RinSwitch: View {
             withAnimation(.easeOut(duration: 0.15)) { isOn.toggle() }
         } label: {
             ZStack(alignment: isOn ? .trailing : .leading) {
-                Capsule().fill(isOn ? Theme.accent : Theme.switchOff)
-                Circle().fill(isOn ? Theme.onAccent : Theme.switchKnob)
+                Capsule().fill(isOn ? Theme.switchOn : Theme.switchOff)
+                Circle().fill(isOn ? Theme.switchOnKnob : Theme.switchKnob)
                     .frame(width: 16, height: 16)
                     .padding(2)
             }
@@ -271,7 +271,8 @@ struct RinSwitch: View {
 /// `.tab` for small inline switches (22 pt, 11 pt text), `.tabs` for a page's tab bar
 /// (26 pt, full width), `.sort` for the overview's sort switch (26 pt).
 struct Segmented<Value: Hashable>: View {
-    enum Style { case compact, range, tab, tabs, sort }
+    /// `inline`: the range's look at 22 tall, beside a switch in a settings row.
+    enum Style { case compact, range, inline, tab, tabs, sort }
 
     var label: String
     var options: [(Value, String)]
@@ -280,6 +281,8 @@ struct Segmented<Value: Hashable>: View {
     /// Draws a segment as an icon instead of text.
     var glyph: ((Value) -> AnyView)? = nil
     var glyphWidth: CGFloat = 18
+    /// A module page's time range: the selected segment washed in the module's color.
+    var tint: Color? = nil
 
     private var fills: Bool { style == .tabs }
 
@@ -297,8 +300,8 @@ struct Segmented<Value: Hashable>: View {
                             Text(option.1).ui(fontSize, on ? 500 : 400).lineLimit(1)
                         }
                     }
-                    .foregroundStyle(on ? Theme.text : Theme.sub)
-                    .padding(.horizontal, style == .range ? 9 : 7)
+                    .foregroundStyle(on ? tint ?? Theme.text : Theme.sub)
+                    .padding(.horizontal, style == .range ? 10 : style == .inline ? 8 : 7)
                     .frame(maxWidth: fills ? .infinity : nil)
                     .frame(height: height)
                     .thumbAnchor(on)
@@ -311,7 +314,9 @@ struct Segmented<Value: Hashable>: View {
             }
         }
         .slidingThumb(selection) {
-            if glass {
+            if let tint {
+                RoundedRectangle(cornerRadius: 6, style: .continuous).fill(tint.opacity(0.22))
+            } else if glass {
                 GlassThumb()
             } else {
                 RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.raised).raisedShadow()
@@ -331,15 +336,15 @@ struct Segmented<Value: Hashable>: View {
 
     private var height: CGFloat {
         switch style {
-        case .range: return 24
-        case .tab: return 22
+        case .range: return 26
+        case .tab, .inline: return 22
         case .tabs, .sort: return 26
         case .compact: return 24
         }
     }
 
     private var glass: Bool { style != .tab }
-    private var fontSize: CGFloat { style == .tab ? 12 : 13 }
+    private var fontSize: CGFloat { style == .tab ? 12 : 14 }
 }
 
 /// "− 12 pt +" on a glass track.
@@ -419,7 +424,7 @@ struct MenuPill<Value: Hashable>: View {
         } label: {
             HStack(spacing: 8) {
                 if let dot { Circle().fill(dot(selection)).frame(width: 9, height: 9) }
-                Text(options.first(where: { $0.0 == selection })?.1 ?? "").ui(13)
+                Text(options.first(where: { $0.0 == selection })?.1 ?? "").ui(14)
                 LineIcon(d: Icons.upDown, width: 8, height: 12, viewBox: CGSize(width: 8, height: 12), lineWidth: 1.4)
             }
             .foregroundStyle(Theme.text)
@@ -513,63 +518,14 @@ struct IconButton: View {
 
 // MARK: - Data display
 
-/// A level as a row of short cells, 6 pt tall (see `DotMeter`).
+/// A level as a thin rounded bar, 4 pt tall (see `LevelBar`).
 struct MeterBar: View {
     var fraction: Double
     var color: Color
-    var height: CGFloat = 6
+    var height: CGFloat = 4
 
     var body: some View {
-        DotMeter(fraction: fraction, color: color, height: max(height, 4))
-    }
-}
-
-/// Circular gauge; `segments` stack around the ring (butt ends when there are several).
-struct Ring: View {
-    struct Segment {
-        var fraction: Double
-        var color: Color
-        var opacity: Double = 1
-    }
-
-    var segments: [Segment]
-    var size: CGFloat
-    var lineWidth: CGFloat
-    var butt: Bool
-
-    init(fraction: Double, color: Color, size: CGFloat, lineWidth: CGFloat, forceButt: Bool = false) {
-        segments = [Segment(fraction: fraction, color: color)]
-        self.size = size
-        self.lineWidth = lineWidth
-        butt = forceButt
-    }
-
-    init(segments: [Segment], size: CGFloat, lineWidth: CGFloat, forceButt: Bool = false) {
-        self.segments = segments
-        self.size = size
-        self.lineWidth = lineWidth
-        butt = forceButt || segments.count > 1
-    }
-
-    var body: some View {
-        ZStack {
-            Circle().stroke(Theme.track, lineWidth: lineWidth)
-            ForEach(Array(starts.enumerated()), id: \.offset) { i, start in
-                let seg = segments[i]
-                Circle()
-                    .trim(from: start, to: min(1, start + max(0, seg.fraction)))
-                    .stroke(seg.color.opacity(seg.opacity), style: StrokeStyle(lineWidth: lineWidth, lineCap: butt ? .butt : .round))
-                    .rotationEffect(.degrees(-90))
-            }
-        }
-        .padding(lineWidth / 2)
-        .frame(width: size, height: size)
-        .accessibilityHidden(true)
-    }
-
-    private var starts: [Double] {
-        var acc = 0.0
-        return segments.map { s in defer { acc += max(0, s.fraction) }; return acc }
+        LevelBar(fraction: fraction, color: color, height: height)
     }
 }
 

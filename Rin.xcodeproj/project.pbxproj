@@ -20,7 +20,6 @@
 		1B0AC5004C97B11502AF87E8 /* runner-cat-1x-3.png in Resources */ = {isa = PBXBuildFile; fileRef = 35CA60AAC81706851A5B0534 /* runner-cat-1x-3.png */; };
 		1D1324FF2A600CE864C5DC7F /* runner-cat-1x-7.png in Resources */ = {isa = PBXBuildFile; fileRef = 6F414BC11853F0151C93FD48 /* runner-cat-1x-7.png */; };
 		1F182FE4F78EDE2954BE5DE6 /* Alerts.swift in Sources */ = {isa = PBXBuildFile; fileRef = F56A3A8F85809D69F9F6DC5F /* Alerts.swift */; };
-		1F2C5D3B5D012A09F7E16CF8 /* SpaceGrotesk-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 0EEDE8B7E3140E96CC18640F /* SpaceGrotesk-OFL.txt */; };
 		211F8C1C204C0E03A5F79A44 /* NetworkReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85C409BFE52D954315998FB1 /* NetworkReader.swift */; };
 		258F974717990BD1CFE3971A /* runner-cat-1x-13.png in Resources */ = {isa = PBXBuildFile; fileRef = 30419E79DB90C83FAA79584A /* runner-cat-1x-13.png */; };
 		263E7873D52E8E668FEBF3FB /* runner-cat-1x-6.png in Resources */ = {isa = PBXBuildFile; fileRef = 1949B7F250486CF17E328A31 /* runner-cat-1x-6.png */; };
@@ -112,7 +111,6 @@
 		AE6F792DC88789521CD5E818 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = B32357BD581DB2AEF5C5913D /* L10n.swift */; };
 		AECC7434FAAA9B8933672FFC /* runner-cat-2x-0.png in Resources */ = {isa = PBXBuildFile; fileRef = 9188BF208124B7F9B3B9251D /* runner-cat-2x-0.png */; };
 		AF61D48447D25FFBA606C639 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD1B7C0838E2951936B3A7A /* Theme.swift */; };
-		B0E8C19DF6D08D19DDAC8B3E /* SpaceGrotesk.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 59F9A1320CFF90120D61E694 /* SpaceGrotesk.ttf */; };
 		B13DF8ADE62D332BBAB96242 /* runner-girl-1x-19.png in Resources */ = {isa = PBXBuildFile; fileRef = 225575C7144DA58DDF51A4F3 /* runner-girl-1x-19.png */; };
 		B230CE0CC3AE3A9E077A1505 /* runner-girl-2x-12.png in Resources */ = {isa = PBXBuildFile; fileRef = 152C2BA71EEBC45313A87E47 /* runner-girl-2x-12.png */; };
 		B26BDF880000F16BEAB1FE7B /* SleepBlockers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7513338909BD48BE9608C60F /* SleepBlockers.swift */; };
@@ -180,7 +178,6 @@
 		0DA561EA8057530B203EC2BE /* runner-girl-1x-8.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-1x-8.png"; sourceTree = "<group>"; };
 		0E94438B73066F7E9A3F8998 /* SensorsReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorsReader.swift; sourceTree = "<group>"; };
 		0EAF0F72966F37BFCF66719F /* ProcessActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessActions.swift; sourceTree = "<group>"; };
-		0EEDE8B7E3140E96CC18640F /* SpaceGrotesk-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "SpaceGrotesk-OFL.txt"; sourceTree = "<group>"; };
 		13F111C67CF2A219796EBAF9 /* runner-cat-1x-1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-1x-1.png"; sourceTree = "<group>"; };
 		143D058D8889BFAE06BD9A38 /* RenameMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenameMigration.swift; sourceTree = "<group>"; };
 		1457B4627B3CD6336794A1B4 /* runner-girl-1x-2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-1x-2.png"; sourceTree = "<group>"; };
@@ -227,7 +224,6 @@
 		55DF2D107263AF18CA7267D8 /* runner-girl-1x-11.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-1x-11.png"; sourceTree = "<group>"; };
 		582A09C1C325595C8DD0993E /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		58AAB669C17CA92EE8F738B6 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
-		59F9A1320CFF90120D61E694 /* SpaceGrotesk.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = SpaceGrotesk.ttf; sourceTree = "<group>"; };
 		5B43A5722A566ED8ABC06254 /* runner-girl-2x-9.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-2x-9.png"; sourceTree = "<group>"; };
 		5D2A7215A6FDCDE4D8226638 /* Console.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Console.swift; sourceTree = "<group>"; };
 		5D914128807FFA4E20628523 /* runner-cat-1x-15.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-1x-15.png"; sourceTree = "<group>"; };
@@ -359,15 +355,6 @@
 				0CC0E5B05AA94C286EF9B728 /* SystemInfo.swift */,
 			);
 			path = Readers;
-			sourceTree = "<group>";
-		};
-		5BC851A01BD8357B95399B0D /* Fonts */ = {
-			isa = PBXGroup;
-			children = (
-				0EEDE8B7E3140E96CC18640F /* SpaceGrotesk-OFL.txt */,
-				59F9A1320CFF90120D61E694 /* SpaceGrotesk.ttf */,
-			);
-			path = Fonts;
 			sourceTree = "<group>";
 		};
 		5BE7D68BDDF5E5EE46BDDED4 /* Window */ = {
@@ -566,7 +553,6 @@
 			isa = PBXGroup;
 			children = (
 				81626050D84264CA3842CEA9 /* Assets.xcassets */,
-				5BC851A01BD8357B95399B0D /* Fonts */,
 				4E945FC11D8B13CA17BD6103 /* Localizable.strings */,
 				A3DAEB568265FB8360944646 /* Runners */,
 			);
@@ -661,8 +647,6 @@
 			files = (
 				B2CFAB5B6C0127C037292E3B /* Assets.xcassets in Resources */,
 				12C0DCF6F5499F91384B131F /* Localizable.strings in Resources */,
-				1F2C5D3B5D012A09F7E16CF8 /* SpaceGrotesk-OFL.txt in Resources */,
-				B0E8C19DF6D08D19DDAC8B3E /* SpaceGrotesk.ttf in Resources */,
 				E36CC22BD295BBF5F64CF1F5 /* runner-cat-1x-0.png in Resources */,
 				7495E3D34BE9B103462DF085 /* runner-cat-1x-1.png in Resources */,
 				13947C37E8649CFEB4A02948 /* runner-cat-1x-10.png in Resources */,
@@ -926,7 +910,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -939,7 +923,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -985,7 +969,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -1004,7 +988,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.1;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

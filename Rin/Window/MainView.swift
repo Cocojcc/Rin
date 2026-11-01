@@ -20,7 +20,7 @@ struct MainView: View {
         .background(GlassBackground(radius: UIScale.of(18), tint: Theme.windowGlass, material: .underWindowBackground))
         .environment(\.textScale, Fonts.windowTextScale)
         .environment(\.pageGlass, pageGlass)
-        .ui(13)
+        .ui(14)
         .foregroundStyle(Theme.text)
         .focusEffectDisabled()
         .ignoresSafeArea()
@@ -59,7 +59,7 @@ struct PageView: View {
 
     private var stack: some View {
         content
-            .padding(EdgeInsets(top: 14, leading: 20, bottom: 16, trailing: 20))
+            .padding(EdgeInsets(top: 0, leading: 20, bottom: Sidebar.bottomInset, trailing: 20))
             .frame(maxWidth: .infinity, maxHeight: fillsWindow ? .infinity : nil, alignment: .topLeading)
     }
 
@@ -79,6 +79,7 @@ struct PageView: View {
             }
         case .moduleSettings(let m): ModuleSettingsPage(module: m)
         case .settings: SettingsPage()
+        case .menuBar: MenuBarSettingsPage()
         case .processes: ProcessesPage()
         case .sleep: SleepPage()
         case .alerts: AlertsPage()
@@ -112,17 +113,15 @@ struct Sidebar: View {
         Self.moduleOrder.filter(settings.prefs.isEnabled).map { (.monitor($0), Icons.module($0), $0.title) }
     }
 
+    /// The band at the top that holds the traffic lights and, across the window, each page's title.
+    static let titleBand: CGFloat = 52
+    /// Below the footer, and below each page's last panel, so their bottoms line up.
+    static let bottomInset: CGFloat = 12
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            // Clear of the traffic lights; the mark sits where the two-line title block used to
-            // center it, and the pages below keep their place.
-            Color.clear.frame(height: 44)
-            HStack(spacing: 10) {
-                MoodMark(size: 26)
-                Text(L10n.App.name).ui(20, 600).kerning(-0.2)
-            }
-            .padding(.horizontal, 10)
-            .padding(.bottom, 16)
+            // The traffic lights' band; the first item lines up with the first panel on the right.
+            Color.clear.frame(height: Self.titleBand + 8)
 
             VStack(alignment: .leading, spacing: 2) {
                 ForEach(overviewPages, id: \.0) { item($0) }
@@ -138,30 +137,50 @@ struct Sidebar: View {
                 Color.clear.frame(height: 10)
                 ForEach(toolPages, id: \.0) { item($0, badge: $0.0 == .alerts ? alerts.unseenCount : 0) }
             }
-            .slidingThumb(navigator.page.sidebarPage) { RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.selection) }
+            // The selected page sits on the same surface as the panels beside it.
+            .slidingThumb(navigator.page.sidebarPage) { thumb(hue(navigator.page.sidebarPage)) }
             Spacer(minLength: 12)
-            HStack {
-                footerButton(Icons.gear, lineWidth: 1.3, label: L10n.Sidebar.settings, selected: navigator.page == .settings) {
-                    navigator.page = .settings
-                }
+            // Her face and the name at the bottom left, beside settings, pause and quit.
+            HStack(spacing: 8) {
+                MoodMark(size: 22)
+                Text(L10n.App.name).ui(16, 600).fixedSize()
                 Spacer(minLength: 0)
-                footerButton(monitor.isPaused ? Icons.play : Icons.pause, lineWidth: monitor.isPaused ? 1.5 : 1.8,
-                             label: monitor.isPaused ? L10n.Sidebar.resume : L10n.Sidebar.pause, selected: false) {
-                    monitor.togglePause()
-                }
-                Spacer(minLength: 0)
-                footerButton(Icons.power, lineWidth: 1.5, label: L10n.Menu.quit, selected: false) {
-                    NSApp.terminate(nil)
+                HStack(spacing: 2) {
+                    footerButton(Icons.gear, lineWidth: 1.3, label: L10n.Sidebar.settings, selected: navigator.page == .settings || navigator.page == .menuBar) {
+                        navigator.page = .settings
+                    }
+                    footerButton(monitor.isPaused ? Icons.play : Icons.pause, lineWidth: monitor.isPaused ? 1.5 : 1.8,
+                                 label: monitor.isPaused ? L10n.Sidebar.resume : L10n.Sidebar.pause, selected: false) {
+                        monitor.togglePause()
+                    }
+                    footerButton(Icons.power, lineWidth: 1.5, label: L10n.Menu.quit, selected: false) {
+                        NSApp.terminate(nil)
+                    }
                 }
             }
-            .padding(.horizontal, 2)
+            .frame(height: 30)
+            .padding(.leading, 8)
         }
-        .padding(EdgeInsets(top: 0, leading: 10, bottom: 12, trailing: 10))
+        .padding(EdgeInsets(top: 0, leading: 12, bottom: Self.bottomInset, trailing: 12))
         .frame(maxHeight: .infinity, alignment: .top)
-        .background(Theme.side)
+        .background(Theme.windowGlass)
         .overlay(alignment: .trailing) { Rectangle().fill(Theme.panelEdge).frame(width: 1) }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Sidebar.label)
+    }
+
+    /// A module page's color, for its row; nil for the other pages (and battery, Bluetooth).
+    private func hue(_ page: Page) -> Color? {
+        if case .monitor(let m) = page { return Theme.hue(m) }
+        return nil
+    }
+
+    @ViewBuilder private func thumb(_ hue: Color?) -> some View {
+        if let hue {
+            RoundedRectangle(cornerRadius: 8, style: .continuous).fill(hue.opacity(0.16))
+        } else {
+            PanelBackground(radius: 8)
+        }
     }
 
     private func turnOff(_ m: Module) {
@@ -175,8 +194,9 @@ struct Sidebar: View {
             navigator.page = entry.0
         } label: {
             HStack(spacing: 10) {
-                LineIcon(d: entry.1, size: 14, lineWidth: 1.5)
-                Text(entry.2).ui(13, on ? 500 : 400)
+                LineIcon(d: entry.1, size: 16, lineWidth: 1.5)
+                    .foregroundStyle(hue(entry.0) ?? (on ? Theme.text : Theme.sub))
+                Text(entry.2).ui(14, on ? 500 : 400)
                 Spacer(minLength: 0)
                 if badge > 0 {
                     Text("\(badge)").ui(12, 500).foregroundStyle(Theme.onDanger)

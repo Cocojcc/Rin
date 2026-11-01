@@ -160,7 +160,7 @@ struct NotchAlertView: View {
         }
         .padding(18)
         .frame(width: 320)
-        .ui(13)
+        .ui(14)
         .foregroundStyle(Theme.text)
         .focusEffectDisabled()
         .accessibilityElement(children: .contain)

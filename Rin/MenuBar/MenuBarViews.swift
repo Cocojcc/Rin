@@ -101,7 +101,7 @@ struct SmoothText: View {
     }
 }
 
-/// A widget font: the system font (tabular digits) in the menu bar, Space Grotesk in previews.
+/// A widget font: the menu bar's system font, or the UI font in previews.
 struct BarFontSpec {
     var size: CGFloat
     var weight: CGFloat = 400
@@ -126,7 +126,7 @@ private struct WidgetUIFontKey: EnvironmentKey { static let defaultValue = false
 private struct BarTypefaceKey: EnvironmentKey { static let defaultValue = BarTypeface.system }
 
 extension EnvironmentValues {
-    /// Widgets draw in the system font in the menu bar and in Space Grotesk where the settings
+    /// Widgets draw in the menu bar's font in the menu bar and in the UI font where the settings
     /// window previews them (the design draws the widget strip in the UI font).
     var widgetUIFont: Bool {
         get { self[WidgetUIFontKey.self] }

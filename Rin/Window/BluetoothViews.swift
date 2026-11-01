@@ -102,17 +102,17 @@ struct BluetoothPanel: View {
         PanelHeader(module: .bluetooth, subtitle: L10n.Bluetooth.deviceCount(bt.connected.count))
         VStack(spacing: 0) {
             if bt.withBattery.isEmpty {
-                Text(L10n.Bluetooth.noDevices).ui(13).foregroundStyle(Theme.sub).frame(maxWidth: .infinity, alignment: .leading).frame(height: 30)
+                Text(L10n.Bluetooth.noDevices).ui(14).foregroundStyle(Theme.sub).frame(maxWidth: .infinity, alignment: .leading).frame(height: 30)
             }
             ForEach(bt.withBattery) { d in
                 let low = BluetoothText.isLow(d, prefs)
                 HStack(spacing: 10) {
                     LineIcon(d: Icons.device(d.kind), size: 16, lineWidth: 1.4).foregroundStyle(Theme.sub).frame(width: 16)
-                    Text(d.name).ui(13).lineLimit(1).truncationMode(.tail).frame(maxWidth: .infinity, alignment: .leading)
-                    DotMeter(fraction: d.level ?? 0, color: low ? Theme.danger : Theme.bat, count: 16).frame(width: 72)
+                    Text(d.name).ui(14).lineLimit(1).truncationMode(.tail).frame(maxWidth: .infinity, alignment: .leading)
+                    LevelBar(fraction: d.level ?? 0, color: low ? Theme.danger : Theme.bat).frame(width: 72)
                     HStack(spacing: 2) {
                         if d.charging { FilledIcon(d: Icons.chargingBolt, width: 7, height: 10).foregroundStyle(Theme.bat) }
-                        Text(Format.percent(d.level ?? 0)).ui(13, 500)
+                        Text(Format.percent(d.level ?? 0)).ui(14, 500)
                     }
                     .foregroundStyle(low ? Theme.danger : Theme.text)
                     .frame(width: 44, alignment: .trailing)
@@ -148,7 +148,7 @@ struct BluetoothPanel: View {
                     ForEach(bt.disconnected) { d in
                         HStack(spacing: 10) {
                             LineIcon(d: Icons.device(d.kind), size: 16, lineWidth: 1.3).frame(width: 16)
-                            Text(d.name).ui(13).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                            Text(d.name).ui(14).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
                             if let seen = BluetoothText.lastSeen(d.lastSeen) { Text(seen).ui(12).lineLimit(1) }
                         }
                         .foregroundStyle(Theme.sub)
@@ -203,7 +203,7 @@ struct BluetoothPage: View {
                 PanelTitle(title: L10n.Bluetooth.connected)
                 VStack(spacing: 0) {
                     if bt.withBattery.isEmpty {
-                        Text(L10n.Bluetooth.noDevices).ui(13).foregroundStyle(Theme.sub)
+                        Text(L10n.Bluetooth.noDevices).ui(14).foregroundStyle(Theme.sub)
                             .frame(maxWidth: .infinity, alignment: .leading).frame(height: 32)
                     }
                     ForEach(bt.withBattery) { d in
@@ -274,11 +274,11 @@ private struct DeviceRow: View {
     var body: some View {
         HStack(spacing: 10) {
             LineIcon(d: Icons.device(device.kind), size: 16, lineWidth: 1.4).foregroundStyle(Theme.sub).frame(width: 16)
-            Text(device.name).ui(13).lineLimit(1).frame(width: 120, alignment: .leading)
-            DotMeter(fraction: device.level ?? 0, color: low ? Theme.danger : Theme.bat)
+            Text(device.name).ui(14).lineLimit(1).frame(width: 120, alignment: .leading)
+            LevelBar(fraction: device.level ?? 0, color: low ? Theme.danger : Theme.bat)
             HStack(spacing: 3) {
                 if device.charging { FilledIcon(d: Icons.chargingBolt, width: 7, height: 10).foregroundStyle(Theme.bat) }
-                Text(Format.percent(device.level ?? 0)).ui(13, 500).foregroundStyle(low ? Theme.danger : Theme.text)
+                Text(Format.percent(device.level ?? 0)).ui(14, 500).foregroundStyle(low ? Theme.danger : Theme.text)
             }
             .frame(width: 52, alignment: .trailing)
             Text(device.charging ? L10n.Battery.charging : (BluetoothText.estimate(device) ?? "")).ui(12).foregroundStyle(Theme.sub)
@@ -297,9 +297,9 @@ private struct DisconnectedRow: View {
     var body: some View {
         HStack(spacing: 10) {
             LineIcon(d: Icons.device(device.kind), size: 16, lineWidth: 1.4).frame(width: 16)
-            Text(device.name).ui(13).lineLimit(1).frame(width: 120, alignment: .leading)
-            DotMeter(fraction: device.level ?? 0, color: Theme.neutral.opacity(0.5))
-            Text(device.level.map(Format.percent) ?? L10n.Common.dash).ui(13).frame(width: 52, alignment: .trailing)
+            Text(device.name).ui(14).lineLimit(1).frame(width: 120, alignment: .leading)
+            LevelBar(fraction: device.level ?? 0, color: Theme.neutral.opacity(0.5))
+            Text(device.level.map(Format.percent) ?? L10n.Common.dash).ui(14).frame(width: 52, alignment: .trailing)
             Text(BluetoothText.lastSeen(device.lastSeen).map { L10n.Bluetooth.lastConnected($0) } ?? "").ui(12)
                 .lineLimit(1).frame(width: 140, alignment: .trailing)
         }

@@ -20,7 +20,7 @@ struct PanelHeader: View {
     var body: some View {
         HStack(spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(title).ui(15, 600).accessibilityAddTraits(.isHeader)
+                Text(title).ui(16, 600).accessibilityAddTraits(.isHeader)
                 if let subtitle { Text(subtitle).ui(12).foregroundStyle(Theme.sub).lineLimit(1) }
             }
             Spacer(minLength: 0)
@@ -117,9 +117,9 @@ struct KVRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(key).ui(13).foregroundStyle(Theme.sub)
+            Text(key).ui(14).foregroundStyle(Theme.sub)
             Spacer(minLength: 8)
-            Text(value).ui(13, 500).foregroundStyle(valueColor).lineLimit(1).truncationMode(.middle)
+            Text(value).ui(14, 500).foregroundStyle(valueColor).lineLimit(1).truncationMode(.middle)
         }
         .frame(height: 26)
         .accessibilityElement(children: .combine)
@@ -135,9 +135,9 @@ struct MeterRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Text(name).ui(13).foregroundStyle(Theme.sub).lineLimit(1).frame(width: 76, alignment: .leading)
-            DotMeter(fraction: fraction, color: color, count: 20)
-            Text(value).ui(13, 500).lineLimit(1).frame(width: 64, alignment: .trailing)
+            Text(name).ui(14).foregroundStyle(Theme.sub).lineLimit(1).frame(width: 76, alignment: .leading)
+            LevelBar(fraction: fraction, color: color)
+            Text(value).ui(14, 500).lineLimit(1).frame(width: 64, alignment: .trailing)
         }
         .frame(height: 24)
         .accessibilityElement(children: .combine)
@@ -217,7 +217,7 @@ struct ConfirmForceQuitRow: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
                 ProcessIcon(process: process, size: 18)
-                Text(process.name).ui(13, 500).lineLimit(1)
+                Text(process.name).ui(14, 500).lineLimit(1)
                 Text(L10n.Panel.notResponding)
                     .ui(12, 500)
                     .foregroundStyle(Theme.danger)
@@ -225,7 +225,7 @@ struct ConfirmForceQuitRow: View {
                     .frame(height: 16)
                     .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.raised))
                 Spacer(minLength: 4)
-                Text(value).ui(13, 500)
+                Text(value).ui(14, 500)
             }
             .frame(height: 20)
             Text(L10n.Panel.forceQuitWarning)
@@ -270,7 +270,7 @@ struct QuitToast: View {
     var body: some View {
         HStack(spacing: 8) {
             LineIcon(d: Icons.check, size: 13, lineWidth: 2).foregroundStyle(Theme.ok)
-            Text(L10n.Panel.quitDone(toast.name)).ui(13, 500).lineLimit(1)
+            Text(L10n.Panel.quitDone(toast.name)).ui(14, 500).lineLimit(1)
             Spacer(minLength: 4)
             if toast.freed > 0 {
                 Text(L10n.Panel.freed(Format.memory(toast.freed))).ui(12).foregroundStyle(Theme.sub)
@@ -307,7 +307,7 @@ struct ProcessListPanel: View {
             if !rest.isEmpty || stuck.isEmpty {
                 VStack(spacing: 0) {
                     if processes.isEmpty {
-                        Text(L10n.Panel.noProcesses).ui(13).foregroundStyle(Theme.faint)
+                        Text(L10n.Panel.noProcesses).ui(14).foregroundStyle(Theme.faint)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, rowPadding)
                             .frame(height: rowHeight)
@@ -325,7 +325,7 @@ struct ProcessListPanel: View {
         let isHover = hovered == p.id && !p.isSystem
         return HStack(spacing: 10) {
             ProcessIcon(process: p, size: 14)
-            Text(p.name).ui(13).lineLimit(1).truncationMode(.tail)
+            Text(p.name).ui(14).lineLimit(1).truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
             if isHover {
                 Spacer(minLength: 0)
@@ -343,9 +343,9 @@ struct ProcessListPanel: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(L10n.Panel.quitNamed(p.name))
             } else {
-                DotMeter(fraction: fraction * 0.9, color: color, count: 16).frame(width: 56)
+                LevelBar(fraction: fraction * 0.9, color: color).frame(width: 56)
             }
-            Text(metric.text(p)).ui(13, 500).lineLimit(1).frame(width: valueWidth, alignment: .trailing)
+            Text(metric.text(p)).ui(14, 500).lineLimit(1).frame(width: valueWidth, alignment: .trailing)
         }
         .padding(.horizontal, rowPadding)
         .frame(height: rowHeight)
@@ -369,7 +369,7 @@ struct TrafficList: View {
     var body: some View {
         VStack(spacing: 0) {
             if processes.isEmpty {
-                Text(L10n.Panel.noProcesses).ui(13).foregroundStyle(Theme.faint)
+                Text(L10n.Panel.noProcesses).ui(14).foregroundStyle(Theme.faint)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 8)
                     .frame(height: 30)
@@ -378,12 +378,13 @@ struct TrafficList: View {
                 HStack(spacing: 10) {
                     ProcessIcon(process: p, size: 14)
                     Text(p.name).lineLimit(1).truncationMode(.tail).frame(maxWidth: .infinity, alignment: .leading)
+                    // Columns line up, and a long rate widens its column instead of being cut.
                     Text(MenuBarText.downArrow + " " + Format.rate(p.netDown, unit: unit)).fontWeight(.medium).lineLimit(1)
-                        .frame(width: 76, alignment: .trailing)
-                    Text(MenuBarText.upArrow + " " + Format.rate(p.netUp, unit: unit)).foregroundStyle(Theme.sub).lineLimit(1)
-                        .frame(width: 64, alignment: .trailing)
+                        .fixedSize().frame(minWidth: 76, alignment: .trailing)
+                    Text(MenuBarText.upArrow + " " + Format.rate(p.netUp, unit: unit)).fontWeight(.medium).lineLimit(1)
+                        .fixedSize().frame(minWidth: 72, alignment: .trailing)
                 }
-                .ui(13)
+                .ui(14)
                 .frame(height: 28)
                 .contentShape(Rectangle())
                 .contextMenu { ProcessContextMenu(process: p) }

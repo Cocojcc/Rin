@@ -8,6 +8,8 @@ enum Page: Hashable {
     /// A module's settings: widgets, dropdown, alerts (from the monitor page's settings button).
     case moduleSettings(Module)
     case settings
+    /// 设置 › 菜单栏: separate items or one, and what the combined dropdown shows.
+    case menuBar
     /// Every process, sortable, with an inspector for the selected one.
     case processes
     /// Keep-awake and the apps holding the Mac awake.
@@ -102,7 +104,33 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         window.delegate = self
         if !window.setFrameUsingName("RinMainWindow.v4") { window.center() }
         self.window = window
+        placeTrafficLights()
     }
+
+    /// Centres the traffic lights in the title band beside each page's title, 20 in from the left
+    /// like the sidebar's items. AppKit puts them back on its own layouts, so this runs again after those.
+    private func placeTrafficLights() {
+        guard let window, !window.styleMask.contains(.fullScreen),
+              let close = window.standardWindowButton(.closeButton),
+              let mini = window.standardWindowButton(.miniaturizeButton),
+              let zoom = window.standardWindowButton(.zoomButton),
+              let container = close.superview?.superview else { return }
+        let band = UIScale.of(Sidebar.titleBand)
+        let pitch = mini.frame.minX - close.frame.minX
+        var frame = container.frame
+        frame.size.height = band
+        frame.origin.y = window.frame.height - band
+        container.frame = frame
+        let y = ((band - close.frame.height) / 2).rounded()
+        for (i, button) in [close, mini, zoom].enumerated() {
+            button.setFrameOrigin(NSPoint(x: UIScale.of(20) + CGFloat(i) * pitch, y: y))
+        }
+    }
+
+    func windowDidResize(_ notification: Notification) { placeTrafficLights() }
+    func windowDidBecomeKey(_ notification: Notification) { placeTrafficLights() }
+    func windowDidExitFullScreen(_ notification: Notification) { placeTrafficLights() }
+    func windowDidChangeBackingProperties(_ notification: Notification) { placeTrafficLights() }
 
     func windowWillClose(_ notification: Notification) {
         Monitor.shared.setVisible(.window(Navigator.shared.page), false)
