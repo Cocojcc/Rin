@@ -193,7 +193,7 @@ private enum CombinedReading {
     }
 }
 
-/// The first module, large: its name, the reading at 52 in the accent, its last minute beside it.
+/// The first module, large: its name, the reading at 52 in its hue, its last minute beside it.
 private struct CombinedHero: View {
     let module: Module
     var monitor = Monitor.shared
@@ -204,13 +204,16 @@ private struct CombinedHero: View {
         let prefs = settings.prefs
         let v = CombinedReading.value(module, s, prefs)
         let low = CombinedReading.isLow(module, s, prefs)
+        // Battery and Bluetooth levels stay plain unless charging or low.
+        let lead = low ? Theme.danger : module == .battery ? Theme.batteryLevel(s.battery) : Theme.hue(module) ?? Theme.text
+        let line = low ? Theme.danger : module == .battery ? Theme.batteryLevel(s.battery, lead: false) : Theme.hue(module) ?? Theme.mid
         Button { MainWindowController.shared.show(.monitor(module)) } label: {
             VStack(alignment: .leading, spacing: 6) {
                 SmallLabel(text: CombinedReading.name(module))
                 HStack(alignment: .bottom) {
-                    BigValue(value: v.0, unit: v.1, size: 52, color: low ? Theme.danger : Theme.accent).layoutPriority(1)
+                    BigValue(value: v.0, unit: v.1, size: 52, color: lead).layoutPriority(1)
                     Spacer(minLength: 12)
-                    CombinedReading.chart(module, color: low ? Theme.danger : Theme.accent, width: 2, fill: true, height: 44)
+                    CombinedReading.chart(module, color: line, width: 2, fill: true, height: 44)
                         .frame(minWidth: 72, maxWidth: 140)
                         .accessibilityHidden(true)
                 }
@@ -218,12 +221,13 @@ private struct CombinedHero: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .environment(\.chartTint, Theme.chartTint(module, battery: s.battery))
         .accessibilityElement(children: .combine)
         .accessibilityHint(L10n.Panel.openMonitor(module.title))
     }
 }
 
-/// Name, the last minute as a small grey line, the reading; the row opens the module's page.
+/// Name, the last minute as a small line in the module's hue, the reading; the row opens the module's page.
 private struct ModuleLine: View {
     let module: Module
     var monitor = Monitor.shared
@@ -241,7 +245,7 @@ private struct ModuleLine: View {
                         LevelBar(fraction: CombinedReading.lowestDevice(s)?.level ?? 0,
                                  color: CombinedReading.isLow(module, s, prefs) ? Theme.danger : Theme.mid, height: 3)
                     } else {
-                        CombinedReading.chart(module, color: Theme.faint, width: 1.3, fill: false, height: module == .network || module == .disk ? 26 : 18)
+                        CombinedReading.chart(module, color: Theme.hue(module) ?? Theme.faint, width: 1.3, fill: false, height: module == .network || module == .disk ? 26 : 18)
                     }
                 }
                 .frame(width: 72)

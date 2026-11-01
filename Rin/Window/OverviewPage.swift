@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Every module at a glance, four to a row: its name, a big reading, a small graphic that suits
 /// the data (a line for rates, a fill for capacities, a bar per Bluetooth device) and a line of
-/// detail; a tile opens its page. Under them, the apps using the most CPU and memory.
+/// detail, each in the module's own hue; a tile opens its page. Under them, the apps using the most CPU and memory.
 struct OverviewPage: View {
     var monitor = Monitor.shared
     var settings = SettingsStore.shared
@@ -50,10 +50,15 @@ struct OverviewPage: View {
 
     private var range: TimeRange { navigator.overviewRange }
 
-    private func spark(_ metric: Metric, _ color: Color = Theme.faint) -> some View {
+    private func spark(_ metric: Metric, _ color: Color) -> some View {
         ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(metric, range: range), color, width: 1.5, fill: false),
                      range: range, maxValue: 100, height: 28, gutter: 0, showTimes: false)
             .allowsHitTesting(false)
+    }
+
+    /// A tile's reading: the module's hue, red while one of its alerts is on.
+    private func lead(_ m: Module, _ kind: Alerts.Rule) -> Color {
+        alerts.firing(kind) == nil ? Theme.color(for: m) : Theme.danger
     }
 
     @ViewBuilder private func tile(_ m: Module, _ s: Snapshot) -> some View {
@@ -61,26 +66,26 @@ struct OverviewPage: View {
         switch m {
         case .cpu:
             OverviewTile(module: m) {
-                BigValue(value: Format.percentNumber(s.cpu.total), unit: "%", size: 36, color: alerts.firing(.cpu) == nil ? Theme.accent : Theme.danger)
+                BigValue(value: Format.percentNumber(s.cpu.total), unit: "%", size: 36, color: lead(m, .cpu))
             } visual: {
-                spark(.cpu, Theme.accent)
+                spark(.cpu, Theme.color(for: m))
             } foot: {
                 KeyValues(pairs: [(L10n.Panel.user, Format.percent(s.cpu.user)), (L10n.Panel.system, Format.percent(s.cpu.system))])
             }
         case .gpu:
             OverviewTile(module: m) {
-                BigValue(value: Format.percentNumber(s.gpu.utilization), unit: "%", size: 36, color: alerts.firing(.gpu) == nil ? Theme.text : Theme.danger)
+                BigValue(value: Format.percentNumber(s.gpu.utilization), unit: "%", size: 36, color: lead(m, .gpu))
             } visual: {
-                spark(.gpu)
+                spark(.gpu, Theme.color(for: m))
             } foot: {
                 KeyValue(label: L10n.Panel.vram, value: Format.memory(s.gpu.memoryUsed))
             }
         case .memory:
             let mem = s.memory
             OverviewTile(module: m) {
-                BigValue(value: Format.percentNumber(mem.usedFraction), unit: "%", size: 36)
+                BigValue(value: Format.percentNumber(mem.usedFraction), unit: "%", size: 36, color: Theme.color(for: m))
             } visual: {
-                LevelBar(fraction: mem.usedFraction, color: mem.pressure == .normal ? Theme.mid : PanelText.pressure(mem.pressure).1)
+                LevelBar(fraction: mem.usedFraction, color: mem.pressure == .normal ? Theme.color(for: m) : PanelText.pressure(mem.pressure).1)
             } foot: {
                 KeyValue(label: L10n.Monitor.usedLabel, value: L10n.Monitor.usedSlash(Format.memory(mem.used), Format.memoryTotal(mem.total)))
             }
@@ -90,9 +95,9 @@ struct OverviewPage: View {
             let down = monitor.history.points(.netDown, range: range), up = monitor.history.points(.netUp, range: range)
             let d = Format.rateParts(n.down, unit: speed)
             OverviewTile(module: m) {
-                BigValue(value: n.connected ? d.0 : L10n.Common.dash, unit: n.connected ? d.1 + " " + MenuBarText.downArrow : nil, size: 36)
+                BigValue(value: n.connected ? d.0 : L10n.Common.dash, unit: n.connected ? d.1 + " " + MenuBarText.downArrow : nil, size: 36, color: Theme.color(for: m))
             } visual: {
-                ConsoleChart(kind: .mirroredArea, series: ChartSeries.mirrored(down, Theme.faint, up, Theme.faint, lineWidth: 1.3),
+                ConsoleChart(kind: .mirroredArea, series: ChartSeries.mirrored(down, Theme.color(for: m), up, Theme.color(for: m), lineWidth: 1.3),
                              range: range, maxValue: ConsoleChart.niceMax(Swift.max(down.map(\.value).max() ?? 0, 10_000) * 1.1),
                              bottomMax: ConsoleChart.niceMax(Swift.max(up.map(\.value).max() ?? 0, 10_000) * 1.1), height: 28, gutter: 0, showTimes: false)
                     .allowsHitTesting(false)
@@ -107,9 +112,9 @@ struct OverviewPage: View {
             let root = s.disk.root
             let free = Format.parts(Format.storage(root?.available ?? 0))
             OverviewTile(module: m) {
-                BigValue(value: free.0, unit: L10n.Monitor.unitFree(free.1), size: 36, color: alerts.firing(.disk) == nil ? Theme.text : Theme.danger)
+                BigValue(value: free.0, unit: L10n.Monitor.unitFree(free.1), size: 36, color: lead(m, .disk))
             } visual: {
-                LevelBar(fraction: root?.usedFraction ?? 0, color: Theme.mid)
+                LevelBar(fraction: root?.usedFraction ?? 0, color: Theme.color(for: m))
             } foot: {
                 KeyValue(label: L10n.Monitor.readWriteTitle, value: L10n.Monitor.readWritePair(Format.parts(Format.rate(s.disk.read)).0, Format.rate(s.disk.write)))
             }
@@ -119,7 +124,7 @@ struct OverviewPage: View {
                 BigValue(value: b.hasBattery ? Format.percentNumber(b.level) : L10n.Common.dash, unit: b.hasBattery ? "%" : nil, size: 36,
                          color: b.hasBattery && b.level <= 0.2 && !b.onAC ? Theme.danger : Theme.text)
             } visual: {
-                if b.hasBattery { LevelBar(fraction: b.level, color: b.level <= 0.2 && !b.onAC ? Theme.danger : Theme.mid) }
+                if b.hasBattery { LevelBar(fraction: b.level, color: Theme.batteryLevel(b, lead: false)) }
             } foot: {
                 Text(b.hasBattery ? PanelText.batteryState(b) : L10n.Battery.noBattery).foregroundStyle(Theme.sub)
             }
@@ -148,9 +153,9 @@ struct OverviewPage: View {
             let t = s.sensors
             OverviewTile(module: m) {
                 BigValue(value: t.cpuAverage.map { Format.temperatureNumber($0, unit: unit) } ?? L10n.Common.dash, unit: Format.temperatureSymbol(unit), size: 36,
-                         color: alerts.firing(.temperature) == nil ? Theme.text : Theme.danger)
+                         color: lead(m, .temperature))
             } visual: {
-                spark(.cpuTemp)
+                spark(.cpuTemp, Theme.color(for: m))
             } foot: {
                 if let f = t.fans.first {
                     KeyValue(label: L10n.Overview.fan, value: Format.rpm(f.rpm))

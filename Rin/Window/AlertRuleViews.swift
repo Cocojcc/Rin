@@ -108,7 +108,9 @@ struct AlertRuleRow: View {
         HStack(spacing: 12) {
             HStack(spacing: 10) {
                 if showsIcon {
-                    LineIcon(d: Icons.module(rule.module), size: 16, lineWidth: 1.5).foregroundStyle(Theme.sub).accessibilityHidden(true)
+                    LineIcon(d: Icons.module(rule.module), size: 16, lineWidth: 1.5)
+                        .foregroundStyle(on ? Theme.hue(rule.module) ?? Theme.sub : Theme.sub)
+                        .accessibilityHidden(true)
                 }
                 AlertRuleSentence(rule: rule).foregroundStyle(on ? Theme.text : Theme.sub)
             }
@@ -123,7 +125,7 @@ struct AlertRuleRow: View {
         .frame(minHeight: minHeight)
         .background {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Theme.accent.opacity(highlighted ? 0.12 : 0))
+                .fill(Theme.color(for: rule.module).opacity(highlighted ? 0.12 : 0))
                 .padding(.horizontal, -8)
                 .padding(.vertical, 2)
         }

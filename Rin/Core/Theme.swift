@@ -2,10 +2,10 @@ import AppKit
 import CoreText
 import SwiftUI
 
-/// Design tokens (light / dark pairs), monochrome: one surface (white, or graphite when dark), no
-/// cards; space and hairlines do the grouping. Everything is text greys except one accent (lime,
-/// a deeper green on white) for the one reading a page is about. Red is kept for what needs
-/// attention, amber for running high; all-is-well is never colored.
+/// Design tokens (light / dark pairs): one surface (white, or graphite when dark), no cards; space
+/// and hairlines do the grouping. Everything is text greys except each module's own soft hue, for
+/// the reading its page is about. Red is kept for what needs attention, amber for running high;
+/// all-is-well is never colored.
 struct RGBA {
     let r: CGFloat, g: CGFloat, b: CGFloat, a: CGFloat
 
@@ -65,8 +65,8 @@ enum Theme {
     static let well = raise
     static let switchOff = Color.dyn(RGBA(0, 0, 0, 0.12), RGBA(255, 255, 255, 0.16))
     static let switchKnob = Color.dyn(RGBA(0xFFFFFF), RGBA(0xD9D9DC))
-    /// A switch that is on: the accent, with a white knob (a graphite one on the lime).
-    static var switchOn: Color { accent }
+    /// A switch that is on: Rin's green, with a white knob (a graphite one on the light green).
+    static var switchOn: Color { green }
     static let switchOnKnob = Color.dyn(RGBA(0xFFFFFF), RGBA(0x111113))
     /// No cards: a "panel" is the window itself.
     static let panel = windowGlass
@@ -81,7 +81,7 @@ enum Theme {
     static let low = Color.dyn(RGBA(0, 0, 0, 0.16), RGBA(255, 255, 255, 0.25))
     static let track = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.08))
     static let grid = line
-    /// Under a chart's line: a neutral wash, whatever the line's color.
+    /// Under a chart's line when dark; on white the wash takes a faint tint of the line instead.
     static let area = Color.dyn(RGBA(0, 0, 0, 0.035), RGBA(255, 255, 255, 0.045))
     static let cache = low
     static let cross = Color.dyn(RGBA(0, 0, 0, 0.28), RGBA(255, 255, 255, 0.45))
@@ -90,10 +90,23 @@ enum Theme {
     /// 85% opaque, which rendered the items grey).
     static let barInk = Color.dyn(RGBA(0x000000), RGBA(0xFFFFFF))
 
-    /// The one accent: lime on graphite, a deeper green on white so lines and figures hold.
-    static let accent = Color.dyn(RGBA(0x4D8C00), RGBA(0xD7FF3A))
-    static let accentSoft = Color.dyn(RGBA(77, 140, 0, 0.4), RGBA(215, 255, 58, 0.55))
-    static let onAccent = Color.dyn(RGBA(0xFFFFFF), RGBA(0x111113))
+    /// Each module's own soft hue: its rail icon, its page's lead figure and line, its dropdown.
+    /// Deeper on white so lines and figures hold. Battery and Bluetooth have none: their levels
+    /// stay neutral, Rin's green while charging, red when low.
+    private static let hues: [Module: (light: UInt32, dark: UInt32)] = [
+        .cpu: (0x3E8A4E, 0x7FC48A), .gpu: (0x6F7A1F, 0xB8C46A), .memory: (0x6B4FA8, 0xB39DDB),
+        .network: (0x2F8A78, 0x6FC2B0), .disk: (0x9A7630, 0xD8B97A), .sensors: (0xB8602A, 0xE08E5A),
+    ]
+    private static let hueColors = hues.mapValues { Color.dyn(RGBA($0.light), RGBA($0.dark)) }
+    /// A module's second series (CPU system, GPU tiler, wired memory): the same hue, lighter.
+    private static let softColors = hues.mapValues { Color.dyn(RGBA($0.light, 0.42), RGBA($0.dark, 0.5)) }
+    /// The selected rail item behind a module's icon.
+    private static let tintColors = hues.mapValues { Color.dyn(RGBA($0.light, 0.14), RGBA($0.dark, 0.2)) }
+
+    static func hue(_ module: Module) -> Color? { hueColors[module] }
+    /// Rin's own green (the CPU's hue): switches, the keep-awake timer, a charging battery, buttons.
+    static let green = hueColors[.cpu]!
+    static let onGreen = Color.dyn(RGBA(0xFFFFFF), RGBA(0x111113))
 
     // Status: all is well is plain text; only running high and an alert are colored.
     static let ok = sub
@@ -105,8 +118,6 @@ enum Theme {
     static let dangerFill = danger
     static let onDanger = Color.dyn(RGBA(0xFFFFFF), RGBA(0x111113))
 
-    // Data: the lead reading wears the accent; the parts around it are greys.
-    static var cpu: Color { accent }
     /// The battery chart's charging spans.
     static let chargeBand = Color.dyn(RGBA(0, 0, 0, 0.045), RGBA(255, 255, 255, 0.05))
 
@@ -150,8 +161,25 @@ enum Theme {
         }
     }
 
-    /// A module's lead color: the accent for all of them (battery and device levels go red when low).
-    static func color(for module: Module) -> Color { accent }
+    /// A module's lead color: its hue, Rin's green for battery and Bluetooth.
+    static func color(for module: Module) -> Color { hueColors[module] ?? green }
+    /// A module's second series.
+    static func soft(_ module: Module) -> Color { softColors[module] ?? faint }
+    static func tint(_ module: Module) -> Color? { tintColors[module] }
+
+    /// What a module's charts tint their fills with on white: its hue; the battery's green only
+    /// while charging; nothing for Bluetooth.
+    static func chartTint(_ module: Module, battery: BatterySample) -> Color? {
+        module == .battery ? (battery.isCharging ? green : nil) : hueColors[module]
+    }
+
+    /// A battery level: red when low, Rin's green while charging, else plain (`lead` for a figure,
+    /// a mid grey for a line or bar).
+    static func batteryLevel(_ b: BatterySample, lead: Bool = true) -> Color {
+        if b.level <= 0.2 && !b.onAC { return danger }
+        if b.isCharging { return green }
+        return lead ? text : mid
+    }
 }
 
 

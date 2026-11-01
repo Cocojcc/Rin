@@ -120,9 +120,9 @@ struct CPUPage: View {
             Columns(right: 232) {
                 VStack(alignment: .leading, spacing: 0) {
                     SmallLabel(text: L10n.Panel.utilization)
-                    BigValue(value: Format.percentNumber(s.cpu.total), unit: "%", size: 56, color: Theme.accent).padding(.top, 8)
-                    StackedBar(parts: [.init(label: L10n.Monitor.userShare(Format.percent(s.cpu.user)), value: s.cpu.user, color: Theme.accent),
-                                       .init(label: L10n.Monitor.systemShare(Format.percent(s.cpu.system)), value: s.cpu.system, color: Theme.faint),
+                    BigValue(value: Format.percentNumber(s.cpu.total), unit: "%", size: 56, color: Theme.color(for: .cpu)).padding(.top, 8)
+                    StackedBar(parts: [.init(label: L10n.Monitor.userShare(Format.percent(s.cpu.user)), value: s.cpu.user, color: Theme.color(for: .cpu)),
+                                       .init(label: L10n.Monitor.systemShare(Format.percent(s.cpu.system)), value: s.cpu.system, color: Theme.soft(.cpu)),
                                        .init(label: L10n.Monitor.idleShare(Format.percent(idle)), value: idle, color: Theme.raise, ring: true)],
                                keySize: 12)
                         .padding(.top, 14)
@@ -144,7 +144,7 @@ struct CPUPage: View {
                         kind: .area, series: ChartSeries.cpuStack(total: history.points(.cpu, range: range), system: history.points(.cpuSystem, range: range)),
                         range: range, maxValue: 100, height: 159, yLabels: ChartScale.percent,
                         rules: AlertMarks.mark(.cpu, fraction: settings.prefs.alerts.cpuThreshold / 100, settings.prefs),
-                        markers: lookback ? peaks : [], selectedMarker: lookback ? selected?.date : nil, markerColor: Theme.accent,
+                        markers: lookback ? peaks : [], selectedMarker: lookback ? selected?.date : nil, markerColor: Theme.color(for: .cpu),
                         hoverText: { hoverLines($0, range) },
                         onTap: { date in
                             guard lookback else { return }
@@ -253,8 +253,8 @@ private struct PeakList: View {
     }
 }
 
-/// Every core as a thin upright bar with its share under it: performance cores in the accent,
-/// efficiency cores grey after a rule, and each group's average along the bottom.
+/// Every core as a thin upright bar with its share under it: performance cores in the CPU's hue,
+/// efficiency cores lighter after a rule, and each group's average along the bottom.
 struct CoreStrip: View {
     var cpu: CPUSample
     var height: CGFloat = 72
@@ -268,12 +268,12 @@ struct CoreStrip: View {
         let avg = { (ix: [Int]) in ix.isEmpty ? 0 : ix.map { cpu.perCore[$0] }.reduce(0, +) / Double(ix.count) }
         VStack(spacing: 8) {
             HStack(alignment: .bottom, spacing: 0) {
-                ForEach(p, id: \.self) { bar($0, Theme.accent) }
+                ForEach(p, id: \.self) { bar($0, Theme.color(for: .cpu)) }
                 if !e.isEmpty {
                     Rectangle().fill(Theme.line).frame(width: 1, height: compact ? height : height + 20)
                         .padding(.horizontal, compact ? 0 : 6)
                         .frame(maxHeight: .infinity, alignment: .top)
-                    ForEach(e, id: \.self) { bar($0, Theme.faint) }
+                    ForEach(e, id: \.self) { bar($0, Theme.soft(.cpu)) }
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -325,7 +325,7 @@ struct GPUPage: View {
             Columns(left: 200, gap: 48) {
                 VStack(alignment: .leading, spacing: 0) {
                     SmallLabel(text: L10n.Panel.utilization)
-                    BigValue(value: Format.percentNumber(g.utilization), unit: "%", size: 56, color: Theme.accent).padding(.top, 8)
+                    BigValue(value: Format.percentNumber(g.utilization), unit: "%", size: 56, color: Theme.color(for: .gpu)).padding(.top, 8)
                     Stat(name: L10n.Panel.vram) {
                         let used = Format.parts(Format.memory(g.memoryUsed))
                         BigValue(value: used.0, unit: g.memoryLimit > 0 ? L10n.Monitor.ofTotalUnit(used.1, Format.memory(g.memoryLimit)) : used.1, size: 28)
@@ -342,7 +342,7 @@ struct GPUPage: View {
             } b: {
                 VStack(alignment: .leading, spacing: 0) {
                     HeadRow(title: L10n.Monitor.engines)
-                    engine(L10n.Monitor.renderer, g.renderer ?? 0, value: g.renderer.map(Format.percent) ?? L10n.Common.dash, color: Theme.accent)
+                    engine(L10n.Monitor.renderer, g.renderer ?? 0, value: g.renderer.map(Format.percent) ?? L10n.Common.dash, color: Theme.color(for: .gpu))
                     engine(L10n.Monitor.tiler, g.tiler ?? 0, value: g.tiler.map(Format.percent) ?? L10n.Common.dash)
                     media(L10n.Monitor.videoDecode, g.decodeWatts)
                     media(L10n.Monitor.videoEncode, g.encodeWatts)
@@ -350,13 +350,13 @@ struct GPUPage: View {
             }
             .padding(.top, 22)
             ChartHead(title: range.recent) {
-                KeyDot(text: L10n.Panel.utilization, color: Theme.accent, size: 12)
-                KeyDot(text: L10n.Monitor.tiler, color: Theme.faint, size: 12)
+                KeyDot(text: L10n.Panel.utilization, color: Theme.color(for: .gpu), size: 12)
+                KeyDot(text: L10n.Monitor.tiler, color: Theme.soft(.gpu), size: 12)
             }
             .padding(.top, 26)
             ConsoleChart(kind: .area,
-                         series: [ChartSeries(id: "t", points: history.points(.gpuTiler, range: range), color: Theme.faint, fill: 0, lineWidth: 1.5),
-                                  ChartSeries(id: "g", points: history.points(.gpu, range: range), color: Theme.accent, fill: 1, lineWidth: 2)],
+                         series: [ChartSeries(id: "t", points: history.points(.gpuTiler, range: range), color: Theme.soft(.gpu), fill: 0, lineWidth: 1.5),
+                                  ChartSeries(id: "g", points: history.points(.gpu, range: range), color: Theme.color(for: .gpu), fill: 1, lineWidth: 2)],
                          range: range, maxValue: 100, height: 94, yLabels: ChartScale.percent,
                          rules: AlertMarks.mark(.gpu, fraction: settings.prefs.alerts.gpuThreshold / 100, settings.prefs),
                          hoverText: { hover($0, range) })
@@ -436,7 +436,7 @@ struct MemoryPage: View {
             PageHeader(title: L10n.Module.memory, spec: L10n.Monitor.unifiedSpec(Format.memoryTotal(m.total)))
             SmallLabel(text: L10n.Monitor.usedLabel).padding(.top, 22)
             HStack(alignment: .firstTextBaseline, spacing: 14) {
-                BigValue(value: Format.percentNumber(m.usedFraction), unit: "%", size: 56, color: Theme.accent)
+                BigValue(value: Format.percentNumber(m.usedFraction), unit: "%", size: 56, color: Theme.color(for: .memory))
                 Text(L10n.Monitor.usedSlash(Format.memory(m.used), Format.memoryTotal(m.total))).ui(12).foregroundStyle(Theme.sub)
             }
             .padding(.top, 8)
@@ -462,7 +462,7 @@ struct MemoryPage: View {
             } b: {
                 VStack(alignment: .leading, spacing: 12) {
                     ChartHead(title: L10n.Monitor.titled(L10n.Monitor.memoryPressure, range.recent))
-                    ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(.memoryPressure, range: range)),
+                    ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(.memoryPressure, range: range), Theme.color(for: .memory)),
                                  range: range, maxValue: 100, height: 155, yLabels: ChartScale.percent,
                                  rules: AlertMarks.mark(.memory, fraction: alertAt, label: L10n.Alerts.memoryMarkShort, settings.prefs),
                                  hoverText: { date in hoverLine(.memoryPressure, range, date) { Format.percent($0 / 100) } })
@@ -535,8 +535,8 @@ enum MemoryParts {
     }
 
     static func of(_ m: MemorySample) -> [Part] {
-        [Part(label: L10n.Monitor.appMemory, bytes: Double(m.app), color: Theme.accent),
-         Part(label: L10n.Memory.wired, bytes: Double(m.wired), color: Theme.accentSoft),
+        [Part(label: L10n.Monitor.appMemory, bytes: Double(m.app), color: Theme.color(for: .memory)),
+         Part(label: L10n.Memory.wired, bytes: Double(m.wired), color: Theme.soft(.memory)),
          Part(label: L10n.Monitor.compressed, bytes: Double(m.compressed), color: Theme.mid),
          Part(label: L10n.Monitor.cache, bytes: Double(m.cached), color: Theme.low),
          Part(label: L10n.Memory.free, bytes: Double(m.free), color: Theme.raise)]
@@ -582,7 +582,7 @@ struct NetworkPage: View {
             } b: {
                 VStack(alignment: .leading, spacing: 12) {
                     ChartHead(title: range.recent)
-                    ConsoleChart(kind: .mirroredArea, series: ChartSeries.mirrored(down, Theme.accent, up, Theme.accent),
+                    ConsoleChart(kind: .mirroredArea, series: ChartSeries.mirrored(down, Theme.color(for: .network), up, Theme.color(for: .network)),
                                  range: range, maxValue: dMax, bottomMax: uMax, height: 297,
                                  yLabels: [(1, MenuBarText.downArrow + " " + Format.rate(dMax, unit: unit)), (0.5, "0"), (0, MenuBarText.upArrow + " " + Format.rate(uMax, unit: unit))],
                                  gutter: 72, hoverText: { hover($0, range) })
@@ -626,7 +626,7 @@ struct NetworkPage: View {
     private func flow(_ label: String, _ rate: Double, unit: SpeedUnit, session: UInt64, today: UInt64) -> some View {
         let parts = Format.rateParts(rate, unit: unit)
         return Stat(name: label) {
-            BigValue(value: parts.0, unit: parts.1, size: 44, color: Theme.accent)
+            BigValue(value: parts.0, unit: parts.1, size: 44, color: Theme.color(for: .network))
         } foot: {
             KeyValues(pairs: [(L10n.Monitor.session, Format.storage(session)), (L10n.Monitor.today, Format.storage(today))])
         }
@@ -778,9 +778,9 @@ struct VolumeBlock: View {
                 Spacer(minLength: 0)
                 if let alert { BellLabel(text: alert.1).ui(12).foregroundStyle(Theme.danger).lineLimit(1).fixedSize() }
             }
-            BigValue(value: free.0, unit: L10n.Monitor.unitFree(free.1), size: size, color: Theme.accent).padding(.top, 6)
-            SegmentBar(parts: [(Double(max(0, volume.used - volume.purgeable)) / total, Theme.accent),
-                               (Double(volume.purgeable) / total, Theme.accentSoft),
+            BigValue(value: free.0, unit: L10n.Monitor.unitFree(free.1), size: size, color: Theme.color(for: .disk)).padding(.top, 6)
+            SegmentBar(parts: [(Double(max(0, volume.used - volume.purgeable)) / total, Theme.color(for: .disk)),
+                               (Double(volume.purgeable) / total, Theme.soft(.disk)),
                                (Double(volume.available) / total, Theme.track)], height: barHeight)
                 .overlay {
                     if let alert {
@@ -841,7 +841,7 @@ struct BatteryPage: View {
                 Columns(left: 150) {
                     VStack(alignment: .leading, spacing: 0) {
                         SmallLabel(text: L10n.Battery.level)
-                        BigValue(value: Format.percentNumber(b.level), unit: "%", size: 64, color: b.level <= 0.2 && !b.onAC ? Theme.danger : Theme.accent).padding(.top, 8)
+                        BigValue(value: Format.percentNumber(b.level), unit: "%", size: 64, color: Theme.batteryLevel(b)).padding(.top, 8)
                         VStack(alignment: .leading, spacing: 4) {
                             ForEach(statusLines(b), id: \.self) { Text($0) }
                         }
@@ -858,7 +858,7 @@ struct BatteryPage: View {
                                 Text(L10n.Monitor.chargingLegend)
                             }
                         }
-                        ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(.battery, range: range)),
+                        ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(.battery, range: range), Theme.batteryLevel(b, lead: false)),
                                      range: range, maxValue: 100, height: 132, yLabels: ChartScale.percent,
                                      rules: AlertMarks.mark(.battery, fraction: settings.prefs.alerts.batteryPercent / 100, settings.prefs),
                                      bands: ChargingBands.of(range), hoverText: { hover($0, range) })
@@ -928,7 +928,7 @@ struct BatteryPage: View {
         let headroom = max(0, adapter - system - charge)
         let parts: [StackedBar.Part] = b.onAC
             ? [.init(label: L10n.Monitor.systemDrawValue(Format.watts(system)), value: system, color: Theme.mid),
-               .init(label: L10n.Monitor.chargeValue(Format.watts(charge)), value: charge, color: Theme.accent),
+               .init(label: L10n.Monitor.chargeValue(Format.watts(charge)), value: charge, color: Theme.green),
                .init(label: L10n.Monitor.headroomValue(Format.watts(headroom)), value: headroom, color: Theme.raise, ring: true)]
             : [.init(label: L10n.Monitor.systemDrawValue(Format.watts(system)), value: max(system, 0.01), color: Theme.mid)]
         return VStack(alignment: .leading, spacing: 8) {
@@ -1033,11 +1033,11 @@ struct SensorsPage: View {
                 VStack(alignment: .leading, spacing: 0) {
                     SmallLabel(text: L10n.Monitor.cpuTempTitle)
                     BigValue(value: s.cpuAverage.map { Format.temperatureNumber($0, unit: unit) } ?? L10n.Common.dash,
-                             unit: Format.temperatureSymbol(unit), size: 52, color: Theme.accent)
+                             unit: Format.temperatureSymbol(unit), size: 52, color: Theme.color(for: .sensors))
                         .padding(.top, 8)
                     if let mx = s.cpuMax { KeyValue(label: L10n.Monitor.highest, value: t(mx)).padding(.top, 10) }
                     ChartHead(title: range.recent).padding(.top, 26)
-                    ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(.cpuTemp, range: range)),
+                    ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(.cpuTemp, range: range), Theme.color(for: .sensors)),
                                  range: range, maxValue: 100, height: 198,
                                  yLabels: [(0.9, Format.temperatureNumber(90, unit: unit)), (0.7, Format.temperatureNumber(70, unit: unit)), (0, Format.temperatureNumber(0, unit: unit))],
                                  showTimes: false,

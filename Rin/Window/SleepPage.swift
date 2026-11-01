@@ -73,7 +73,7 @@ struct SleepPage: View {
             VStack(alignment: .leading, spacing: 0) {
                 SmallLabel(text: keepAwake.isOn ? caption : L10n.Sleep.keepAwake)
                 if keepAwake.isOn {
-                    BigValue(value: Format.hms(clockSeconds(now)), size: 44, color: Theme.accent).padding(.top, 10)
+                    BigValue(value: Format.hms(clockSeconds(now)), size: 44, color: Theme.green).padding(.top, 10)
                     Text(endLine).ui(12).foregroundStyle(Theme.sub).padding(.top, 12)
                 } else {
                     BigValue(value: L10n.Sleep.offShort, size: 44).padding(.top, 10)

@@ -5,6 +5,7 @@ import SwiftUI
 struct ModulePanel: View {
     let module: Module
     var quitCenter = QuitCenter.shared
+    var monitor = Monitor.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -20,6 +21,7 @@ struct ModulePanel: View {
             }
             if let toast = quitCenter.toast { QuitToast(toast: toast).padding(.top, 12) }
         }
+        .environment(\.chartTint, Theme.chartTint(module, battery: monitor.snapshot.battery))
     }
 }
 
@@ -165,9 +167,9 @@ struct CPUPanel: View {
         let p = settings.prefs.cpu
         let _ = monitor.tick
         PanelHeader(module: .cpu, subtitle: PanelText.cpuSubtitle())
-        PanelHero(label: L10n.Monitor.totalUsage, value: Format.percentNumber(s.cpu.total), unit: "%") {
-            KeyDot(text: L10n.Monitor.userShare(Format.percent(s.cpu.user)), color: Theme.accent)
-            KeyDot(text: L10n.Monitor.systemShare(Format.percent(s.cpu.system)), color: Theme.faint)
+        PanelHero(label: L10n.Monitor.totalUsage, value: Format.percentNumber(s.cpu.total), unit: "%", color: Theme.color(for: .cpu)) {
+            KeyDot(text: L10n.Monitor.userShare(Format.percent(s.cpu.user)), color: Theme.color(for: .cpu))
+            KeyDot(text: L10n.Monitor.systemShare(Format.percent(s.cpu.system)), color: Theme.soft(.cpu))
         }
         PanelChart(kind: .area, series: ChartSeries.cpuStack(total: monitor.history.points(.cpu, range: .m5), system: monitor.history.points(.cpuSystem, range: .m5)))
             .accessibilityElement(children: .ignore)
@@ -235,11 +237,11 @@ struct GPUPanel: View {
         let _ = monitor.tick
         let vram = g.memoryLimit > 0 ? Double(g.memoryUsed) / Double(g.memoryLimit) : 0
         PanelHeader(module: .gpu, subtitle: L10n.Panel.chipCores(g.model, g.cores))
-        PanelHero(label: L10n.Panel.utilization, value: Format.percentNumber(g.utilization), unit: "%") {
+        PanelHero(label: L10n.Panel.utilization, value: Format.percentNumber(g.utilization), unit: "%", color: Theme.color(for: .gpu)) {
             Text(L10n.Monitor.partValue(L10n.Panel.vram, Format.percent(vram)))
             Text(L10n.Monitor.partValue(L10n.Panel.temperature, g.temperature.map { Format.temperature($0, unit: unit) } ?? L10n.Common.dash))
         }
-        PanelChart(kind: .area, series: ChartSeries.line(monitor.history.points(.gpu, range: .m5)))
+        PanelChart(kind: .area, series: ChartSeries.line(monitor.history.points(.gpu, range: .m5), Theme.color(for: .gpu)))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(L10n.Panel.gpuChartA11y)
         if p.showMemory || p.showFrequency || p.showVideo || p.showTempPower {
@@ -282,7 +284,7 @@ struct MemoryPanel: View {
         let _ = monitor.tick
         let pr = PanelText.pressure(m.pressure)
         PanelHeader(module: .memory, subtitle: L10n.Monitor.unifiedMemory)
-        PanelHero(label: L10n.Monitor.usedLabel, value: Format.percentNumber(m.usedFraction), unit: "%") {
+        PanelHero(label: L10n.Monitor.usedLabel, value: Format.percentNumber(m.usedFraction), unit: "%", color: Theme.color(for: .memory)) {
             Text(L10n.Monitor.usedOfTotal(Format.memory(m.used), Format.memory(m.total)))
             HStack(spacing: 4) {
                 Text(L10n.Panel.pressure)
@@ -296,7 +298,7 @@ struct MemoryPanel: View {
         }
         if p.showPressure {
             PanelSection(title: L10n.Panel.pressure, right: p.showSwap ? L10n.Monitor.partValue(L10n.Memory.swap, Format.memory(m.swapUsed)) : nil, top: 20) {
-                ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(.memoryPressure, range: .m5)),
+                ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(.memoryPressure, range: .m5), Theme.color(for: .memory)),
                              span: 60, maxValue: 100, height: 40, xLabels: nil)
                     .padding(.top, 6)
                     .accessibilityElement(children: .ignore)
@@ -352,7 +354,7 @@ struct NetworkPanel: View {
             .frame(height: 100)
             .padding(.top, 20)
         }
-        PanelChart(kind: .mirroredArea, series: ChartSeries.mirrored(down, Theme.accent, up, Theme.accent),
+        PanelChart(kind: .mirroredArea, series: ChartSeries.mirrored(down, Theme.color(for: .network), up, Theme.color(for: .network)),
                    seconds: seconds, maxValue: dMax, bottomMax: uMax, height: 56)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(L10n.Panel.networkChartA11y)
@@ -376,12 +378,12 @@ struct NetworkPanel: View {
         }
     }
 
-    /// Download and upload alike, in the accent.
+    /// Download and upload alike, in the network's hue.
     private func speed(_ label: String, _ v: Double, _ unit: SpeedUnit) -> some View {
         let parts = Format.rateParts(v, unit: unit)
         return VStack(alignment: .leading, spacing: 6) {
             SmallLabel(text: label)
-            BigValue(value: parts.0, unit: parts.1, size: 40, color: Theme.accent)
+            BigValue(value: parts.0, unit: parts.1, size: 40, color: Theme.color(for: .network))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
@@ -445,11 +447,10 @@ struct BatteryPanel: View {
         let b = monitor.snapshot.battery
         let p = settings.prefs.battery
         let _ = monitor.tick
-        let low = b.level <= 0.2 && !b.onAC
         let unit = settings.prefs.general.temperatureUnit
         PanelHeader(module: .battery, subtitle: b.onAC ? b.adapterWatts.map { L10n.Battery.adapter($0) } : nil)
         if b.hasBattery {
-            PanelHero(label: L10n.Battery.level, value: Format.percentNumber(b.level), unit: "%", color: low ? Theme.danger : Theme.accent) {
+            PanelHero(label: L10n.Battery.level, value: Format.percentNumber(b.level), unit: "%", color: Theme.batteryLevel(b)) {
                 Text(PanelText.batteryState(b))
                 if b.isCharging, let m = b.minutesToFull {
                     Text(L10n.Battery.untilFull(BatteryTime.text(m))).ui(13, 500).foregroundStyle(Theme.text)
@@ -469,7 +470,7 @@ struct BatteryPanel: View {
             }
             .padding(.top, 20)
             PanelSection(title: L10n.Battery.level, right: L10n.Range.last24h, top: 22) {
-                ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(.battery, range: .h24), low ? Theme.danger : Theme.accent),
+                ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(.battery, range: .h24), Theme.batteryLevel(b, lead: false)),
                              span: TimeRange.h24.seconds, maxValue: 100, height: 56, xLabels: [L10n.Range.ago24h, L10n.Range.ago12h, L10n.Range.now],
                              bands: ChargingBands.of(.h24))
                     .padding(.top, 8)
@@ -507,7 +508,7 @@ struct SensorsPanel: View {
         ShareRow(spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 SmallLabel(text: L10n.Sensors.choice(p.sensor))
-                BigValue(value: deg(MenuBarText.sensorValue(s, p.sensor)), size: 52, color: Theme.accent)
+                BigValue(value: deg(MenuBarText.sensorValue(s, p.sensor)), size: 52, color: Theme.color(for: .sensors))
             }
             .share(1.5)
             Figure(name: L10n.Sensors.gpu, value: deg(s.value(.gpu)), size: 28)
@@ -553,7 +554,7 @@ struct SensorsPanel: View {
             let cpu = s.cpuPower ?? 0, gpu = s.gpuPower ?? 0
             let other = max(0, (s.systemPower ?? cpu + gpu) - cpu - gpu)
             PanelSection(title: L10n.Sensors.power, right: s.systemPower.map { L10n.Processes.wholeMac(Format.watts($0)) }, top: 16) {
-                StackedBar(parts: [.init(label: L10n.Monitor.partValue(L10n.Module.cpu, s.cpuPower.map(Format.watts) ?? L10n.Common.dash), value: cpu, color: Theme.accent),
+                StackedBar(parts: [.init(label: L10n.Monitor.partValue(L10n.Module.cpu, s.cpuPower.map(Format.watts) ?? L10n.Common.dash), value: cpu, color: Theme.color(for: .sensors)),
                                    .init(label: L10n.Monitor.partValue(L10n.Module.gpu, s.gpuPower.map(Format.watts) ?? L10n.Common.dash), value: gpu, color: Theme.mid),
                                    .init(label: "", value: other, color: Theme.track)], height: 4, keySize: 12)
                     .padding(.top, 8)

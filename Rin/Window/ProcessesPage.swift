@@ -323,8 +323,8 @@ private struct ProcessInspector: View {
                     .padding(.top, 12)
                 }
             }
-            sparkCard(L10n.Module.cpu, value: Format.percentValue(p.cpu), values: history.map(\.cpu), color: Theme.accent).padding(.top, 16)
-            sparkCard(L10n.Module.memory, value: Format.memory(p.memory), values: history.map(\.memory), color: Theme.faint).padding(.top, 12)
+            sparkCard(L10n.Module.cpu, value: Format.percentValue(p.cpu), values: history.map(\.cpu), color: Theme.color(for: .cpu)).padding(.top, 16)
+            sparkCard(L10n.Module.memory, value: Format.memory(p.memory), values: history.map(\.memory), color: Theme.color(for: .memory), fill: false).padding(.top, 12)
             group(L10n.Processes.details, [
                 (L10n.Processes.cpuTime, p.cpuTime > 0 ? Format.hms(p.cpuTime) : nil),
                 (L10n.Processes.threads, d.threads.map { "\($0)" }),
@@ -371,7 +371,7 @@ private struct ProcessInspector: View {
         .buttonStyle(.plain)
     }
 
-    private func sparkCard(_ label: String, value: String, values: [Double], color: Color) -> some View {
+    private func sparkCard(_ label: String, value: String, values: [Double], color: Color, fill: Bool = true) -> some View {
         let top = max(values.max() ?? 0, 0.0001) * 1.1
         let now = Date()
         let points = values.enumerated().map { ChartPoint(date: now.addingTimeInterval(Double($0.offset - values.count + 1) * 3), value: $0.element / top * 100) }
@@ -382,7 +382,7 @@ private struct ProcessInspector: View {
                 Text(value).fontWeight(.medium)
             }
             .ui(13)
-            ConsoleChart(kind: .area, series: ChartSeries.line(points, color, width: 1.5),
+            ConsoleChart(kind: .area, series: ChartSeries.line(points, color, width: 1.5, fill: fill),
                          span: Double(max(ProcessPoint.kept, 2) * 3), maxValue: 100, height: 24, xLabels: nil, midline: false)
                 .accessibilityHidden(true)
         }

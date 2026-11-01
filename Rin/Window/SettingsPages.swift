@@ -265,10 +265,10 @@ struct NotchBanner: View {
                 SettingsStore.shared.prefs.menubar.displayMode = .combined
             } label: {
                 Text(L10n.Notch.merge).ui(12, 500)
-                    .foregroundStyle(Theme.onAccent)
+                    .foregroundStyle(Theme.onGreen)
                     .padding(.horizontal, 12)
                     .frame(height: 26)
-                    .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.accent))
+                    .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.green))
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -282,8 +282,8 @@ struct NotchBanner: View {
     }
 }
 
-/// Every module as a chip under the preview: the ones in the menu bar (glass, in their order,
-/// a notch mark when hidden behind it) | the rest. Click shows or hides; drag reorders.
+/// Every module as a chip under the preview: the ones in the menu bar (grey with a dot of the
+/// module's hue, in their order, a notch mark when hidden behind it) | the rest. Click shows or hides; drag reorders.
 struct ModuleChips: View {
     var blocked: [Module]
     @Binding var dragging: Module?
@@ -315,6 +315,7 @@ struct ModuleChips: View {
             withAnimation(Motion.slide) { settings.prefs.setInMenubar(m, !shown) }
         } label: {
             HStack(spacing: 6) {
+                if shown { Circle().fill(Theme.hue(m) ?? Theme.mid).frame(width: 6, height: 6) }
                 Text(m.title).ui(13).lineLimit(1)
                 if isBlocked {
                     LineIcon(d: Icons.notch, size: 12, lineWidth: 1.5).foregroundStyle(Theme.warn)

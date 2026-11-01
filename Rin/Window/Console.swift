@@ -160,18 +160,19 @@ struct ConsoleChart: View {
     var bandColor: Color = Theme.chargeBand
     var markers: [PeakMarker] = []
     var selectedMarker: Date? = nil
-    var markerColor: Color = Theme.cpu
+    var markerColor: Color = Theme.green
     var hoverText: ((Date) -> [String])? = nil
     var onTap: ((Date) -> Void)? = nil
     var pinnedTip: [String]? = nil
     /// Width of one bar's slot, the bar taking two thirds of it.
     var slot: CGFloat = 6
     @State private var hoverX: CGFloat?
+    @Environment(\.chartTint) private var tint
 
     init(kind: Kind, series: [ChartSeries], range: TimeRange, maxValue: Double, bottomMax: Double = 1, height: CGFloat? = nil,
          yLabels: [(Double, String)] = [], gutter: CGFloat = 36, grid: [Double] = [], baseline: Bool = false,
          showTimes: Bool = true, rules: [ChartRule] = [], bands: [ClosedRange<Date>] = [], markers: [PeakMarker] = [],
-         selectedMarker: Date? = nil, markerColor: Color = Theme.cpu, hoverText: ((Date) -> [String])? = nil,
+         selectedMarker: Date? = nil, markerColor: Color = Theme.green, hoverText: ((Date) -> [String])? = nil,
          onTap: ((Date) -> Void)? = nil, pinnedTip: [String]? = nil) {
         self.kind = kind
         self.series = series
@@ -484,7 +485,8 @@ struct ConsoleChart: View {
         return out
     }
 
-    /// Fills each run back to `base` with the neutral wash and strokes its edge as a smooth curve;
+    /// Fills each run back to `base` with the wash (on white a faint tint of the page's module, when
+    /// it has one; neutral when dark) and strokes its edge as a smooth curve;
     /// `extent` is how far a full level reaches (negative draws downward). A series with no line
     /// width is a fill alone; one with no fill a line alone.
     private func drawRuns(_ ctx: inout GraphicsContext, _ s: ChartSeries, _ runs: [[(x: CGFloat, level: CGFloat)]], base: CGFloat, extent: CGFloat) {
@@ -496,7 +498,8 @@ struct ConsoleChart: View {
                 fill.addLine(to: CGPoint(x: points[points.count - 1].x, y: base))
                 fill.addLine(to: CGPoint(x: points[0].x, y: base))
                 fill.closeSubpath()
-                ctx.fill(fill, with: .color(Theme.area))
+                let wash = ctx.environment.colorScheme == .light ? tint.map { $0.opacity(0.08) } : nil
+                ctx.fill(fill, with: .color(wash ?? Theme.area))
             }
             if s.lineWidth > 0 {
                 ctx.stroke(line, with: .color(s.color.opacity(s.opacity)),
@@ -569,5 +572,17 @@ struct ShareRow: Layout {
         let room = max(0, total - fixed.reduce(0, +) - spacing * CGFloat(max(subviews.count - 1, 0)))
         let sum = max(weights.reduce(0, +), 0.0001)
         return zip(fixed, weights).map { $1 > 0 ? room * $1 / sum : $0 }
+    }
+}
+
+/// The module whose page or dropdown a chart is on: on white its fills take a faint tint of it.
+private struct ChartTintKey: EnvironmentKey {
+    static let defaultValue: Color? = nil
+}
+
+extension EnvironmentValues {
+    var chartTint: Color? {
+        get { self[ChartTintKey.self] }
+        set { self[ChartTintKey.self] = newValue }
     }
 }

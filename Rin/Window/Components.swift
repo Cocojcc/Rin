@@ -427,7 +427,7 @@ struct WellButton: View {
     }
 }
 
-/// Accent-filled button ("完成", "合并成一项").
+/// Green button ("完成", "合并成一项").
 struct PrimaryButton: View {
     var title: String
     var height: CGFloat = 38
@@ -439,11 +439,11 @@ struct PrimaryButton: View {
         Button(action: action) {
             Text(title).ui(fontSize, 500)
                 .lineLimit(1)
-                .foregroundStyle(Theme.onAccent)
+                .foregroundStyle(Theme.onGreen)
                 .padding(.horizontal, 10)
                 .frame(maxWidth: .infinity)
                 .frame(height: height)
-                .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Theme.accent))
+                .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Theme.green))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

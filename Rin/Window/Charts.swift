@@ -12,14 +12,14 @@ struct ChartSeries: Identifiable {
 }
 
 extension ChartSeries {
-    /// CPU: the system share as a grey line, the total in the accent over the neutral wash.
+    /// CPU: the system share as a lighter line, the total in the CPU's hue over the wash.
     static func cpuStack(total: [ChartPoint], system: [ChartPoint], lineWidth: CGFloat = 2) -> [ChartSeries] {
-        [ChartSeries(id: "s", points: system, color: Theme.faint, fill: 0, lineWidth: max(1.3, lineWidth - 0.5)),
-         ChartSeries(id: "t", points: total, color: Theme.accent, fill: 1, lineWidth: lineWidth)]
+        [ChartSeries(id: "s", points: system, color: Theme.soft(.cpu), fill: 0, lineWidth: max(1.3, lineWidth - 0.5)),
+         ChartSeries(id: "t", points: total, color: Theme.color(for: .cpu), fill: 1, lineWidth: lineWidth)]
     }
 
     /// One reading as a line over the wash (`fill: false` for a bare line, the overview's sparks).
-    static func line(_ points: [ChartPoint], _ color: Color = Theme.accent, width: CGFloat = 2, fill: Bool = true) -> [ChartSeries] {
+    static func line(_ points: [ChartPoint], _ color: Color, width: CGFloat = 2, fill: Bool = true) -> [ChartSeries] {
         [ChartSeries(id: "l", points: points, color: color, fill: fill ? 1 : 0, lineWidth: width)]
     }
 

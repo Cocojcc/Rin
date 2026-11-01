@@ -153,8 +153,18 @@ struct PageView: View {
 
     private var stack: some View {
         content
+            .environment(\.chartTint, tint)
             .padding(EdgeInsets(top: 28, leading: 32, bottom: Sidebar.bottomInset, trailing: 32))
             .frame(maxWidth: .infinity, maxHeight: fillsWindow ? .infinity : nil, alignment: .topLeading)
+    }
+
+    /// A module page's charts (and the process inspector's) take its hue under their lines.
+    private var tint: Color? {
+        switch page {
+        case .monitor(let m): return Theme.chartTint(m, battery: Monitor.shared.snapshot.battery)
+        case .processes: return Theme.hue(.cpu)
+        default: return nil
+        }
     }
 
     @ViewBuilder private var content: some View {
@@ -183,7 +193,8 @@ struct PageView: View {
 }
 
 /// The icon rail: overview and processes, the modules, then sleep, alerts and this Mac; settings
-/// at the foot. The current page's icon sits on a grey square.
+/// at the foot. A module's icon always wears its hue; the current page's icon sits on a square,
+/// a module's tinted with its hue, the rest grey.
 struct Sidebar: View {
     var navigator = Navigator.shared
     var alerts = Alerts.shared
@@ -204,7 +215,7 @@ struct Sidebar: View {
             item(.overview, Icons.overview, L10n.Sidebar.overview)
             item(.processes, Icons.processes, L10n.Sidebar.processes)
             ForEach(modules, id: \.self) { m in
-                item(.monitor(m), Icons.module(m), m.title)
+                item(.monitor(m), Icons.module(m), m.title, hue: Theme.hue(m), tint: Theme.tint(m))
                     .padding(.top, m == modules.first ? 10 : 0)
                     .contextMenu {
                         Button(L10n.Sidebar.turnOffModule(m.title)) { settings.prefs.setEnabled(m, false) }
@@ -224,9 +235,10 @@ struct Sidebar: View {
         .accessibilityLabel(L10n.Sidebar.label)
     }
 
-    private func item(_ page: Page, _ d: String, _ title: String, badge: Int = 0, lineWidth: CGFloat = 1.5) -> some View {
+    private func item(_ page: Page, _ d: String, _ title: String, badge: Int = 0, lineWidth: CGFloat = 1.5,
+                      hue: Color? = nil, tint: Color? = nil) -> some View {
         let on = navigator.page.sidebarPage == page || (page == .settings && navigator.page == .menuBar)
-        return RailButton(d: d, title: title, on: on, badge: badge, lineWidth: lineWidth) { navigator.page = page }
+        return RailButton(d: d, title: title, on: on, badge: badge, lineWidth: lineWidth, hue: hue, tint: tint) { navigator.page = page }
     }
 }
 
@@ -238,16 +250,18 @@ private struct RailButton: View {
     var on: Bool
     var badge: Int
     var lineWidth: CGFloat
+    var hue: Color?
+    var tint: Color?
     var action: () -> Void
     @State private var hovering = false
 
     var body: some View {
         Button(action: action) {
             LineIcon(d: d, size: 18, lineWidth: lineWidth)
-                .foregroundStyle(on ? Theme.text : Theme.sub)
+                .foregroundStyle(hue ?? (on ? Theme.text : Theme.sub))
                 .frame(width: 36, height: 36)
                 .background {
-                    if on || hovering { RoundedRectangle(cornerRadius: 10, style: .continuous).fill(on ? Theme.selection : Theme.lgHover) }
+                    if on || hovering { RoundedRectangle(cornerRadius: 10, style: .continuous).fill(on ? tint ?? Theme.selection : Theme.lgHover) }
                 }
                 .overlay(alignment: .topTrailing) {
                     if badge > 0 {

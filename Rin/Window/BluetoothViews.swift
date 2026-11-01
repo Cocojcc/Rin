@@ -95,7 +95,7 @@ struct BluetoothPanel: View {
         .padding(.top, 14)
         if p.showHistory, let d = MenuBarText.lowestDevice(monitor.snapshot) {
             PanelSection(title: d.name, right: L10n.Range.last24h, top: 16) {
-                ConsoleChart(kind: .area, series: ChartSeries.line(levels(d), BluetoothText.isLow(d, prefs) ? Theme.danger : Theme.accent),
+                ConsoleChart(kind: .area, series: ChartSeries.line(levels(d), BluetoothText.isLow(d, prefs) ? Theme.danger : Theme.mid),
                              span: 86_400, maxGap: .infinity, maxValue: 100, height: 48, yLabels: [], xLabels: [L10n.Range.ago24h, L10n.Range.ago12h, L10n.Range.now],
                              rules: [ChartRule(fraction: p.lowLevel, color: Theme.danger)])
                     .padding(.top, 8)
@@ -180,14 +180,14 @@ struct BluetoothPage: View {
             if let device = devices.first(where: { $0.id == chosen }) ?? lowest ?? devices.first {
                 let isLow = BluetoothText.isLow(device, prefs)
                 ChartHead(title: L10n.Monitor.titled(device.name, L10n.Monitor.recent(range.title))) {
-                    KeyDot(text: L10n.Bluetooth.levelKey(Format.percent(device.level ?? 0)), color: isLow ? Theme.danger : Theme.accent, size: 12)
+                    KeyDot(text: L10n.Bluetooth.levelKey(Format.percent(device.level ?? 0)), color: isLow ? Theme.danger : Theme.mid, size: 12)
                     if devices.count > 1 {
                         MenuPill(label: L10n.Bluetooth.device, options: devices.map { ($0.id, $0.name) },
                                  selection: Binding(get: { device.id }, set: { chosen = $0 }))
                     }
                 }
                 .padding(.top, 26)
-                ConsoleChart(kind: .area, series: ChartSeries.line(levels(device, range), isLow ? Theme.danger : Theme.accent),
+                ConsoleChart(kind: .area, series: ChartSeries.line(levels(device, range), isLow ? Theme.danger : Theme.mid),
                              span: range.seconds, maxGap: .infinity, maxValue: 100, height: 145, yLabels: ChartScale.percent,
                              xLabels: range.axisLabels,
                              rules: AlertMarks.mark(.bluetoothLow, fraction: low, prefs))

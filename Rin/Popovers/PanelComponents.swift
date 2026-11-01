@@ -121,13 +121,13 @@ struct PanelSection<Content: View>: View {
     }
 }
 
-/// The module's one big reading in a dropdown: a small label, the figure at 52 in the accent, and
+/// The module's one big reading in a dropdown: a small label, the figure at 52 in its hue, and
 /// small notes stacked at the far side.
 struct PanelHero<Right: View>: View {
     var label: String
     var value: String
     var unit: String? = nil
-    var color: Color = Theme.accent
+    var color: Color
     @ViewBuilder var right: Right
 
     var body: some View {
@@ -283,7 +283,7 @@ struct QuitToast: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            LineIcon(d: Icons.check, size: 13, lineWidth: 2).foregroundStyle(Theme.accent)
+            LineIcon(d: Icons.check, size: 13, lineWidth: 2).foregroundStyle(Theme.green)
             Text(L10n.Panel.quitDone(toast.name)).ui(14, 500).lineLimit(1)
             Spacer(minLength: 4)
             if toast.freed > 0 {
