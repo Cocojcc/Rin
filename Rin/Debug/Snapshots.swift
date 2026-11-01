@@ -118,7 +118,7 @@ enum Snapshots {
             if want("page") || want("page-alerts") {
                 seedAlerts()
                 Navigator.shared.page = .alerts
-                save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-alerts-\(tag).png"))
+                save(MainView().frame(width: pageWidth, height: UIScale.of(1000)).background(wall), appearance, dir.appendingPathComponent("page-alerts-\(tag).png"))
                 seedAlerts()
                 Navigator.shared.page = .overview
                 save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-overview-alert-\(tag).png"))

@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import UserNotifications
 
-/// Every alert rule in one place, what fired lately, and how alerts reach you.
+/// Every alert rule in one place, what fired lately, and how alerts reach you, one under another.
 struct AlertsPage: View {
     var settings = SettingsStore.shared
     var alerts = Alerts.shared
@@ -19,59 +19,53 @@ struct AlertsPage: View {
         let enabledCount = Alerts.Rule.allCases.filter { prefs[keyPath: $0.enabledKey] && prefs.isEnabled($0.module) }.count
         VStack(alignment: .leading, spacing: 0) {
             PageTitle(title: L10n.Sidebar.alerts)
-            Columns(gap: 44) {
-                VStack(alignment: .leading, spacing: 0) {
-                    HeadRow(title: L10n.Alerts.rules) {
-                        Text(L10n.Alerts.rulesOn(enabledCount))
-                        addButton
-                    }
-                    VStack(spacing: 0) {
-                        DividedRows {
-                            ForEach(Alerts.Rule.allCases, id: \.self) { AlertRuleRow(rule: $0, minHeight: 42, highlighted: highlighted == $0) }
-                        }
-                    }
-                    .opacity(prefs.alerts.enabled ? 1 : 0.5)
-                }
-            } b: {
-                VStack(alignment: .leading, spacing: 0) {
-                    HeadRow(title: L10n.Alerts.recent) {
-                        if !alerts.events.isEmpty { Text(L10n.Alerts.thisWeek(alerts.thisWeek)) }
-                    }
-                    if alerts.events.isEmpty {
-                        Text(L10n.Alerts.noneYet).ui(14).foregroundStyle(Theme.sub)
-                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                    }
-                    VStack(spacing: 0) {
-                        DividedRows {
-                            ForEach(alerts.events.prefix(Self.recentShown)) { e in
-                                EventRow(event: e, fresh: fresh.contains(e.id)) { alerts.show(e) }
-                            }
-                        }
-                    }
-                    SettingsGroup(title: L10n.Alerts.delivery) {
-                        SettingsRow(title: L10n.Alerts.enabled) { RinSwitch(isOn: pref(\.alerts.enabled), label: L10n.Alerts.enabled) }
-                        if authorization == .denied {
-                            SettingsRow(title: L10n.Settings.notificationsOff) {
-                                WellButton(title: L10n.Settings.openNotificationSettings) { openNotificationSettings() }
-                            }
-                        }
-                        SettingsRow(title: L10n.Settings.notificationStyle) {
-                            Segmented(label: L10n.Settings.notificationStyle,
-                                      options: [(NotificationStyle.banner, L10n.Settings.banner), (.alert, L10n.Settings.alertStyle)],
-                                      selection: Binding(get: { prefs.alerts.style }, set: { style in
-                                          guard style != settings.prefs.alerts.style else { return }
-                                          settings.prefs.alerts.style = style
-                                          // Banner vs. alert is a system setting per app; open the page where it is changed.
-                                          openNotificationSettings()
-                                      }))
-                        }
-                        SettingsRow(title: L10n.Settings.playSound) { RinSwitch(isOn: pref(\.alerts.sound), label: L10n.Settings.playSound) }
-                        SettingsRow(title: L10n.Settings.colorMenubar) { RinSwitch(isOn: pref(\.alerts.colorMenubar), label: L10n.Settings.colorMenubar) }
-                    }
-                    .padding(.top, 36)
+            HeadRow(title: L10n.Alerts.rules) {
+                Text(L10n.Alerts.rulesOn(enabledCount))
+                addButton
+            }
+            .padding(.top, 26)
+            VStack(spacing: 0) {
+                DividedRows {
+                    ForEach(Alerts.Rule.allCases, id: \.self) { AlertRuleRow(rule: $0, minHeight: 42, highlighted: highlighted == $0) }
                 }
             }
-            .padding(.top, 30)
+            .opacity(prefs.alerts.enabled ? 1 : 0.5)
+            HeadRow(title: L10n.Alerts.recent) {
+                if !alerts.events.isEmpty { Text(L10n.Alerts.thisWeek(alerts.thisWeek)) }
+            }
+            .padding(.top, 32)
+            if alerts.events.isEmpty {
+                Text(L10n.Alerts.noneYet).ui(14).foregroundStyle(Theme.sub)
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            }
+            VStack(spacing: 0) {
+                DividedRows {
+                    ForEach(alerts.events.prefix(Self.recentShown)) { e in
+                        EventRow(event: e, fresh: fresh.contains(e.id)) { alerts.show(e) }
+                    }
+                }
+            }
+            SettingsGroup(title: L10n.Alerts.delivery) {
+                SettingsRow(title: L10n.Alerts.enabled) { RinSwitch(isOn: pref(\.alerts.enabled), label: L10n.Alerts.enabled) }
+                if authorization == .denied {
+                    SettingsRow(title: L10n.Settings.notificationsOff) {
+                        WellButton(title: L10n.Settings.openNotificationSettings) { openNotificationSettings() }
+                    }
+                }
+                SettingsRow(title: L10n.Settings.notificationStyle) {
+                    Segmented(label: L10n.Settings.notificationStyle,
+                              options: [(NotificationStyle.banner, L10n.Settings.banner), (.alert, L10n.Settings.alertStyle)],
+                              selection: Binding(get: { prefs.alerts.style }, set: { style in
+                                  guard style != settings.prefs.alerts.style else { return }
+                                  settings.prefs.alerts.style = style
+                                  // Banner vs. alert is a system setting per app; open the page where it is changed.
+                                  openNotificationSettings()
+                              }))
+                }
+                SettingsRow(title: L10n.Settings.playSound) { RinSwitch(isOn: pref(\.alerts.sound), label: L10n.Settings.playSound) }
+                SettingsRow(title: L10n.Settings.colorMenubar) { RinSwitch(isOn: pref(\.alerts.colorMenubar), label: L10n.Settings.colorMenubar) }
+            }
+            .padding(.top, 32)
         }
         .onAppear {
             takeNew()
@@ -162,7 +156,7 @@ private struct EventRow: View {
                 }
             }
             .foregroundStyle(Theme.text)
-            .frame(height: 66)
+            .frame(height: 56)
             .padding(.horizontal, 8)
             .background { if hovering { RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.lgHover) } }
             .padding(.horizontal, -8)

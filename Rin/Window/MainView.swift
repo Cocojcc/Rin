@@ -47,9 +47,8 @@ struct TitleBar: View {
                 RangeControl(range: Binding(get: { navigator.overviewRange }, set: { navigator.overviewRange = $0 }),
                              options: Navigator.ranges(for: .cpu))
             case .monitor(.bluetooth):
-                Segmented(label: L10n.Range.label, options: DeviceRange.allCases.map { ($0, $0.title) },
-                          selection: Binding(get: { navigator.deviceRange }, set: { navigator.deviceRange = $0 }), style: .range)
-                    .fixedSize()
+                // The accessories page is a list of devices; nothing on it spans time.
+                EmptyView()
             case .monitor(let m):
                 if m != .battery || Monitor.shared.snapshot.battery.hasBattery {
                     RangeControl(range: Binding(get: { navigator.range(m) }, set: { navigator.ranges[m] = $0 }), options: Navigator.ranges(for: m))

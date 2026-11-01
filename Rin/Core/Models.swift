@@ -35,7 +35,7 @@ enum Module: String, Codable, CaseIterable, Identifiable {
         case .network: return "NET"
         case .disk: return "SSD"
         case .battery: return "BAT"
-        case .bluetooth: return "BT"
+        case .bluetooth: return "DEV"
         case .sensors: return "TMP"
         }
     }
@@ -185,12 +185,15 @@ struct BatterySample {
 /// last battery and time Rin saw.
 struct BluetoothDevice: Identifiable, Equatable {
     enum Kind: String, Codable { case keyboard, mouse, trackpad, earbuds, headphones, gamepad, phone, tablet, other }
+    /// How it reaches the Mac: Bluetooth, or a Logitech receiver.
+    enum Connection { case bluetooth, receiver }
     var id: String
     var name: String
     var kind: Kind
     var level: Double?              // 0...1
     var charging = false
     var connected = true
+    var connection = Connection.bluetooth
     /// AirPods-style buds and their case.
     var left: Double?
     var right: Double?
@@ -259,20 +262,12 @@ struct GPUSample {
     var memoryUsed: UInt64 = 0
     var memoryLimit: UInt64 = 0
     var frequencyMHz: Double?
-    var averageMHz: Double?
-    var maxMHz: Double?
     var temperature: Double?
     var power: Double?
     var cores: Int = 0
     var model: String = ""
-    var renderer: Double?           // 0...1
-    var tiler: Double?              // 0...1
-    /// Media engine power (W): macOS reports their energy, not utilization or codec.
+    /// Video decoder power (W): macOS reports the media engines' energy, not utilization or codec.
     var decodeWatts: Double?
-    var encodeWatts: Double?
-    /// Main display: current refresh (frames per second) and its maximum.
-    var fps: Double?
-    var maxFPS: Int = 60
 }
 
 /// One row in a "top processes" list. Helper processes are folded into their app.

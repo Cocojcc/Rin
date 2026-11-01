@@ -45,8 +45,6 @@ final class Navigator {
     /// Each monitor page's time range; the title bar switches it.
     var ranges: [Module: TimeRange] = [:]
     var overviewRange: TimeRange = .m5
-    /// The Bluetooth page's range, which reaches back 30 days.
-    var deviceRange: DeviceRange = .h24
 
     func range(_ m: Module) -> TimeRange { ranges[m] ?? (m == .battery ? .h24 : .m5) }
 

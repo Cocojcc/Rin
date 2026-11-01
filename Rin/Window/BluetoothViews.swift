@@ -32,21 +32,6 @@ enum BluetoothText {
     static func isLow(_ d: BluetoothDevice, _ prefs: Preferences) -> Bool { (d.level ?? 1) <= prefs.bluetooth.lowLevel }
 }
 
-enum DeviceRange: CaseIterable {
-    case h24, d7, d30
-
-    var seconds: TimeInterval { [86_400, 7 * 86_400, 30 * 86_400][index] }
-    var title: String { [L10n.Range.h24, L10n.Range.d7, L10n.Range.d30][index] }
-    var axisLabels: [String] {
-        switch self {
-        case .h24: return TimeRange.h24.axisLabels
-        case .d7: return TimeRange.d7.axisLabels
-        case .d30: return [30, 24, 18, 12, 6].map { L10n.Chart.daysAgo($0) } + [L10n.Range.now]
-        }
-    }
-    private var index: Int { Self.allCases.firstIndex(of: self) ?? 0 }
-}
-
 // MARK: - Dropdown
 
 struct BluetoothPanel: View {
@@ -70,7 +55,7 @@ struct BluetoothPanel: View {
                         LineIcon(d: Icons.device(d.kind), size: 16, lineWidth: 1.4).foregroundStyle(Theme.sub)
                         Text(d.name).ui(14).lineLimit(1).truncationMode(.tail)
                     }
-                    .frame(width: 132, alignment: .leading)
+                    .frame(width: 176, alignment: .leading)
                     LevelBar(fraction: d.level ?? 0, color: low ? Theme.danger : Theme.mid, height: 3)
                     HStack(spacing: 2) {
                         if d.charging { FilledIcon(d: Icons.chargingBolt, width: 7, height: 10) }
@@ -89,6 +74,12 @@ struct BluetoothPanel: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .frame(height: 22)
                     .padding(.leading, 24)
+                }
+                if d.connection == .receiver {
+                    KeyValue(label: L10n.Bluetooth.connectionLabel, value: L10n.Bluetooth.receiver)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(height: 22)
+                        .padding(.leading, 24)
                 }
             }
         }
@@ -145,19 +136,15 @@ struct FilledIcon: View {
 
 // MARK: - Monitor page
 
-/// Every connected device as a figure, three to a row; the chosen (or lowest) one's level over
-/// the range; then the paired devices that aren't connected.
+/// One row per device: connected ones with their level, then the paired ones that aren't
+/// connected, greyed, with when Rin last saw them.
 struct BluetoothPage: View {
     var monitor = Monitor.shared
     var settings = SettingsStore.shared
-    var navigator = Navigator.shared
-    @State private var chosen: String?
 
     var body: some View {
         let bt = monitor.snapshot.bluetooth
         let prefs = settings.prefs
-        let low = prefs.bluetooth.lowLevel
-        let range = navigator.deviceRange
         let _ = monitor.tick
         let lowest = MenuBarText.lowestDevice(monitor.snapshot)
         VStack(alignment: .leading, spacing: 0) {
@@ -170,100 +157,65 @@ struct BluetoothPage: View {
             if bt.withBattery.isEmpty {
                 Text(L10n.Bluetooth.noDevices).ui(14).foregroundStyle(Theme.sub).padding(.top, 28)
             } else {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 36, alignment: .topLeading), count: 3), alignment: .leading, spacing: 24) {
-                    ForEach(bt.withBattery) { DeviceFigure(device: $0, low: BluetoothText.isLow($0, prefs)) }
-                }
-                .padding(.top, 28)
-            }
-
-            let devices = bt.connected + bt.disconnected
-            if let device = devices.first(where: { $0.id == chosen }) ?? lowest ?? devices.first {
-                let isLow = BluetoothText.isLow(device, prefs)
-                ChartHead(title: L10n.Monitor.titled(device.name, L10n.Monitor.recent(range.title))) {
-                    KeyDot(text: L10n.Bluetooth.levelKey(Format.percent(device.level ?? 0)), color: isLow ? Theme.danger : Theme.mid, size: 12)
-                    if devices.count > 1 {
-                        MenuPill(label: L10n.Bluetooth.device, options: devices.map { ($0.id, $0.name) },
-                                 selection: Binding(get: { device.id }, set: { chosen = $0 }))
-                    }
-                }
-                .padding(.top, 26)
-                ConsoleChart(kind: .area, series: ChartSeries.line(levels(device, range), isLow ? Theme.danger : Theme.mid),
-                             span: range.seconds, maxGap: .infinity, maxValue: 100, height: 145, yLabels: ChartScale.percent,
-                             xLabels: range.axisLabels,
-                             rules: AlertMarks.mark(.bluetoothLow, fraction: low, prefs))
-                    .alertBell(.bluetoothLow)
-                    .padding(.top, 12)
-                    .accessibilityElement()
-                    .accessibilityLabel(L10n.Bluetooth.chartA11y(device.name, range.title, Format.percent(low)))
-            }
-
-            if !bt.disconnected.isEmpty {
-                HeadRow(title: L10n.Bluetooth.disconnected) { Text(L10n.Battery.deviceCount(bt.disconnected.count)) }.padding(.top, 22)
                 VStack(spacing: 0) {
-                    DividedRows { ForEach(bt.disconnected) { DisconnectedRow(device: $0) } }
+                    DividedRows { ForEach(bt.withBattery) { DeviceRow(device: $0, low: BluetoothText.isLow($0, prefs)) } }
+                }
+                .padding(.top, 22)
+            }
+            if !bt.disconnected.isEmpty {
+                HeadRow(title: L10n.Bluetooth.disconnected) { Text(L10n.Battery.deviceCount(bt.disconnected.count)) }.padding(.top, 28)
+                VStack(spacing: 0) {
+                    DividedRows { ForEach(bt.disconnected) { DeviceRow(device: $0, low: false, away: true) } }
                 }
             }
         }
-    }
-
-    /// The device's stored levels over the range, the last one from before it carried in from the
-    /// left edge and the newest held up to now.
-    private func levels(_ device: BluetoothDevice, _ range: DeviceRange) -> [ChartPoint] {
-        let all = BluetoothStore.shared.history(device.id)
-        let end = Date()
-        let start = end.addingTimeInterval(-range.seconds)
-        var pts = all.filter { $0.date >= start }.map { ChartPoint(date: $0.date, value: $0.level * 100) }
-        if let before = all.last(where: { $0.date < start }) { pts.insert(ChartPoint(date: start, value: before.level * 100), at: 0) }
-        if let last = pts.last { pts.append(ChartPoint(date: end, value: (device.level.map { $0 * 100 }) ?? last.value)) }
-        return pts
     }
 }
 
-/// A connected device: icon, name and the time it has left; its level as a figure (red when
-/// low) on a thin bar; AirPods' buds and case under it.
-private struct DeviceFigure: View {
+/// A device on one row: icon and name (AirPods' buds and case, or the receiver it's on, under
+/// it), the level on a thin bar and as a number (red when low), then the time it has left, or for
+/// one that isn't connected, when it was last seen.
+private struct DeviceRow: View {
     var device: BluetoothDevice
     var low: Bool
+    var away = false
+
+    private static let height: CGFloat = 56
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                LineIcon(d: Icons.device(device.kind), size: 16, lineWidth: 1.4).foregroundStyle(Theme.sub)
-                Text(device.name).ui(13).lineLimit(1).truncationMode(.tail)
-                Spacer(minLength: 0)
-                Text(device.charging ? L10n.Battery.charging : (BluetoothText.estimate(device) ?? "")).ui(12).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
+        let detail = !away && (device.hasBuds || device.connection == .receiver)
+        HStack(spacing: 20) {
+            HStack(spacing: 10) {
+                LineIcon(d: Icons.device(device.kind), size: 18, lineWidth: 1.4).foregroundStyle(Theme.sub)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(device.name).ui(14).foregroundStyle(away ? Theme.sub : Theme.text).lineLimit(1).truncationMode(.tail)
+                    if detail && device.hasBuds {
+                        KeyValues(pairs: BluetoothText.buds(device).map { ($0.1, $0.0) }, spacing: 8)
+                    } else if detail {
+                        KeyValue(label: L10n.Bluetooth.connectionLabel, value: L10n.Bluetooth.receiver)
+                    }
+                }
             }
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                BigValue(value: device.level.map(Format.percentNumber) ?? L10n.Common.dash, unit: "%", size: 32, color: low ? Theme.danger : Theme.text)
-                if device.charging { FilledIcon(d: Icons.chargingBolt, width: 8, height: 11).foregroundStyle(Theme.sub) }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            LevelBar(fraction: device.level ?? 0, color: low ? Theme.danger : away ? Theme.low : Theme.mid, height: 3)
+                .frame(width: 180)
+            HStack(spacing: 2) {
+                if device.charging && !away { FilledIcon(d: Icons.chargingBolt, width: 7, height: 10) }
+                Text(device.level.map(Format.percent) ?? L10n.Common.dash).ui(14, away ? 400 : 500)
             }
-            .padding(.top, 10)
-            LevelBar(fraction: device.level ?? 0, color: low ? Theme.danger : Theme.mid, height: 3).padding(.top, 10)
-            if device.hasBuds {
-                KeyValues(pairs: BluetoothText.buds(device).map { ($0.1, $0.0) }, spacing: 8).padding(.top, 8)
-            }
+            .foregroundStyle(low ? Theme.danger : away ? Theme.sub : Theme.text)
+            .lineLimit(1)
+            .frame(width: 44, alignment: .trailing)
+            Text(trailing).ui(13).foregroundStyle(Theme.sub).lineLimit(1).fixedSize().frame(minWidth: 120, alignment: .trailing)
         }
+        .padding(.vertical, detail ? (Self.height - 22) / 2 : 0)
+        .frame(minHeight: Self.height)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(BluetoothText.a11y(device, low: low))
     }
-}
 
-/// A paired device that isn't connected: its battery then, and when Rin last saw it.
-private struct DisconnectedRow: View {
-    var device: BluetoothDevice
-
-    var body: some View {
-        HStack(spacing: 8) {
-            LineIcon(d: Icons.device(device.kind), size: 16, lineWidth: 1.4)
-            Text(device.name).ui(14).lineLimit(1)
-            Spacer(minLength: 8)
-            HStack(spacing: 14) {
-                if let level = device.level { KeyValue(label: L10n.Battery.level, value: Format.percent(level), size: 14) }
-                if let seen = BluetoothText.lastSeen(device.lastSeen) { KeyValue(label: L10n.Bluetooth.lastConnectedLabel, value: seen, size: 14) }
-            }
-        }
-        .foregroundStyle(Theme.sub)
-        .frame(height: 32)
-        .accessibilityElement(children: .combine)
+    private var trailing: String {
+        if away { return BluetoothText.lastSeen(device.lastSeen).map { L10n.Bluetooth.lastConnected($0) } ?? "" }
+        return device.charging ? L10n.Battery.charging : (BluetoothText.estimate(device) ?? "")
     }
 }

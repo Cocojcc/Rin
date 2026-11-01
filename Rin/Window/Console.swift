@@ -348,7 +348,8 @@ struct ConsoleChart: View {
                 .buttonStyle(.plain)
                 .help(rule.help ?? "")
                 .fixedSize()
-                .offset(y: max(0, y - 20))
+                // A line near the top of a short chart puts its words in the gap above the plot.
+                .offset(y: max(-12, y - 20))
             }
         }
     }

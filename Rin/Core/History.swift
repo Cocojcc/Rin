@@ -4,6 +4,7 @@ enum Metric: Int, CaseIterable, Codable {
     case cpu, cpuUser, cpuSystem, gpu, memory, memoryPressure, swap
     case netDown, netUp, diskRead, diskWrite, battery
     case cpuTemp, gpuTemp, fan, power
+    // The last five are no longer recorded; they keep their places so saved history still lines up.
     case charging, gpuRenderer, gpuTiler, videoDecode, videoEncode, fps
 }
 
@@ -144,11 +145,6 @@ final class History {
         }
         if on(.gpu) {
             values[Metric.gpu.rawValue] = Float(s.gpu.utilization * 100)
-            if let v = s.gpu.renderer { values[Metric.gpuRenderer.rawValue] = Float(v * 100) }
-            if let v = s.gpu.tiler { values[Metric.gpuTiler.rawValue] = Float(v * 100) }
-            if let v = s.gpu.decodeWatts { values[Metric.videoDecode.rawValue] = Float(v) }
-            if let v = s.gpu.encodeWatts { values[Metric.videoEncode.rawValue] = Float(v) }
-            if let v = s.gpu.fps { values[Metric.fps.rawValue] = Float(v) }
         }
         if on(.memory) {
             values[Metric.memory.rawValue] = Float(s.memory.usedFraction * 100)

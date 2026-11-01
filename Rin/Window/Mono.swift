@@ -164,6 +164,31 @@ extension ValueRow where Value == Text {
     }
 }
 
+/// A reading on a hairline row: its name grey on the left; at the end the value, its breakdown
+/// just before it ("平均负载 … 5 分钟 1.87  15 分钟 1.62   2.14").
+struct FactRow<Detail: View>: View {
+    var label: String
+    var value: String
+    var valueColor: Color = Theme.text
+    var height: CGFloat = 30
+    @ViewBuilder var detail: Detail
+
+    var body: some View {
+        ValueRow(label: label, height: height, labelColor: Theme.sub) {
+            HStack(alignment: .firstTextBaseline, spacing: 16) {
+                detail
+                Text(value).foregroundStyle(valueColor)
+            }
+        }
+    }
+}
+
+extension FactRow where Detail == EmptyView {
+    init(label: String, value: String, valueColor: Color = Theme.text, height: CGFloat = 30) {
+        self.init(label: label, value: value, valueColor: valueColor, height: height) { EmptyView() }
+    }
+}
+
 /// A small figure: its name in 12 grey (and a note on the right), the reading under it.
 struct Figure<Right: View>: View {
     var name: String

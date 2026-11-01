@@ -51,6 +51,8 @@ enum Icons {
     static let arrowDownSmall = "M3 0.6V5.1M1.1 3.3L3 5.2L4.9 3.3"     // 6 × 6
     static let bolt = "M6.8 1L2.8 6.8h2.7L5 11l4.2-6H6.4z"              // 12 × 12, filled
     static let bluetooth = "M4.5 5.2L11.5 11L8 14V2l3.5 3L4.5 10.8"
+    /// The Accessories module, which also covers devices on a Logitech receiver.
+    static let keyboard = "M2 4.5h12a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1zM4 7h.01M6.5 7h.01M9 7h.01M11.5 7h.01M5 9.5h6"
     static let chargingBolt = "M4.6 0.5L0.8 6.2h2.7L2.9 10.5l4.3-6.1H4.4z"  // 8 × 11, filled
     static let pencil = "M11 2.8l2.2 2.2L6 12.2l-2.9.7.7-2.9zM9.6 4.2l2.2 2.2"
     static let bell = "M4 11V7a4 4 0 0 1 8 0v4l1.5 1.5h-11L4 11zM6.5 13.5a1.5 1.5 0 0 0 3 0"
@@ -72,7 +74,7 @@ enum Icons {
     /// A Bluetooth accessory by kind (16 × 16).
     static func device(_ kind: BluetoothDevice.Kind) -> String {
         switch kind {
-        case .keyboard: return "M2 4.5h12a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1zM4 7h.01M6.5 7h.01M9 7h.01M11.5 7h.01M5 9.5h6"
+        case .keyboard: return keyboard
         case .trackpad: return "M2.5 3.5h11a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1z"
         case .mouse: return "M8 1.5a4 4 0 0 1 4 4v5a4 4 0 0 1-8 0v-5a4 4 0 0 1 4-4zM8 4v2.5"
         case .earbuds: return "M5.5 2.5a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2v6M10.5 2.5a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2v6"
@@ -92,7 +94,7 @@ enum Icons {
         case .network: return network
         case .disk: return disk
         case .battery: return battery
-        case .bluetooth: return bluetooth
+        case .bluetooth: return keyboard
         case .sensors: return sensors
         }
     }

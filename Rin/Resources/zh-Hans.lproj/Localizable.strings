@@ -17,7 +17,7 @@
 "range.7d" = "7 天";
 "range.label" = "时间范围";
 "range.last60s" = "60 秒";
-"range.lastSeconds" = "%d秒";
+"range.lastSeconds" = "%d 秒";
 "range.last24h" = "最近 24 小时";
 "range.ago24h" = "24 小时前";
 "range.ago12h" = "12 小时前";
@@ -41,7 +41,7 @@
 "common.auto" = "自动";
 "common.none" = "无";
 "common.dash" = "—";
-"common.count" = "%d个";
+"common.count" = "%d 个";
 "common.mono" = "单色";
 "common.colored" = "彩色";
 "common.restart" = "重新启动";
@@ -49,7 +49,7 @@
 "overview.title" = "概览";
 "overview.uptime.days" = "已运行%1$d天%2$d小时";
 "overview.uptime.hours" = "已运行%1$d小时%2$d分钟";
-"overview.uptime.minutes" = "已运行%d分钟";
+"overview.uptime.minutes" = "已运行 %d 分钟";
 "overview.allGood" = "一切如常。";
 "overview.issues" = "有 %d 处不太对。";
 "overview.cpu.detail" = "用户 %1$@ · 系统 %2$@";
@@ -90,7 +90,7 @@
 "battery.deviceCount" = "%d台";
 "battery.noBattery" = "这台 Mac 没有内置电池";
 "battery.ups" = "不间断电源";
-"battery.upsDetail" = "交流供电 · 停电时约可支撑%d分钟";
+"battery.upsDetail" = "交流供电 · 停电时约可支撑 %d 分钟";
 "battery.upsOnAC" = "交流供电";
 "battery.low" = "电量低";
 "battery.lowA11y" = "，电量低";
@@ -121,8 +121,8 @@
 "alerts.battery.body" = "该插电了。";
 "alerts.temp.body" = "让它歇一会儿吧。";
 "alerts.network.body" = "检查一下 Wi-Fi 或网线。";
-"alerts.seconds" = "%d秒";
-"alerts.minutes" = "%d分钟";
+"alerts.seconds" = "%d 秒";
+"alerts.minutes" = "%d 分钟";
 
 "panel.openMonitor" = "打开%@监视器";
 "panel.moduleSettings" = "%@菜单栏设置";
@@ -267,7 +267,6 @@
 "monitor.unifiedMemory" = "统一内存";
 "monitor.usedOfLimit" = "已用 · 上限 %@";
 "monitor.current" = "当前";
-"monitor.average" = "平均";
 "monitor.highest" = "最高";
 "monitor.appMemory" = "App 内存";
 "monitor.compressed" = "已压缩";
@@ -289,7 +288,7 @@
 "settings.english" = "English";
 "settings.performance" = "性能";
 "settings.refreshInterval" = "刷新频率";
-"settings.seconds" = "%d秒";
+"settings.seconds" = "%d 秒";
 "settings.slowOnBattery" = "用电池时降低刷新频率";
 "settings.light" = "浅色";
 "settings.dark" = "深色";
@@ -434,7 +433,7 @@
 "settings.alertStyle" = "提醒";
 "settings.gigabytes" = "%d GB";
 "notch.title" = "菜单栏放不下";
-"notch.hiddenCount" = "%d个模块被刘海挡住";
+"notch.hiddenCount" = "%d 个模块被刘海挡住";
 "notch.merge" = "合并成一项";
 "notch.dontRemind" = "不再提醒";
 "notch.openSettings" = "菜单栏设置";
@@ -455,7 +454,6 @@
 "sidebar.pause" = "暂停监控";
 "sidebar.resume" = "继续监控";
 "overview.gpu.videoDecode" = "视频解码 %@";
-"monitor.active" = "活跃";
 "monitor.idleState" = "空闲";
 "monitor.idle" = "闲置";
 "monitor.adapter" = "电源适配器";
@@ -469,7 +467,6 @@
 "monitor.capacityValue" = "%1$@ / %2$@ mAh";
 "monitor.chargePower" = "充电";
 "monitor.chargingLegend" = "充电中";
-"monitor.checksA11y" = "最近 %1$d 次连接检查：%2$d 次正常，%3$d 次较慢，%4$d 次失败";
 "monitor.connection" = "连接";
 "monitor.connectionLog" = "连接记录";
 "monitor.coreGroup" = "核心 · %d 个";
@@ -484,7 +481,6 @@
 "monitor.fanManual" = "手动";
 "monitor.fanRange" = "范围 %1$d–%2$d rpm";
 "monitor.fps" = "FPS";
-"monitor.frameRate" = "帧率";
 "monitor.frequencyGHz" = "频率 GHz";
 "monitor.gpuCores" = "%d 核心";
 "monitor.headroom" = "余量";
@@ -501,12 +497,9 @@
 "monitor.peak24h" = "24 小时峰值";
 "monitor.powerSource" = "电源";
 "monitor.powerValue" = "功耗 %@";
-"monitor.proMotion" = "ProMotion";
 "monitor.processThreads" = "%1$@ 个进程 · %2$@ 个线程";
 "monitor.readRate" = "读 %@";
 "monitor.writeRate" = "写 %@";
-"monitor.renderer" = "渲染";
-"monitor.tiler" = "拼贴";
 "monitor.sessionToday" = "本次会话 %1$@ · 今天 %2$@";
 "monitor.smartGood" = "S.M.A.R.T. 良好";
 "monitor.smartFailing" = "S.M.A.R.T. 异常";
@@ -515,7 +508,6 @@
 "monitor.totalWritten" = "累计写入";
 "monitor.usedOfTotal" = "已用 %1$@ · 共 %2$@";
 "monitor.videoDecode" = "视频解码";
-"monitor.videoEncode" = "视频编码";
 "monitor.volumeUsed" = "已用 %1$@ · 共 %2$@";
 "monitor.volumeUsedPurgeable" = "已用 %1$@（其中可清除 %2$@）· 共 %3$@";
 "monitor.vramUnified" = "显存 · 统一内存";
@@ -739,7 +731,7 @@
 "widget.icon.sensors.5" = "字标";
 "widget.name.battery.value" = "百分比";
 "settings.widgetGap" = "小组件间距";
-"module.bluetooth" = "蓝牙";
+"module.bluetooth" = "外设";
 "bluetooth.noDevices" = "没有已连接的设备";
 "bluetooth.deviceCount" = "%d 台设备";
 "bluetooth.lowCount" = "%d 台电量低";
@@ -755,13 +747,11 @@
 "bluetooth.chartA11y" = "%1$@最近%2$@电量，虚线是 %3$@ 低电量线";
 "bluetooth.deviceA11y" = "%1$@ 电量 %2$@";
 "bluetooth.lowA11y" = "，电量低";
-"bluetooth.device" = "设备";
 "bluetooth.nameSeparator" = "、";
 "bluetooth.devicesMore" = "%1$@等 %2$d 台";
 "bluetooth.noHistory" = "还没有电量记录";
-"range.d30" = "30 天";
 "a11y.device" = "%1$@ %2$@";
-"a11y.bluetooth" = "蓝牙，%@";
+"a11y.bluetooth" = "外设，%@";
 "settings.lowLevel" = "低电量";
 "settings.lowLevelValue" = "%d%% 以下";
 "settings.minutes" = "%d 分钟";
@@ -785,7 +775,7 @@
 "widget.name.devices" = "设备电量";
 "widget.name.lowest" = "最低电量";
 "widget.name.bluetooth.stack" = "两行";
-"widget.icon.bluetooth.0" = "蓝牙";
+"widget.icon.bluetooth.0" = "键盘";
 "bluetooth.daysAgo" = "%d 天前";
 "sidebar.processes" = "进程";
 "sidebar.sleep" = "睡眠";
@@ -873,7 +863,7 @@
 "about.architecture" = "架构";
 "about.appleSilicon" = "Apple 芯片";
 "about.intel" = "Intel";
-"about.cpuCores" = "%1$d 核 · %2$d 性能 · %3$d 能效";
+"about.cpuCores" = "%1$d 核（%2$d 性能核，%3$d 能效核）";
 "about.cores" = "%d 核";
 "about.displayValue" = "%1$@ 英寸 · %2$d × %3$d";
 "about.resolution" = "%1$d × %2$d";
@@ -884,7 +874,7 @@
 "alerts.snooze" = "1 小时内不再提醒";
 "alerts.sentenceGap" = "";
 "alerts.culpritSentence" = "主要是 %1$@（%2$@）。";
-"alerts.culpritDetail" = "%1$@ 占用最多 · %2$@";
+"alerts.culpritDetail" = "%1$@ 占用最多，%2$@";
 "alerts.cpuHeadline" = "CPU 使用率 %1$@，超过 %2$@ 已 %3$@";
 "alerts.gpuHeadline" = "GPU 使用率 %1$@，超过 %2$@ 已 %3$@";
 "alerts.cpuBanner" = "CPU 已经 %1$@ %2$@了。";
@@ -897,7 +887,7 @@
 "alerts.networkDownFor" = "网络断开 %@";
 "alerts.bluetoothLowHeadline" = "%1$@电量 %2$@，低于 %3$@";
 "alerts.recovered" = "已恢复";
-"alerts.diskRecovered" = "已恢复 · 现在剩余 %@";
+"alerts.diskRecovered" = "已恢复，现在剩余 %@";
 "alerts.untilEmpty" = "%@后耗尽";
 "alerts.reconnected" = "%@ 已自动重新连接";
 "alerts.reconnectedPlain" = "已重新连接";
@@ -974,7 +964,7 @@
 "mood.network" = "网断了。";
 "mood.disk" = "磁盘快满了。";
 "mood.battery" = "电量不多了。";
-"mood.bluetooth" = "蓝牙设备快没电了。";
+"mood.bluetooth" = "外设快没电了。";
 "mood.sensors" = "有点热了。";
 "chart.minutesAgo" = "−%d:00";
 "chart.hoursAgo" = "−%d 时";
@@ -1024,10 +1014,7 @@
 "monitor.coreAverage" = "平均";
 "monitor.pAverage" = "性能核 平均";
 "monitor.eAverage" = "能效核 平均";
-"monitor.fpsValue" = "%d FPS";
 "monitor.ofTotalUnit" = "%@ / %@";
-"monitor.share" = "占用";
-"monitor.engines" = "引擎";
 "monitor.chipSpec" = "%@ · %d 核";
 "monitor.recent" = "最近 %@";
 "monitor.unifiedSpec" = "统一内存 %@";
@@ -1047,6 +1034,7 @@
 "monitor.health" = "健康";
 "monitor.sinceBoot" = "开机以来";
 "monitor.readShort" = "读";
+"monitor.readSinceBoot" = "开机以来 读";
 "monitor.writeShort" = "写";
 "monitor.purgeableLabel" = "可清除";
 "monitor.totalLabel" = "共";
@@ -1069,8 +1057,8 @@
 "bluetooth.connectedCount" = "%d 台已连接";
 "bluetooth.lowNote" = "%@电量 %@，%@后耗尽";
 "bluetooth.lowNoteShort" = "%@电量 %@";
-"bluetooth.levelKey" = "电量 %@";
-"bluetooth.lastConnectedLabel" = "上次连接";
+"bluetooth.connectionLabel" = "连接";
+"bluetooth.receiver" = "接收器";
 "sleep.duration" = "持续时间";
 "sleep.blockerCount" = "%d 个";
 "sleep.modeCustomEllipsis" = "自定时间…";

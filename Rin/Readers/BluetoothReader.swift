@@ -1,15 +1,18 @@
 import Foundation
 import IOKit
 
-/// Paired Bluetooth accessories and their batteries. Magic keyboards, mice and trackpads report
-/// through the IORegistry; system_profiler adds AirPods and other headphones (with each bud and
-/// the case), device types, and the paired devices that are not connected right now.
+/// Paired accessories and their batteries. Magic keyboards, mice and trackpads report through
+/// the IORegistry; system_profiler adds AirPods and other headphones (with each bud and the case),
+/// device types, and the paired devices that are not connected right now. Accessories on a
+/// Logitech receiver come from `LogitechReader`.
 final class BluetoothReader {
     private let store = BluetoothStore.shared
+    private let logitech = LogitechReader()
 
     func read(now: Date = Date()) -> BluetoothSample {
         let hid = Self.hidDevices()
         let listed = Self.profiler()
+        let receiver = logitech.read(now: now)
         var connected: [BluetoothDevice] = []
         var seen = Set<String>()
 
@@ -22,6 +25,7 @@ final class BluetoothReader {
         for (id, entry) in hid where !seen.contains(id) {
             connected.append(BluetoothDevice(id: id, name: entry.name, kind: Self.kind(name: entry.name, minorType: nil), level: entry.level))
         }
+        connected += receiver.connected
         connected = connected.filter { $0.level != nil || $0.kind != .other }
         store.record(connected, now: now)
 
@@ -32,6 +36,14 @@ final class BluetoothReader {
             // Only accessories: skip paired phones and computers Rin never saw with a battery.
             guard known != nil || device.level != nil || ![.other, .phone, .tablet].contains(device.kind) else { continue }
             device.level = device.level ?? known?.level
+            device.lastSeen = known?.lastSeen
+            disconnected.append(device)
+        }
+        // The receiver's paired devices that didn't answer; the full name if Rin has seen it.
+        for var device in receiver.asleep where !connectedIDs.contains(device.id) {
+            let known = store.device(device.id)
+            if let known { device.name = known.name; device.kind = known.kind }
+            device.level = known?.level
             device.lastSeen = known?.lastSeen
             disconnected.append(device)
         }

@@ -267,7 +267,6 @@
 "monitor.unifiedMemory" = "Unified memory";
 "monitor.usedOfLimit" = "used · limit %@";
 "monitor.current" = "Current";
-"monitor.average" = "Average";
 "monitor.highest" = "Highest";
 "monitor.appMemory" = "App memory";
 "monitor.compressed" = "Compressed";
@@ -455,7 +454,6 @@
 "sidebar.pause" = "Pause monitoring";
 "sidebar.resume" = "Resume monitoring";
 "overview.gpu.videoDecode" = "Video decode %@";
-"monitor.active" = "Active";
 "monitor.idleState" = "Idle";
 "monitor.idle" = "Idle";
 "monitor.adapter" = "Power adapter";
@@ -469,7 +467,6 @@
 "monitor.capacityValue" = "%1$@ / %2$@ mAh";
 "monitor.chargePower" = "Charging";
 "monitor.chargingLegend" = "Charging";
-"monitor.checksA11y" = "Last %1$d connection checks: %2$d OK, %3$d slow, %4$d failed";
 "monitor.connection" = "Connection";
 "monitor.connectionLog" = "Connection log";
 "monitor.coreGroup" = "%d cores";
@@ -484,7 +481,6 @@
 "monitor.fanManual" = "Manual";
 "monitor.fanRange" = "Range %1$d–%2$d rpm";
 "monitor.fps" = "FPS";
-"monitor.frameRate" = "Frame rate";
 "monitor.frequencyGHz" = "Frequency GHz";
 "monitor.gpuCores" = "%d cores";
 "monitor.headroom" = "Headroom";
@@ -501,12 +497,9 @@
 "monitor.peak24h" = "24-hour peak";
 "monitor.powerSource" = "Power";
 "monitor.powerValue" = "Power %@";
-"monitor.proMotion" = "ProMotion";
 "monitor.processThreads" = "%1$@ processes · %2$@ threads";
 "monitor.readRate" = "R %@";
 "monitor.writeRate" = "W %@";
-"monitor.renderer" = "Renderer";
-"monitor.tiler" = "Tiler";
 "monitor.sessionToday" = "Session %1$@ · Today %2$@";
 "monitor.smartGood" = "S.M.A.R.T. verified";
 "monitor.smartFailing" = "S.M.A.R.T. failing";
@@ -515,7 +508,6 @@
 "monitor.totalWritten" = "Total written";
 "monitor.usedOfTotal" = "%1$@ used of %2$@";
 "monitor.videoDecode" = "Video decode";
-"monitor.videoEncode" = "Video encode";
 "monitor.volumeUsed" = "%1$@ used · %2$@ total";
 "monitor.volumeUsedPurgeable" = "%1$@ used (%2$@ purgeable) · %3$@ total";
 "monitor.vramUnified" = "VRAM · unified memory";
@@ -739,7 +731,7 @@
 "widget.icon.sensors.5" = "Wordmark";
 "widget.name.battery.value" = "Percentage";
 "settings.widgetGap" = "Space between widgets";
-"module.bluetooth" = "Bluetooth";
+"module.bluetooth" = "Accessories";
 "bluetooth.noDevices" = "No devices connected";
 "bluetooth.deviceCount" = "%d devices";
 "bluetooth.lowCount" = "%d low";
@@ -755,13 +747,11 @@
 "bluetooth.chartA11y" = "%1$@ battery over the last %2$@; the dashed line is the %3$@ low level";
 "bluetooth.deviceA11y" = "%1$@ battery %2$@";
 "bluetooth.lowA11y" = ", low";
-"bluetooth.device" = "Device";
 "bluetooth.nameSeparator" = ", ";
 "bluetooth.devicesMore" = "%1$@ and %2$d more";
 "bluetooth.noHistory" = "No battery history yet";
-"range.d30" = "30 days";
 "a11y.device" = "%1$@ %2$@";
-"a11y.bluetooth" = "Bluetooth, %@";
+"a11y.bluetooth" = "Accessories, %@";
 "settings.lowLevel" = "Low battery";
 "settings.lowLevelValue" = "Below %d%%";
 "settings.minutes" = "%d min";
@@ -785,7 +775,7 @@
 "widget.name.devices" = "Device batteries";
 "widget.name.lowest" = "Lowest battery";
 "widget.name.bluetooth.stack" = "Two rows";
-"widget.icon.bluetooth.0" = "Bluetooth";
+"widget.icon.bluetooth.0" = "Keyboard";
 "bluetooth.daysAgo" = "%d days ago";
 "sidebar.processes" = "Processes";
 "sidebar.sleep" = "Sleep";
@@ -873,7 +863,7 @@
 "about.architecture" = "Architecture";
 "about.appleSilicon" = "Apple silicon";
 "about.intel" = "Intel";
-"about.cpuCores" = "%1$d cores · %2$d performance · %3$d efficiency";
+"about.cpuCores" = "%1$d cores (%2$d performance, %3$d efficiency)";
 "about.cores" = "%d cores";
 "about.displayValue" = "%1$@-inch · %2$d × %3$d";
 "about.resolution" = "%1$d × %2$d";
@@ -884,7 +874,7 @@
 "alerts.snooze" = "Mute for 1 hour";
 "alerts.sentenceGap" = " ";
 "alerts.culpritSentence" = "Mostly %1$@ (%2$@).";
-"alerts.culpritDetail" = "%1$@ uses the most · %2$@";
+"alerts.culpritDetail" = "%1$@ uses the most, %2$@";
 "alerts.cpuHeadline" = "CPU at %1$@, above %2$@ for %3$@";
 "alerts.gpuHeadline" = "GPU at %1$@, above %2$@ for %3$@";
 "alerts.cpuBanner" = "The CPU's been at %1$@ for %2$@.";
@@ -897,7 +887,7 @@
 "alerts.networkDownFor" = "Network down for %@";
 "alerts.bluetoothLowHeadline" = "%1$@ at %2$@, below %3$@";
 "alerts.recovered" = "Recovered";
-"alerts.diskRecovered" = "Recovered · %@ free now";
+"alerts.diskRecovered" = "Recovered, %@ free now";
 "alerts.untilEmpty" = "Empty in %@";
 "alerts.reconnected" = "Reconnected over %@";
 "alerts.reconnectedPlain" = "Reconnected";
@@ -974,7 +964,7 @@
 "mood.network" = "We're offline.";
 "mood.disk" = "The disk's nearly full.";
 "mood.battery" = "Battery's running low.";
-"mood.bluetooth" = "A Bluetooth device is running low.";
+"mood.bluetooth" = "An accessory is running low.";
 "mood.sensors" = "Running a little hot.";
 "chart.minutesAgo" = "−%d:00";
 "chart.hoursAgo" = "−%dh";
@@ -1024,10 +1014,7 @@
 "monitor.coreAverage" = "Average";
 "monitor.pAverage" = "Performance avg.";
 "monitor.eAverage" = "Efficiency avg.";
-"monitor.fpsValue" = "%d FPS";
 "monitor.ofTotalUnit" = "%@ / %@";
-"monitor.share" = "In use";
-"monitor.engines" = "Engines";
 "monitor.chipSpec" = "%@ · %d cores";
 "monitor.recent" = "Last %@";
 "monitor.unifiedSpec" = "%@ unified memory";
@@ -1047,6 +1034,7 @@
 "monitor.health" = "Health";
 "monitor.sinceBoot" = "Since startup";
 "monitor.readShort" = "Read";
+"monitor.readSinceBoot" = "Read since startup";
 "monitor.writeShort" = "Write";
 "monitor.purgeableLabel" = "Purgeable";
 "monitor.totalLabel" = "Total";
@@ -1069,8 +1057,8 @@
 "bluetooth.connectedCount" = "%d connected";
 "bluetooth.lowNote" = "%@ at %@, empty in %@";
 "bluetooth.lowNoteShort" = "%@ at %@";
-"bluetooth.levelKey" = "Battery %@";
-"bluetooth.lastConnectedLabel" = "Last connected";
+"bluetooth.connectionLabel" = "Connection";
+"bluetooth.receiver" = "Receiver";
 "sleep.duration" = "Duration";
 "sleep.blockerCount" = "%d";
 "sleep.modeCustomEllipsis" = "Custom…";

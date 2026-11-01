@@ -9,7 +9,6 @@ final class PowerReport {
         var gpuWatts: Double?
         var gpuMHz: Double?
         var decodeWatts: Double?
-        var encodeWatts: Double?
         /// Average active frequency (MHz): all cores, performance cluster, efficiency cluster.
         var cpuMHz: Double?
         var performanceMHz: Double?
@@ -50,7 +49,7 @@ final class PowerReport {
         let dt = now.timeIntervalSince(previous.date)
         guard dt > 0, let items = (delta as NSDictionary)["IOReportChannels"] as? [CFDictionary] else { return Reading() }
 
-        var cpuJoules = 0.0, gpuJoules = 0.0, aveJoules = 0.0, vdecJoules = 0.0
+        var cpuJoules = 0.0, gpuJoules = 0.0, vdecJoules = 0.0
         var sawCPU = false, sawGPU = false, sawMedia = false
         var residency: [Double] = []
         // (weighted MHz, active time) per cluster.
@@ -64,7 +63,7 @@ final class PowerReport {
                 let joules = Double(IOReportSimpleGetIntegerValue(channel, 0)) * Self.scale(unit)
                 if name == "CPU Energy" { cpuJoules += joules; sawCPU = true }
                 else if name == "GPU Energy" || name == "GPU" { gpuJoules += joules; sawGPU = true }
-                else if name == "AVE" { aveJoules += joules; sawMedia = true }
+                else if name == "AVE" { sawMedia = true }
                 else if name == "VDEC" { vdecJoules += joules; sawMedia = true }
             } else if group == "GPU Stats", name == "GPUPH" {
                 let count = IOReportStateGetCount(channel)
@@ -80,10 +79,7 @@ final class PowerReport {
         var reading = Reading()
         if sawCPU, cpuJoules > 0 { reading.cpuWatts = cpuJoules / dt }
         if sawGPU { reading.gpuWatts = gpuJoules / dt }
-        if sawMedia {
-            reading.decodeWatts = vdecJoules / dt
-            reading.encodeWatts = aveJoules / dt
-        }
+        if sawMedia { reading.decodeWatts = vdecJoules / dt }
         if eCluster.1 > 0 { reading.efficiencyMHz = eCluster.0 / eCluster.1 }
         if pCluster.1 > 0 { reading.performanceMHz = pCluster.0 / pCluster.1 }
         let busy = eCluster.1 + pCluster.1

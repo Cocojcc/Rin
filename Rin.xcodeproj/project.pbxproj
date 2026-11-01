@@ -94,6 +94,7 @@
 		8D9EBE17B49C71DB4C9CCDB9 /* GPUReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 443D637864911AB9D843FE70 /* GPUReader.swift */; };
 		8F3579A9E29BEB9DC5F3EE92 /* RinApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B1B4DF492FBC1EA18539558 /* RinApp.swift */; };
 		8FE44311B0D352B8976BC1D9 /* ProcessDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39705B8D08BFFDD3C62F3379 /* ProcessDetails.swift */; };
+		9264D87000C09F16B5D4BB45 /* LogitechReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08BFF806081BAFD01022B0E9 /* LogitechReader.swift */; };
 		945A02DCBA56C11F5E2FCB23 /* PowerReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFC32CBB196FF6BC75039D1A /* PowerReport.swift */; };
 		94655E606B706B06E3BC95F0 /* runner-girl-2x-15.png in Resources */ = {isa = PBXBuildFile; fileRef = 03178CE92B70866369F0809C /* runner-girl-2x-15.png */; };
 		94C99792983D84E0F706BAAB /* runner-cat-2x-5.png in Resources */ = {isa = PBXBuildFile; fileRef = D52FC6D7126FC97456839516 /* runner-cat-2x-5.png */; };
@@ -172,6 +173,7 @@
 		058E20FF2385C8EC9061F80F /* runner-girl-1x-5.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-1x-5.png"; sourceTree = "<group>"; };
 		063874DA61182602AA5B64E5 /* runner-girl-2x-1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-2x-1.png"; sourceTree = "<group>"; };
 		080535FF12C5C35F84EE652E /* runner-cat-1x-22.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-1x-22.png"; sourceTree = "<group>"; };
+		08BFF806081BAFD01022B0E9 /* LogitechReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogitechReader.swift; sourceTree = "<group>"; };
 		09C8D433845ADD9E19D1F3D5 /* RunnerViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerViews.swift; sourceTree = "<group>"; };
 		0A6D2AA46D9DBB43794E1692 /* Notch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notch.swift; sourceTree = "<group>"; };
 		0BE0FDD9059749CF76263319 /* PanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelController.swift; sourceTree = "<group>"; };
@@ -347,6 +349,7 @@
 				41D668CED85B0D7EC63671DC /* CPUReader.swift */,
 				E9C0095D6CCA97178D90B6C3 /* DiskReader.swift */,
 				443D637864911AB9D843FE70 /* GPUReader.swift */,
+				08BFF806081BAFD01022B0E9 /* LogitechReader.swift */,
 				8A9EBEAC43B344BB2A1D17EB /* MacInfo.swift */,
 				FC51DD8D35793BDA8BE030C6 /* MemoryReader.swift */,
 				85C409BFE52D954315998FB1 /* NetworkReader.swift */,
@@ -772,6 +775,7 @@
 				15F7B9497CE48D952CE65ACB /* Icons.swift in Sources */,
 				DAD18912EF69593F9C0888EF /* KeepAwake.swift in Sources */,
 				AE6F792DC88789521CD5E818 /* L10n.swift in Sources */,
+				9264D87000C09F16B5D4BB45 /* LogitechReader.swift in Sources */,
 				F4E522DCDD42A237B7A21B26 /* MacInfo.swift in Sources */,
 				590755F2CF53EDD1A7149CD1 /* MainView.swift in Sources */,
 				2BC114DAD2A6487C31E75260 /* MainWindowController.swift in Sources */,
