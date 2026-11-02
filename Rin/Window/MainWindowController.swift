@@ -65,7 +65,8 @@ final class MainWindowController: NSObject, NSWindowDelegate {
 
     private var window: NSWindow?
 
-    var isVisible: Bool { window?.isVisible ?? false }
+    /// Whether the page can be seen; a minimized window reads no more than a closed one.
+    var isVisible: Bool { window.map { $0.isVisible && !$0.isMiniaturized } ?? false }
 
     /// Opens the Processes page sorted by the list the "全部" link sat on.
     func showProcesses(sortedBy sort: ProcessSort) {
@@ -79,12 +80,16 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         show(.alerts)
     }
 
+    /// The Dock icon: back to the window on the page it was left on.
+    func reopen() { show(Navigator.shared.page) }
+
     func show(_ page: Page) {
         PanelController.shared.close()
         Navigator.shared.page = page
         if window == nil { makeWindow() }
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        if window?.isMiniaturized == true { window?.deminiaturize(nil) }
         window?.makeKeyAndOrderFront(nil)
         Monitor.shared.setVisible(.window(Navigator.shared.page), true)
     }
@@ -140,6 +145,14 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     func windowDidBecomeKey(_ notification: Notification) { placeTrafficLights() }
     func windowDidExitFullScreen(_ notification: Notification) { placeTrafficLights() }
     func windowDidChangeBackingProperties(_ notification: Notification) { placeTrafficLights() }
+
+    func windowDidMiniaturize(_ notification: Notification) {
+        Monitor.shared.setVisible(.window(Navigator.shared.page), false)
+    }
+
+    func windowDidDeminiaturize(_ notification: Notification) {
+        Monitor.shared.setVisible(.window(Navigator.shared.page), true)
+    }
 
     func windowWillClose(_ notification: Notification) {
         Monitor.shared.setVisible(.window(Navigator.shared.page), false)
