@@ -80,6 +80,9 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         show(.alerts)
     }
 
+    /// Off while the pointer is over something a press drags.
+    func setMovableByBackground(_ movable: Bool) { window?.isMovableByWindowBackground = movable }
+
     /// The Dock icon: back to the window on the page it was left on.
     func reopen() { show(Navigator.shared.page) }
 

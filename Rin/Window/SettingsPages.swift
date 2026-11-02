@@ -1,7 +1,6 @@
 import AppKit
 import ServiceManagement
 import SwiftUI
-import UniformTypeIdentifiers
 
 /// Binding into one field of the stored preferences.
 @MainActor
@@ -19,7 +18,6 @@ struct SettingsPage: View {
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var needsApproval = SMAppService.mainApp.status == .requiresApproval
     @State private var languageChanged = false
-    @State private var dragging: Module?
     /// The system-wide spacing lives in the system's preferences, not in Rin's.
     @State private var systemSpacing = MenuBarSpacing.preset
 
@@ -74,13 +72,12 @@ struct SettingsPage: View {
             SettingsGroup(title: L10n.Settings.menubarGroup) {
                 VStack(alignment: .leading, spacing: 0) {
                     if !blocked.isEmpty {
-                        NotchBanner(count: blocked.count).padding(.top, 6)
+                        NotchBanner(count: blocked.count).padding(.top, 12)
                     }
                     MenubarPreview(blocked: blocked, systemSpacing: systemSpacing)
-                        .padding(.top, 6)
-                        .padding(.bottom, 12)
+                        .padding(.vertical, 12)
                     // Moot while the combined item shows an icon.
-                    ModuleChips(blocked: blocked, dragging: $dragging)
+                    ModuleChips(blocked: blocked)
                         .padding(.bottom, 14)
                         .opacity(prefs.barShowsWidgets ? 1 : 0.4)
                         .allowsHitTesting(prefs.barShowsWidgets)
@@ -286,8 +283,11 @@ struct NotchBanner: View {
 /// module's hue, in their order, a notch mark when hidden behind it) | the rest. Click shows or hides; drag reorders.
 struct ModuleChips: View {
     var blocked: [Module]
-    @Binding var dragging: Module?
     var settings = SettingsStore.shared
+    @State private var drag: ChipDrag<Module>?
+    @State private var frames: [AnyHashable: CGRect] = [:]
+
+    private static let space = "moduleChips"
 
     var body: some View {
         let prefs = settings.prefs
@@ -304,6 +304,7 @@ struct ModuleChips: View {
                 }
             }
         }
+        .modifier(ReorderStrip(space: Self.space, frames: $frames))
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Settings.modulesInMenubar)
@@ -311,23 +312,28 @@ struct ModuleChips: View {
 
     private func chip(_ m: Module, shown: Bool) -> some View {
         let isBlocked = shown && blocked.contains(m)
-        return Button {
-            withAnimation(Motion.slide) { settings.prefs.setInMenubar(m, !shown) }
-        } label: {
-            HStack(spacing: 6) {
-                if shown { Circle().fill(Theme.hue(m) ?? Theme.mid).frame(width: 6, height: 6) }
-                Text(m.title).ui(13).lineLimit(1)
-                if isBlocked {
-                    LineIcon(d: Icons.notch, size: 12, lineWidth: 1.5).foregroundStyle(Theme.warn)
-                }
+        return HStack(spacing: 6) {
+            if shown { Circle().fill(Theme.hue(m) ?? Theme.mid).frame(width: 6, height: 6) }
+            Text(m.title).ui(13).lineLimit(1)
+            if isBlocked {
+                LineIcon(d: Icons.notch, size: 12, lineWidth: 1.5).foregroundStyle(Theme.warn)
             }
-            .modifier(ChipLook(on: shown))
         }
-        .buttonStyle(.plain)
-        .opacity(dragging == m ? 0.4 : 1)
-        .modifier(ReorderModifier(module: m, dragging: $dragging))
+        .modifier(ChipLook(on: shown))
+        .modifier(ReorderChip(id: m, space: Self.space, frames: frames, drag: $drag,
+                              tap: { withAnimation(Motion.slide) { settings.prefs.setInMenubar(m, !shown) } },
+                              move: move))
         .accessibilityLabel(isBlocked ? L10n.Settings.blockedChip(m.title) : m.title)
         .accessibilityAddTraits(shown ? [.isSelected] : [])
+    }
+
+    private func move(_ m: Module, onto target: Module) {
+        var list = settings.prefs.menubar.order
+        guard let from = list.firstIndex(of: m), let to = list.firstIndex(of: target) else { return }
+        withAnimation(.easeOut(duration: 0.15)) {
+            list.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+            settings.prefs.menubar.order = list
+        }
     }
 }
 
@@ -373,85 +379,98 @@ struct ChipLook: ViewModifier {
     }
 }
 
-/// Drag to reorder (skipped in offscreen snapshots, where AppKit drag views can't draw).
-struct ReorderModifier: ViewModifier {
-    let module: Module
-    @Binding var dragging: Module?
-    var order: WritableKeyPath<Preferences, [Module]> = \.menubar.order
+/// A chip being pressed or dragged, in its strip's coordinates.
+struct ChipDrag<ID: Hashable>: Equatable {
+    var id: ID
+    var pointer: CGPoint
+    /// Where the chip was taken hold of, from its top left.
+    var grab: CGPoint
+    var moved = false
+    /// The chip last moved past; it has to be left before it can trigger again, or a wide chip
+    /// that is still under the pointer after swapping places would swap straight back.
+    var target: ID?
+}
+
+/// Where a strip's chips sit, so a drag can tell which one the pointer is over.
+private struct ChipFramesKey: PreferenceKey {
+    static var defaultValue: [AnyHashable: CGRect] { [:] }
+
+    static func reduce(value: inout [AnyHashable: CGRect], nextValue: () -> [AnyHashable: CGRect]) {
+        value.merge(nextValue()) { $1 }
+    }
+}
+
+/// A chip that clicks and drags to reorder. One gesture does both, so nothing depends on how a
+/// system shares the mouse between a button and a drag (`.onDrag` on a Button didn't start on macOS 15).
+struct ReorderChip<ID: Hashable>: ViewModifier {
+    let id: ID
+    let space: String
+    var canDrag = true
+    let frames: [AnyHashable: CGRect]
+    @Binding var drag: ChipDrag<ID>?
+    let tap: () -> Void
+    let move: (ID, ID) -> Void
 
     func body(content: Content) -> some View {
-        if RenderContext.offscreen {
-            content
-        } else {
-            content
-                .onDrag {
-                    dragging = module
-                    return NSItemProvider(object: module.rawValue as NSString)
-                }
-                .onDrop(of: [UTType.text], delegate: ModuleDropDelegate(target: module, dragging: $dragging, order: order))
+        let mine = drag?.id == id ? drag : nil
+        let lifted = canDrag && mine?.moved == true
+        content
+            .opacity(mine != nil && !lifted ? 0.7 : 1)
+            .offset(lifted ? offset(mine) : .zero)
+            // The chip follows the pointer, not the slide into its new place.
+            .transaction { if lifted { $0.animation = nil } }
+            .background {
+                GeometryReader { Color.clear.preference(key: ChipFramesKey.self, value: [AnyHashable(id): $0.frame(in: .named(space))]) }
+            }
+            .zIndex(lifted ? 1 : 0)
+            .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .named(space)).onChanged(changed).onEnded(ended))
+            // Each strip names its chips; a drawn widget has nothing to combine.
+            .accessibilityElement(children: .ignore)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction(.default, tap)
+    }
+
+    private func offset(_ d: ChipDrag<ID>?) -> CGSize {
+        guard let d, let frame = frames[AnyHashable(id)] else { return .zero }
+        return CGSize(width: d.pointer.x - d.grab.x - frame.minX, height: d.pointer.y - d.grab.y - frame.minY)
+    }
+
+    private func changed(_ value: DragGesture.Value) {
+        var d = drag?.id == id ? drag! : {
+            let frame = frames[AnyHashable(id)] ?? .zero
+            return ChipDrag(id: id, pointer: value.location, grab: CGPoint(x: value.startLocation.x - frame.minX, y: value.startLocation.y - frame.minY))
+        }()
+        d.pointer = value.location
+        if hypot(value.translation.width, value.translation.height) >= 4 { d.moved = true }
+        if canDrag && d.moved {
+            let over = frames.first { $0.key != AnyHashable(id) && $0.value.contains(value.location) }?.key.base as? ID
+            if over != d.target {
+                d.target = over
+                if let over { move(id, over) }
+            }
         }
+        drag = d
+    }
+
+    private func ended(_ value: DragGesture.Value) {
+        let clicked = drag?.moved != true
+        withAnimation(.easeOut(duration: 0.15)) { drag = nil }
+        if clicked { tap() }
     }
 }
 
-struct ModuleDropDelegate: DropDelegate {
-    let target: Module
-    @Binding var dragging: Module?
-    var order: WritableKeyPath<Preferences, [Module]> = \.menubar.order
-
-    func dropEntered(info: DropInfo) {
-        guard let dragging, dragging != target else { return }
-        var list = SettingsStore.shared.prefs[keyPath: order]
-        guard let from = list.firstIndex(of: dragging), let to = list.firstIndex(of: target) else { return }
-        withAnimation(.easeOut(duration: 0.15)) {
-            list.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
-            SettingsStore.shared.prefs[keyPath: order] = list
-        }
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
-
-    func performDrop(info: DropInfo) -> Bool {
-        dragging = nil
-        return true
-    }
-}
-
-/// Picked widgets can be dragged into another order; they sit in the menu bar in that order.
-private struct WidgetReorder: ViewModifier {
-    let module: Module
-    let kind: WidgetKind
-    var picked: Bool
-    @Binding var dragging: WidgetKind?
+/// What a strip of `ReorderChip`s needs: their coordinates and frames. A press on a chip drags the
+/// chip, so the window, which moves by its background, stays put while the pointer is over the strip.
+struct ReorderStrip: ViewModifier {
+    let space: String
+    @Binding var frames: [AnyHashable: CGRect]
 
     func body(content: Content) -> some View {
-        if RenderContext.offscreen || !picked {
-            content
-        } else {
-            content
-                .onDrag {
-                    dragging = kind
-                    return NSItemProvider(object: kind.rawValue as NSString)
-                }
-                .onDrop(of: [UTType.text], delegate: WidgetDropDelegate(module: module, target: kind, dragging: $dragging))
-        }
-    }
-}
-
-private struct WidgetDropDelegate: DropDelegate {
-    let module: Module
-    let target: WidgetKind
-    @Binding var dragging: WidgetKind?
-
-    func dropEntered(info: DropInfo) {
-        guard let dragging, dragging != target else { return }
-        withAnimation(Motion.slide) { SettingsStore.shared.prefs.moveWidget(dragging, to: target, for: module) }
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
-
-    func performDrop(info: DropInfo) -> Bool {
-        dragging = nil
-        return true
+        content
+            .coordinateSpace(.named(space))
+            .onPreferenceChange(ChipFramesKey.self) { frames = $0 }
+            .onHover { MainWindowController.shared.setMovableByBackground(!$0) }
+            .onDisappear { MainWindowController.shared.setMovableByBackground(true) }
     }
 }
 
@@ -595,7 +614,10 @@ struct ModuleSettingsPage: View {
 struct WidgetStrip: View {
     let module: Module
     var settings = SettingsStore.shared
-    @State private var dragging: WidgetKind?
+    @State private var drag: ChipDrag<WidgetKind>?
+    @State private var frames: [AnyHashable: CGRect] = [:]
+
+    private static let space = "widgetStrip"
 
     var body: some View {
         let prefs = settings.prefs
@@ -607,13 +629,18 @@ struct WidgetStrip: View {
             ForEach(on.map { WidgetSlot.widget($0) } + (on.isEmpty || off.isEmpty ? [] : [.divider]) + off.map { .widget($0) }) { item in
                 switch item {
                 case .widget(let kind):
-                    WidgetChip(module: module, kind: kind, on: on.contains(kind), prefs: prefs)
-                        .opacity(dragging == kind ? 0.4 : 1)
-                        .modifier(WidgetReorder(module: module, kind: kind, picked: on.contains(kind), dragging: $dragging))
+                    let picked = on.contains(kind)
+                    WidgetChip(module: module, kind: kind, on: picked, prefs: prefs)
+                        .modifier(ReorderChip(id: kind, space: Self.space, canDrag: picked, frames: frames, drag: $drag,
+                                              tap: { withAnimation(Motion.slide) { settings.prefs.setWidget(kind, !picked, for: module) } },
+                                              move: { dragged, target in withAnimation(Motion.slide) { settings.prefs.moveWidget(dragged, to: target, for: module) } }))
+                        .accessibilityLabel(L10n.Widget.name(kind, module))
+                        .accessibilityAddTraits(picked ? [.isSelected] : [])
                 case .divider: Rectangle().fill(Theme.faint).frame(width: 1, height: 22).padding(.horizontal, 6).frame(height: 34)
                 }
             }
         }
+        .modifier(ReorderStrip(space: Self.space, frames: $frames))
         .padding(5)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.raise))
@@ -629,32 +656,24 @@ private struct WidgetChip: View {
     let kind: WidgetKind
     var on: Bool
     var prefs: Preferences
-    var settings = SettingsStore.shared
     @State private var hovering = false
 
     var body: some View {
-        Button {
-            withAnimation(Motion.slide) { settings.prefs.setWidget(kind, !on, for: module) }
-        } label: {
-            WidgetView(module: module, kind: kind, prefs: prefs)
-                .environment(\.widgetUIFont, true)
-                .foregroundStyle(on ? Theme.text : Theme.sub)
-                .opacity(on ? 1 : 0.6)
-                .padding(.horizontal, 10)
-                .frame(minWidth: 40)
-                .frame(height: 34)
-                .background {
-                    if on { GlassThumb(cornerRadius: 8) } else if hovering { RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.lgHover) }
-                }
-                .hoverAnimation(hovering)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        // The same name titles the widget's options below.
-        .help(L10n.Widget.name(kind, module))
-        .accessibilityLabel(L10n.Widget.name(kind, module))
-        .accessibilityAddTraits(on ? [.isSelected] : [])
+        WidgetView(module: module, kind: kind, prefs: prefs)
+            .environment(\.widgetUIFont, true)
+            .foregroundStyle(on ? Theme.text : Theme.sub)
+            .opacity(on ? 1 : 0.6)
+            .padding(.horizontal, 10)
+            .frame(minWidth: 40)
+            .frame(height: 34)
+            .background {
+                if on { GlassThumb(cornerRadius: 8) } else if hovering { RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.lgHover) }
+            }
+            .hoverAnimation(hovering)
+            .contentShape(Rectangle())
+            .onHover { hovering = $0 }
+            // The same name titles the widget's options below.
+            .help(L10n.Widget.name(kind, module))
     }
 }
 
