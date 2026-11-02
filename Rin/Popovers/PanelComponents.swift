@@ -6,6 +6,7 @@ import SwiftUI
 /// A module dropdown's header: its name (16 / 600) and what it is (13, grey), buttons to its
 /// monitor page and its settings on the right.
 struct PanelHeader: View {
+    @Environment(\.panelQuits) private var quits
     var title: String
     var subtitle: String?
     var buttons: (openLabel: String, open: () -> Void, settingsLabel: String, settings: () -> Void)?
@@ -28,12 +29,22 @@ struct PanelHeader: View {
                 HStack(spacing: 2) {
                     HeaderButton(d: Icons.monitorWindow, label: buttons.openLabel, action: buttons.open)
                     HeaderButton(d: Icons.general, label: buttons.settingsLabel, action: buttons.settings)
-                    HeaderButton(d: Icons.power, label: L10n.Panel.quitRin) { NSApp.terminate(nil) }
+                    if quits { HeaderButton(d: Icons.power, label: L10n.Panel.quitRin) { NSApp.terminate(nil) } }
                 }
                 .padding(.trailing, -6)
             }
         }
         .frame(height: 26)
+    }
+}
+
+private struct PanelQuitsKey: EnvironmentKey { static let defaultValue = true }
+
+extension EnvironmentValues {
+    /// Whether a module's header offers quitting; the details beside the combined dropdown leave it to the dropdown.
+    var panelQuits: Bool {
+        get { self[PanelQuitsKey.self] }
+        set { self[PanelQuitsKey.self] = newValue }
     }
 }
 

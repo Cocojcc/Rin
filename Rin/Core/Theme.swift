@@ -57,6 +57,8 @@ enum Theme {
     /// The grey behind a group of segments, a button, a popup, the selected rail item.
     static let raise = Color.dyn(RGBA(0, 0, 0, 0.05), RGBA(255, 255, 255, 0.06))
     static let lgHover = Color.dyn(RGBA(0, 0, 0, 0.04), RGBA(255, 255, 255, 0.06))
+    /// A dropdown row whose details are open beside it.
+    static let rowSelected = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.1))
     /// The selected rail item.
     static let selection = raise
     /// Tags and chips that are on ("90%" in a rule, a module in the menu bar).

@@ -4,12 +4,12 @@ import SwiftUI
 /// The "合并成一项" dropdown, for a glance: every module, in the order of the chips in 设置 › 菜单栏.
 /// The first one in the menu bar, which the merged item shows, is a big reading with its last
 /// minute; the others follow one to a row (name, last minute, reading); then the busiest app and
-/// what keeps the Mac awake. Every row opens its page.
+/// what keeps the Mac awake. Every row opens its details beside the dropdown.
 struct CombinedPanel: View {
     var monitor = Monitor.shared
     var settings = SettingsStore.shared
     var alerts = Alerts.shared
-    @State private var blockers: [SleepBlocker] = []
+    var details = CombinedDetails.shared
 
     var body: some View {
         let s = monitor.snapshot
@@ -18,7 +18,7 @@ struct CombinedPanel: View {
         let bar = prefs.menubar
         let modules = prefs.combinedModules.filter { hasReading($0, s) }
         let busiest = bar.combinedTop ? (bar.combinedTopByMemory ? s.processes.byMemory : s.processes.byCPU).first : nil
-        let awake = bar.combinedSleep ? blockers : []
+        let awake = bar.combinedSleep ? details.blockers : []
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
                 Text(L10n.App.name).ui(16, 600).accessibilityAddTraits(.isHeader)
@@ -39,39 +39,41 @@ struct CombinedPanel: View {
                     .padding(.top, 8)
             }
             if let hero = modules.first {
-                CombinedHero(module: hero).padding(.top, 22)
+                CombinedHero(module: hero).padding(.top, 16)
             }
             if modules.count > 1 {
                 VStack(spacing: 0) {
                     InsetRows { ForEach(modules.dropFirst()) { ModuleLine(module: $0) } }
                 }
-                .padding(.top, 20)
+                .padding(.top, 14)
             }
             if let busiest {
-                CombinedLine(label: L10n.Combined.topUsageRow, hint: L10n.Sidebar.processes,
+                CombinedLine(label: L10n.Combined.topUsageRow,
                              value: bar.combinedTopByMemory ? L10n.Combined.topMemory(busiest.name, Format.memory(busiest.memory))
-                                                            : L10n.Combined.topCPU(busiest.name, Format.percentValue(busiest.cpu))) {
-                    MainWindowController.shared.showProcesses(sortedBy: bar.combinedTopByMemory ? .memory : .cpu)
-                }
-                .padding(.top, 4)
+                                                            : L10n.Combined.topCPU(busiest.name, Format.percentValue(busiest.cpu)),
+                             detail: .top)
+                    .padding(.top, 4)
             }
             if let first = awake.first {
-                CombinedLine(label: L10n.Combined.sleepRow, hint: L10n.Sidebar.sleep,
-                             value: awake.count > 1 ? L10n.Combined.sleepApps(Self.name(first), awake.count - 1) : Self.name(first)) {
-                    MainWindowController.shared.show(.sleep)
-                }
-                .padding(.top, busiest == nil ? 4 : 0)
+                CombinedLine(label: L10n.Combined.sleepRow,
+                             value: awake.count > 1 ? L10n.Combined.sleepApps(Self.name(first), awake.count) : Self.name(first),
+                             detail: .sleep)
+                    .padding(.top, busiest == nil ? 4 : 0)
             }
         }
         .task(id: bar.combinedSleep) {
             guard bar.combinedSleep else { return }
             // Assertions come and go with playback and syncing; re-read while the dropdown is open.
             while !Task.isCancelled {
-                blockers = Self.appBlockers()
+                details.blockers = Self.appBlockers()
                 try? await Task.sleep(for: .seconds(5))
             }
         }
-        .onAppear { if RenderContext.offscreen { blockers = Self.appBlockers() } }
+        .onAppear { if RenderContext.offscreen { details.blockers = Self.appBlockers() } }
+        // Nothing holding the Mac awake any more leaves nothing to detail.
+        .onChange(of: awake.isEmpty) { _, empty in
+            if empty && details.selection == .sleep { PanelController.shared.setDetail(nil) }
+        }
     }
 
     /// Apps and processes holding the Mac awake; not macOS itself, and not Rin's own keep-awake.
@@ -195,18 +197,25 @@ private struct CombinedHero: View {
     let module: Module
     var monitor = Monitor.shared
     var settings = SettingsStore.shared
+    var details = CombinedDetails.shared
+    @State private var hovering = false
 
     var body: some View {
         let s = monitor.snapshot
         let prefs = settings.prefs
+        let selected = details.selection == .module(module)
         let v = CombinedReading.value(module, s, prefs)
         let low = CombinedReading.isLow(module, s, prefs)
         // Battery and Bluetooth levels stay plain unless charging or low.
         let lead = low ? Theme.danger : module == .battery ? Theme.batteryLevel(s.battery) : Theme.hue(module) ?? Theme.text
         let line = low ? Theme.danger : module == .battery ? Theme.batteryLevel(s.battery, lead: false) : Theme.hue(module) ?? Theme.mid
-        Button { MainWindowController.shared.show(.monitor(module)) } label: {
+        Button { PanelController.shared.toggleDetail(.module(module)) } label: {
             VStack(alignment: .leading, spacing: 6) {
-                SmallLabel(text: CombinedReading.name(module))
+                HStack {
+                    SmallLabel(text: CombinedReading.name(module))
+                    Spacer(minLength: 8)
+                    DetailChevron()
+                }
                 HStack(alignment: .bottom) {
                     BigValue(value: v.0, unit: v.1, size: 52, color: lead).layoutPriority(1)
                     Spacer(minLength: 12)
@@ -215,27 +224,32 @@ private struct CombinedHero: View {
                         .accessibilityHidden(true)
                 }
             }
-            .contentShape(Rectangle())
+            .padding(.vertical, 6)
+            .detailRow(selected: selected, hovering: hovering, radius: 8)
         }
         .buttonStyle(.plain)
+        .onHover { hovering = $0 }
         .environment(\.chartTint, Theme.chartTint(module, battery: s.battery))
         .accessibilityElement(children: .combine)
-        .accessibilityHint(L10n.Panel.openMonitor(module.title))
+        .accessibilityHint(L10n.Combined.showDetails)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
-/// Name, the last minute as a small line in the module's hue, the reading; the row opens the module's page.
+/// Name, the last minute as a small line in the module's hue, the reading; the row opens the module's details.
 private struct ModuleLine: View {
     let module: Module
     var monitor = Monitor.shared
     var settings = SettingsStore.shared
+    var details = CombinedDetails.shared
     @State private var hovering = false
 
     var body: some View {
         let s = monitor.snapshot
         let prefs = settings.prefs
-        Button { MainWindowController.shared.show(.monitor(module)) } label: {
-            HStack(spacing: 12) {
+        let selected = details.selection == .module(module)
+        Button { PanelController.shared.toggleDetail(.module(module)) } label: {
+            HStack(spacing: 10) {
                 Text(CombinedReading.name(module)).ui(14).foregroundStyle(Theme.sub).lineLimit(1).minimumScaleFactor(0.8).frame(width: 44, alignment: .leading)
                 Group {
                     if module == .bluetooth {
@@ -245,22 +259,20 @@ private struct ModuleLine: View {
                         CombinedReading.chart(module, color: Theme.hue(module) ?? Theme.faint, width: 1.3, fill: false, height: module == .network || module == .disk ? 26 : 18)
                     }
                 }
-                .frame(width: 72)
+                .frame(width: 54)
                 .accessibilityHidden(true)
                 reading(s, prefs).ui(14, 500).lineLimit(1).minimumScaleFactor(0.8)
                     .frame(maxWidth: .infinity, alignment: .trailing)
+                DetailChevron()
             }
             .frame(height: 40)
-            .padding(.horizontal, 8)
-            .background { if hovering { RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.lgHover) } }
-            .padding(.horizontal, -8)
-            .hoverAnimation(hovering)
-            .contentShape(Rectangle())
+            .detailRow(selected: selected, hovering: hovering)
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .accessibilityElement(children: .combine)
-        .accessibilityHint(L10n.Panel.openMonitor(module.title))
+        .accessibilityHint(L10n.Combined.showDetails)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     @ViewBuilder private func reading(_ s: Snapshot, _ prefs: Preferences) -> some View {
@@ -281,32 +293,167 @@ private struct ModuleLine: View {
     }
 }
 
-/// "占用最多   Xcode · 38.2%": a grey label and its value on a ruled row that opens a page.
+/// "占用最多   Xcode · CPU 38.2%": a grey label and its value on a ruled row that opens its details.
 private struct CombinedLine: View {
     var label: String
-    var hint: String
     var value: String
-    var action: () -> Void
+    var detail: CombinedDetail
+    var details = CombinedDetails.shared
     @State private var hovering = false
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
+        let selected = details.selection == detail
+        Button { PanelController.shared.toggleDetail(detail) } label: {
+            HStack(spacing: 10) {
                 Text(label).ui(14).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
                 Spacer(minLength: 8)
                 Text(value).ui(14).lineLimit(1).truncationMode(.middle)
+                DetailChevron()
             }
             .frame(height: 40)
-            .padding(.horizontal, 8)
-            .background { if hovering { RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.lgHover) } }
-            .padding(.horizontal, -8)
-            .hoverAnimation(hovering)
-            .contentShape(Rectangle())
+            .detailRow(selected: selected, hovering: hovering)
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .overlay(alignment: .top) { Hairline() }
         .accessibilityElement(children: .combine)
-        .accessibilityHint(hint)
+        .accessibilityHint(L10n.Combined.showDetails)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+/// The small › that says a row opens something.
+private struct DetailChevron: View {
+    var body: some View {
+        LineIcon(d: Icons.chevronRight, size: 11, lineWidth: 1.7).foregroundStyle(Theme.sub).accessibilityHidden(true)
+    }
+}
+
+private extension View {
+    /// A row that opens details: inset 8 from the sides, grey under the pointer and while its details are open.
+    func detailRow(selected: Bool, hovering: Bool, radius: CGFloat = 6) -> some View {
+        padding(.horizontal, 8)
+            .background {
+                if selected || hovering {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous).fill(selected ? Theme.rowSelected : Theme.lgHover)
+                }
+            }
+            .padding(.horizontal, -8)
+            .hoverAnimation(hovering)
+            .contentShape(Rectangle())
+    }
+}
+
+// MARK: - Details
+
+/// What the combined dropdown can open beside itself.
+enum CombinedDetail: Hashable {
+    case module(Module)
+    case top
+    case sleep
+}
+
+/// The combined dropdown's open details, and what its rows and those details share.
+@Observable
+final class CombinedDetails {
+    static let shared = CombinedDetails()
+
+    var selection: CombinedDetail?
+    /// Apps holding the Mac awake, re-read while the dropdown is open.
+    var blockers: [SleepBlocker] = []
+}
+
+/// The panel beside the combined dropdown. A module shows what its own dropdown shows; quitting
+/// stays on the dropdown.
+struct CombinedDetailRoot: View {
+    var details = CombinedDetails.shared
+
+    var body: some View {
+        PanelChrome {
+            switch details.selection {
+            case .module(let m): ModulePanel(module: m).environment(\.panelQuits, false)
+            case .top: TopUsageDetail()
+            case .sleep: SleepDetail()
+            case nil: EmptyView()
+            }
+        }
+    }
+}
+
+/// A detail's title, a note beside it, and the page it leads to.
+private struct DetailHeader: View {
+    var title: String
+    var subtitle: String? = nil
+    var icon: String
+    var label: String
+    var action: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(title).ui(16, 600).accessibilityAddTraits(.isHeader)
+                if let subtitle { Text(subtitle).ui(13).foregroundStyle(Theme.sub).lineLimit(1) }
+            }
+            Spacer(minLength: 0)
+            HeaderButton(d: icon, label: label, action: action).padding(.trailing, -6)
+        }
+        .frame(height: 26)
+    }
+}
+
+/// The busiest apps by CPU and by memory.
+private struct TopUsageDetail: View {
+    var monitor = Monitor.shared
+    var settings = SettingsStore.shared
+    var quitCenter = QuitCenter.shared
+
+    var body: some View {
+        let p = monitor.snapshot.processes
+        let _ = monitor.tick
+        DetailHeader(title: L10n.Combined.topUsageRow, icon: Icons.processes, label: L10n.Combined.openProcesses) {
+            MainWindowController.shared.showProcesses(sortedBy: settings.prefs.menubar.combinedTopByMemory ? .memory : .cpu)
+        }
+        HeadRow(title: L10n.Module.cpu).padding(.top, 16)
+        ProcessTable(processes: Array(p.byCPU.prefix(5)), value: { Format.percentValue($0.cpu) }, minRows: 5)
+        HeadRow(title: L10n.Module.memory).padding(.top, 18)
+        ProcessTable(processes: Array(p.byMemory.prefix(5)), value: { Format.memory($0.memory) }, minRows: 5)
+        if let toast = quitCenter.toast { QuitToast(toast: toast).padding(.top, 12) }
+    }
+}
+
+/// Who is holding the Mac awake, why and for how long.
+private struct SleepDetail: View {
+    var details = CombinedDetails.shared
+
+    var body: some View {
+        let now = Date()
+        DetailHeader(title: L10n.Combined.sleepRow, subtitle: L10n.Sleep.blockerCount(details.blockers.count), icon: Icons.sleep, label: L10n.Combined.openSleep) {
+            MainWindowController.shared.show(.sleep)
+        }
+        VStack(spacing: 0) {
+            DividedRows { ForEach(details.blockers) { row($0, now: now) } }
+        }
+        .padding(.top, 10)
+    }
+
+    private func row(_ b: SleepBlocker, now: Date) -> some View {
+        let name = CombinedPanel.name(b)
+        return HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(name).ui(14).lineLimit(1)
+                Text(SleepPage.detail(b.reason, display: b.display)).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(SleepPage.held(now.timeIntervalSince(b.since))).ui(14, 500).lineLimit(1).fixedSize()
+            // Holds its column even without a button, so the times line up.
+            ZStack {
+                if case .app(let app) = b.owner {
+                    IconAction(d: Icons.openExternal, label: L10n.Sleep.openNamed(name), size: 24) { app.activate() }
+                }
+            }
+            .frame(width: 24, height: 24)
+        }
+        .frame(height: 54)
+        .accessibilityElement(children: .combine)
     }
 }

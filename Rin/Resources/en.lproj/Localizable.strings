@@ -1070,9 +1070,12 @@
 "panel.effAverageValue" = "Efficiency avg. %@";
 "panel.quitRin" = "Quit Rin";
 "combined.openRin" = "Open Rin";
+"combined.openProcesses" = "Open Processes";
+"combined.openSleep" = "Open Sleep";
+"combined.showDetails" = "Show details";
 "combined.topUsageRow" = "Using the most";
 "combined.sleepRow" = "Keeping awake";
-"combined.sleepApps" = "%@ and %d more";
+"combined.sleepApps" = "%@ and others (%d)";
 "combined.downUp" = "↓%@  ↑%@";
 "settings.general" = "General";
 "settings.settingsSpec" = "Settings";

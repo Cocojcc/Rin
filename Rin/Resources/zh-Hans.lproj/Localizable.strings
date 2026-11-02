@@ -1070,6 +1070,9 @@
 "panel.effAverageValue" = "能效核 平均 %@";
 "panel.quitRin" = "退出 Rin";
 "combined.openRin" = "打开 Rin";
+"combined.openProcesses" = "打开进程";
+"combined.openSleep" = "打开睡眠";
+"combined.showDetails" = "显示详情";
 "combined.topUsageRow" = "占用最多";
 "combined.sleepRow" = "阻止睡眠";
 "combined.sleepApps" = "%@ 等 %d 个";

@@ -35,6 +35,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #if DEBUG
         ToggleCheck.runIfRequested()
         LiveDump.scheduleIfRequested()
+        // `--open-combined`: opens the combined dropdown on a menu bar item, to try its details.
+        if CommandLine.arguments.contains("--open-combined") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                if let button = StatusBarController.shared.debugButtons().first?.1 { PanelController.shared.show(.combined, from: button) }
+            }
+        }
         // `--rest-after <s> [<s> awake again]`: acts as if the screen locked, to measure resting.
         if let i = CommandLine.arguments.firstIndex(of: "--rest-after"), i + 1 < CommandLine.arguments.count,
            let delay = Double(CommandLine.arguments[i + 1]) {

@@ -1015,6 +1015,9 @@ enum L10n {
         static func blockingSleep(_ a: String) -> String { tr("combined.blockingSleep", a) }
         static func more(_ a: Int) -> String { tr("combined.more", a) }
         static var openRin: String { tr("combined.openRin") }
+        static var openProcesses: String { tr("combined.openProcesses") }
+        static var openSleep: String { tr("combined.openSleep") }
+        static var showDetails: String { tr("combined.showDetails") }
         static var topUsageRow: String { tr("combined.topUsageRow") }
         static var sleepRow: String { tr("combined.sleepRow") }
         static func sleepApps(_ a: String, _ b: Int) -> String { tr("combined.sleepApps", a, b) }

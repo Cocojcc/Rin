@@ -33,7 +33,7 @@ struct SleepPage: View {
                     VStack(spacing: 0) {
                         DividedRows {
                             if keepAwake.isOn, let started = keepAwake.started {
-                                BlockerRow(name: L10n.App.name, detail: detail(L10n.Sleep.keepAwake, display: keepAwake.holdsDisplay),
+                                BlockerRow(name: L10n.App.name, detail: Self.detail(L10n.Sleep.keepAwake, display: keepAwake.holdsDisplay),
                                            held: now.timeIntervalSince(started))
                             }
                             ForEach(blockers) { b in blockerRow(b, now: now) }
@@ -104,7 +104,7 @@ struct SleepPage: View {
 
     // MARK: Blockers
 
-    private func detail(_ reason: String, display: Bool) -> String {
+    static func detail(_ reason: String, display: Bool) -> String {
         reason + " · " + (display ? L10n.Sleep.preventsDisplay : L10n.Sleep.preventsSystem)
     }
 
@@ -113,12 +113,12 @@ struct SleepPage: View {
         switch b.owner {
         case .app(let app):
             let name = app.localizedName ?? ""
-            BlockerRow(name: name, detail: detail(b.reason, display: b.display), held: held,
+            BlockerRow(name: name, detail: Self.detail(b.reason, display: b.display), held: held,
                        open: { app.activate() }, openLabel: L10n.Sleep.openNamed(name))
         case .process(let name, _):
-            BlockerRow(name: name, detail: detail(b.reason, display: b.display), held: held)
+            BlockerRow(name: name, detail: Self.detail(b.reason, display: b.display), held: held)
         case .system:
-            BlockerRow(name: L10n.Sleep.macOS, detail: detail(b.reason, display: b.display), held: held)
+            BlockerRow(name: L10n.Sleep.macOS, detail: Self.detail(b.reason, display: b.display), held: held)
         }
     }
 

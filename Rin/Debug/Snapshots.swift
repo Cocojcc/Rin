@@ -50,6 +50,13 @@ enum Snapshots {
             }
             if want("panel") {
                 save(PanelRoot(kind: .combined).padding(20).background(wall), appearance, dir.appendingPathComponent("panel-combined-\(tag).png"))
+                CombinedDetails.shared.blockers = CombinedPanel.appBlockers()
+                for (detail, name) in [(CombinedDetail.module(.memory), "memory"), (.top, "top"), (.sleep, "sleep")] {
+                    CombinedDetails.shared.selection = detail
+                    save(HStack(alignment: .top, spacing: UIScale.of(10)) { CombinedDetailRoot(); PanelRoot(kind: .combined) }.padding(20).background(wall),
+                         appearance, dir.appendingPathComponent("panel-combined-\(name)-\(tag).png"))
+                }
+                CombinedDetails.shared.selection = nil
             }
             if want("onboarding") {
                 save(OnboardingRoot().padding(40).background(wall), appearance, dir.appendingPathComponent("onboarding-\(tag).png"))
