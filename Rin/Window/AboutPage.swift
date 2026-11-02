@@ -5,13 +5,15 @@ import SwiftUI
 /// hardware and software facts side by side.
 struct AboutPage: View {
     @State private var info = MacInfo.read()
-    @State private var copied = false
+    @Environment(\.pageExtra) private var extra
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            PageHeader(title: info.modelName, spec: subtitle) {
-                IconAction(d: copied ? Icons.check : Icons.copy, label: copied ? L10n.About.copied : L10n.About.copyA11y, size: 32, raised: true) { copy() }
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(info.modelName).ui(34, 300).kerning(-0.03 * 34).lineLimit(1).fixedSize().accessibilityAddTraits(.isHeader)
+                if let subtitle = Self.subtitle(info) { Text(subtitle).ui(13).foregroundStyle(Theme.sub).lineLimit(1) }
             }
+            .padding(.top, 10)
             HStack(alignment: .top, spacing: 0) {
                 cell(L10n.About.uptimeLabel, first: true) {
                     let up = uptime
@@ -22,25 +24,19 @@ struct AboutPage: View {
                         let free = Format.parts(Format.storage(v.available))
                         BigValue(value: free.0, unit: L10n.Monitor.unitFree(free.1), size: 44)
                         LevelBar(fraction: v.total > 0 ? Double(v.total - v.available) / Double(v.total) : 0, color: Theme.mid)
-                            .frame(maxWidth: 180).padding(.top, 12)
-                        Text(L10n.Monitor.totalOf(Format.storage(v.total))).ui(12).foregroundStyle(Theme.sub).padding(.top, 10)
+                            .frame(width: 160).padding(.top, 12)
+                        Text(L10n.Monitor.totalOf(Format.storage(v.total))).ui(12).foregroundStyle(Theme.sub).padding(.top, 14)
                     }
                 }
             }
             .padding(.horizontal, -20)
-            .padding(.top, 34)
+            .padding(.top, 28)
             Columns(gap: 44) {
-                VStack(alignment: .leading, spacing: 0) {
-                    HeadRow(title: L10n.About.hardware)
-                    rows(hardware)
-                }
+                rows(Self.hardware(info))
             } b: {
-                VStack(alignment: .leading, spacing: 0) {
-                    HeadRow(title: L10n.About.software)
-                    rows(software)
-                }
+                rows(Self.software(info))
             }
-            .padding(.top, 40)
+            .padding(.top, 30)
         }
         .task { info = MacInfo.read() }
     }
@@ -66,12 +62,12 @@ struct AboutPage: View {
         return ("\(max(1, minutes))", L10n.About.uptimeMinutesUnit)
     }
 
-    private var subtitle: String? {
+    static func subtitle(_ info: MacInfo) -> String? {
         let parts = [info.inches.map(L10n.About.inches), info.year.map(L10n.About.year)].compactMap { $0 }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        return parts.isEmpty ? nil : parts.joined(separator: L10n.A11y.separator)
     }
 
-    private var hardware: [(String, String)] {
+    static func hardware(_ info: MacInfo) -> [(String, String)] {
         var out: [(String, String)] = [(L10n.About.chip, info.chip)]
         let cores = info.performanceCores + info.efficiencyCores
         out.append((L10n.Module.cpu, info.efficiencyCores > 0
@@ -88,7 +84,7 @@ struct AboutPage: View {
         return out
     }
 
-    private var software: [(String, String)] {
+    static func software(_ info: MacInfo) -> [(String, String)] {
         [
             (L10n.About.system, L10n.About.macOS(info.osVersion)),
             (L10n.About.build, info.build),
@@ -100,28 +96,38 @@ struct AboutPage: View {
     }
 
     private func rows(_ items: [(String, String)]) -> some View {
-        VStack(spacing: 0) {
-            DividedRows {
-                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                    HStack(spacing: 12) {
-                        Text(item.0).foregroundStyle(Theme.sub).lineLimit(1)
-                        Spacer(minLength: 0)
-                        Text(item.1).fontWeight(.medium).lineLimit(1).truncationMode(.middle)
-                    }
-                    .ui(14)
-                    .frame(height: 58)
-                    .accessibilityElement(children: .combine)
-                    .textSelection(.enabled)
+        // The list is what's left of the page, so its rows take the height there is.
+        let height = 65 + extra / CGFloat(max(items.count, 1))
+        return VStack(spacing: 0) {
+            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                HStack(spacing: 12) {
+                    Text(item.0).foregroundStyle(Theme.sub).lineLimit(1)
+                    Spacer(minLength: 0)
+                    Reading(text: item.1).truncationMode(.middle)
                 }
+                .ui(14)
+                .frame(height: height)
+                .accessibilityElement(children: .combine)
+                .textSelection(.enabled)
             }
         }
     }
+}
+
+/// Copies this Mac's facts; it sits in the bar across the top.
+struct AboutCopyButton: View {
+    @State private var copied = false
+
+    var body: some View {
+        IconAction(d: copied ? Icons.check : Icons.copy, label: copied ? L10n.About.copied : L10n.About.copyA11y, size: 28, raised: true) { copy() }
+    }
 
     private func copy() {
+        let info = MacInfo.read()
         var lines = [info.modelName]
-        if let subtitle { lines.append(subtitle) }
+        if let subtitle = AboutPage.subtitle(info) { lines.append(subtitle) }
         lines.append("")
-        for (label, value) in hardware + software { lines.append(L10n.About.copyLine(label, value)) }
+        for (label, value) in AboutPage.hardware(info) + AboutPage.software(info) { lines.append(L10n.About.copyLine(label, value)) }
         for v in info.volumes {
             lines.append(L10n.About.copyLine(v.name, L10n.About.volume(Format.storage(v.available), Format.storage(v.total))))
         }

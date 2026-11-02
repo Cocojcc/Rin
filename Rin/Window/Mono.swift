@@ -1,31 +1,7 @@
 import SwiftUI
 
-// The pages' vocabulary: a native-style title, small grey labels over large figures, values on
-// hairline rows, and section heads with a note or link on the right. No cards: space and rules
-// do the grouping.
-
-/// A page's title: its name (28 / 600) and what it is (13, grey); readings or controls on the right.
-struct PageHeader<Trailing: View>: View {
-    var title: String
-    var spec: String? = nil
-    @ViewBuilder var trailing: Trailing
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(title).ui(28, 600).kerning(-0.56).lineLimit(1).fixedSize().accessibilityAddTraits(.isHeader)
-                if let spec, !spec.isEmpty { Text(spec).ui(13).foregroundStyle(Theme.sub).lineLimit(1) }
-            }
-            Spacer(minLength: 0)
-            HStack(spacing: 16) { trailing }.ui(13).lineLimit(1).fixedSize()
-        }
-        .frame(height: 34)
-    }
-}
-
-extension PageHeader where Trailing == EmptyView {
-    init(title: String, spec: String? = nil) { self.init(title: title, spec: spec) { EmptyView() } }
-}
+// The pages' vocabulary: small grey labels over large figures, values on plain rows, section heads
+// with a note or link on the right. No cards: space and the odd rule do the grouping.
 
 /// The small grey label over a figure ("使用率", "CPU").
 struct SmallLabel: View {
@@ -56,22 +32,27 @@ extension HeadRow where Trailing == EmptyView {
     init(title: String) { self.init(title: title) { EmptyView() } }
 }
 
-/// A chart's head: "最近 5 分钟" in 13 / 500, its keys or a link on the right.
-struct ChartHead<Trailing: View>: View {
-    var title: String
-    @ViewBuilder var trailing: Trailing
+/// Above a ranked list: the list icon, named by its tooltip, and the way to all of them; the rows say the rest.
+struct ListHead: View {
+    var tip: String
+    var link: ProcessSort? = nil
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(title).ui(13, 500).lineLimit(1)
+        HStack(spacing: 8) {
+            LineIcon(d: Icons.processes, size: 14, lineWidth: 1.5)
+                .foregroundStyle(Theme.sub)
+                .help(tip)
+                .accessibilityLabel(tip)
+                .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
-            HStack(spacing: 14) { trailing }.ui(12).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
+            if let link { AllProcessesLink(sort: link) }
         }
+        .frame(height: 18)
+        .padding(.bottom, 4)
     }
-}
 
-extension ChartHead where Trailing == EmptyView {
-    init(title: String) { self.init(title: title) { EmptyView() } }
+    /// The same height with nothing in it, which lines a list without a head up with the one beside it.
+    static var blank: some View { Color.clear.frame(height: 22).accessibilityHidden(true) }
 }
 
 /// An icon-only control named by its tooltip: grey, a grey square under the pointer, or raised
@@ -140,51 +121,51 @@ struct KeyDot: View {
     }
 }
 
-/// A label and its value on one hairline row: the label 14 (grey or text), the value 14 / 500.
+/// A label and its value on one row: the label 14 (grey or text), the value 14 / 500, its unit quiet.
 struct ValueRow<Value: View>: View {
     var label: String
     var height: CGFloat = 34
-    var labelColor: Color = Theme.text
+    var labelColor: Color = Theme.sub
     @ViewBuilder var value: Value
 
     var body: some View {
         HStack(spacing: 12) {
             Text(label).ui(14).foregroundStyle(labelColor).lineLimit(1).truncationMode(.tail)
             Spacer(minLength: 0)
-            value.ui(14, 500).lineLimit(1).fixedSize()
+            value.lineLimit(1).fixedSize()
         }
         .frame(height: height)
         .accessibilityElement(children: .combine)
     }
 }
 
-extension ValueRow where Value == Text {
-    init(label: String, value: String, height: CGFloat = 34, labelColor: Color = Theme.text) {
-        self.init(label: label, height: height, labelColor: labelColor) { Text(value) }
+extension ValueRow where Value == Reading {
+    init(label: String, value: String, height: CGFloat = 34, labelColor: Color = Theme.sub, valueColor: Color = Theme.text) {
+        self.init(label: label, height: height, labelColor: labelColor) { Reading(text: value, color: valueColor) }
     }
 }
 
-/// A reading on a hairline row: its name grey on the left; at the end the value, its breakdown
-/// just before it ("平均负载 … 5 分钟 1.87  15 分钟 1.62   2.14").
+/// A reading on a row: its name grey on the left; at the end the value, its breakdown just before
+/// it ("平均负载 … 5 分钟 1.87  15 分钟 1.62   2.14").
 struct FactRow<Detail: View>: View {
     var label: String
     var value: String
     var valueColor: Color = Theme.text
-    var height: CGFloat = 30
+    var height: CGFloat = 34
     @ViewBuilder var detail: Detail
 
     var body: some View {
-        ValueRow(label: label, height: height, labelColor: Theme.sub) {
+        ValueRow(label: label, height: height) {
             HStack(alignment: .firstTextBaseline, spacing: 16) {
                 detail
-                Text(value).foregroundStyle(valueColor)
+                if !value.isEmpty { Reading(text: value, color: valueColor) }
             }
         }
     }
 }
 
 extension FactRow where Detail == EmptyView {
-    init(label: String, value: String, valueColor: Color = Theme.text, height: CGFloat = 30) {
+    init(label: String, value: String, valueColor: Color = Theme.text, height: CGFloat = 34) {
         self.init(label: label, value: value, valueColor: valueColor, height: height) { EmptyView() }
     }
 }
@@ -228,7 +209,7 @@ struct Stat<Value: View, Foot: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             SmallLabel(text: name)
             value.padding(.top, tight ? 6 : 8)
-            foot.padding(.top, tight ? 6 : 10)
+            foot.padding(.top, tight ? 10 : 14)
         }
         .accessibilityElement(children: .combine)
     }
@@ -284,7 +265,7 @@ struct StackedBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             SegmentBar(parts: parts.map { ($0.value, $0.color) }, height: height)
-            FlowLayout(spacing: 18, lineSpacing: 6) {
+            FlowLayout(spacing: keySize < 13 ? 16 : 18, lineSpacing: 6) {
                 ForEach(Array(parts.filter { !$0.label.isEmpty }.enumerated()), id: \.offset) { _, p in KeyDot(text: p.label, color: p.color, ring: p.ring, size: keySize) }
             }
         }

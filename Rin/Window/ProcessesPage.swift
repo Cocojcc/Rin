@@ -98,14 +98,9 @@ struct ProcessesPage: View {
         let rows = sorted(s.all)
         let selection = selected.flatMap { id in s.all.first { $0.id == id } }
         VStack(alignment: .leading, spacing: 0) {
-            PageHeader(title: L10n.Sidebar.processes) {
-                KeyValue(label: L10n.Monitor.processesLabel, value: grouped(s.processCount), size: 13)
-                KeyValue(label: L10n.Monitor.threadsLabel, value: grouped(s.threadCount), size: 13)
-            }
             Segmented(label: L10n.Processes.filterLabel, options: ProcessFilter.allCases.map { ($0, $0.title) },
                       selection: $filter, style: .range)
                 .fixedSize()
-                .padding(.top, 22)
             HStack(alignment: .top, spacing: 24) {
                 ProcessGrid(rows: rows, allColumns: columns(inspecting: selection != nil),
                             sort: navigator.processSort, selected: $selected) { navigator.processSort = $0 }
@@ -177,7 +172,7 @@ private struct ProcessGrid: View {
             header
             if RenderContext.offscreen {
                 // Snapshots can't scroll; the first screenful stands in for the list.
-                list(Array(rows.prefix(19))).frame(maxHeight: .infinity, alignment: .top).clipped()
+                list(Array(rows.prefix(18))).frame(maxHeight: .infinity, alignment: .top).clipped()
             } else {
                 ScrollView { list(rows) }.scrollIndicators(.automatic)
             }
@@ -194,7 +189,7 @@ private struct ProcessGrid: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Text(L10n.Processes.name).frame(maxWidth: .infinity, alignment: .leading)
+            Color.clear.frame(maxWidth: .infinity)
             ForEach(columns, id: \.self) { column in
                 let on = column == sort
                 Button {
@@ -216,7 +211,6 @@ private struct ProcessGrid: View {
         .ui(12)
         .foregroundStyle(Theme.sub)
         .frame(height: 28)
-        .overlay(alignment: .bottom) { Hairline() }
         .padding(.bottom, 4)
     }
 
@@ -248,12 +242,15 @@ private struct ProcessGridRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Text(process.name).lineLimit(1).truncationMode(.tail)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 8) {
+                    AppIcon(process: process)
+                    Text(process.name).lineLimit(1).truncationMode(.tail)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 ForEach(Array(columns.enumerated()), id: \.element) { i, column in
                     Group {
                         if let text = column.text(process) {
-                            Text(text).fontWeight(i == 0 ? .medium : .regular)
+                            Reading(text: text, weight: i == 0 ? 500 : 400)
                         } else {
                             Text(L10n.Common.dash).foregroundStyle(Theme.sub)
                         }
@@ -325,7 +322,7 @@ private struct ProcessInspector: View {
             }
             sparkCard(L10n.Module.cpu, value: Format.percentValue(p.cpu), values: history.map(\.cpu), color: Theme.color(for: .cpu)).padding(.top, 16)
             sparkCard(L10n.Module.memory, value: Format.memory(p.memory), values: history.map(\.memory), color: Theme.color(for: .memory), fill: false).padding(.top, 12)
-            group(L10n.Processes.details, [
+            group([
                 (L10n.Processes.cpuTime, p.cpuTime > 0 ? Format.hms(p.cpuTime) : nil),
                 (L10n.Processes.threads, d.threads.map { "\($0)" }),
                 (L10n.Processes.energy, p.energy >= 0.005 ? Format.appWatts(p.energy) : nil),
@@ -333,20 +330,21 @@ private struct ProcessInspector: View {
                 (L10n.Processes.networkInOut, pair(p.netDown, p.netUp)),
                 (L10n.Processes.started, d.started.map(Format.dayAndTime)),
             ])
-            .padding(.top, 16)
-            group(L10n.Processes.relations, [
+            .padding(.top, 14)
+            group([
                 (L10n.Processes.parent, d.parent.map { "\($0.name) · \($0.pid)" }),
                 (L10n.Processes.children, children(d.children)),
             ])
-            .padding(.top, 12)
+            .padding(.top, 10)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func header(_ p: ProcessUsage, _ d: ProcessDetails) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(p.name).ui(18, 600).lineLimit(1)
+            AppIcon(process: p, size: 34)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(p.name).ui(16, 600).lineLimit(1)
                 HStack(spacing: 14) {
                     KeyValue(label: L10n.Processes.pidLabel, value: "\(p.pid)")
                     KeyValue(label: L10n.Processes.userLabel, value: d.user ?? "\(p.uid)")
@@ -383,28 +381,23 @@ private struct ProcessInspector: View {
             }
             .ui(13)
             ConsoleChart(kind: .area, series: ChartSeries.line(points, color, width: 1.5, fill: fill),
-                         span: Double(max(ProcessPoint.kept, 2) * 3), maxValue: 100, height: 24, xLabels: nil, midline: false)
+                         span: Double(max(ProcessPoint.kept, 2) * 3), maxValue: 100, height: 24, midline: false)
                 .accessibilityHidden(true)
         }
         .accessibilityElement(children: .combine)
     }
 
-    private func group(_ title: String, _ rows: [(String, String?)]) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SmallLabel(text: title).padding(.bottom, 2).accessibilityAddTraits(.isHeader)
-            VStack(spacing: 0) {
-                DividedRows {
-                    ForEach(rows, id: \.0) { row in
-                        HStack(spacing: 10) {
-                            Text(row.0).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
-                            Spacer(minLength: 0)
-                            Text(row.1 ?? L10n.Common.dash).lineLimit(1).truncationMode(.tail)
-                        }
-                        .ui(13)
-                        .frame(height: 25)
-                        .accessibilityElement(children: .combine)
-                    }
+    private func group(_ rows: [(String, String?)]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(rows, id: \.0) { row in
+                HStack(spacing: 10) {
+                    Text(row.0).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
+                    Spacer(minLength: 0)
+                    Text(row.1 ?? L10n.Common.dash).lineLimit(1).truncationMode(.tail)
                 }
+                .ui(13)
+                .frame(height: 25)
+                .accessibilityElement(children: .combine)
             }
         }
     }

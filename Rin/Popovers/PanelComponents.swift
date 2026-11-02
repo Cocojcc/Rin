@@ -3,27 +3,21 @@ import SwiftUI
 
 // MARK: - Chrome
 
-/// A module dropdown's header: its name (16 / 600) and what it is (13, grey), buttons to its
-/// monitor page and its settings on the right.
+/// A module dropdown's header: its name (16 / 600), buttons to its monitor page and its settings on the right.
 struct PanelHeader: View {
     @Environment(\.panelQuits) private var quits
     var title: String
-    var subtitle: String?
     var buttons: (openLabel: String, open: () -> Void, settingsLabel: String, settings: () -> Void)?
 
-    init(module: Module, subtitle: String? = nil) {
+    init(module: Module) {
         title = module.title
-        self.subtitle = subtitle
         buttons = (L10n.Panel.openMonitor(module.title), { MainWindowController.shared.show(.monitor(module)) },
                    L10n.Panel.moduleSettings(module.title), { MainWindowController.shared.show(.moduleSettings(module)) })
     }
 
     var body: some View {
         HStack(spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(title).ui(16, 600).accessibilityAddTraits(.isHeader)
-                if let subtitle { Text(subtitle).ui(13).foregroundStyle(Theme.sub).lineLimit(1) }
-            }
+            Text(title).ui(16, 600).accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
             if let buttons {
                 HStack(spacing: 2) {
@@ -93,32 +87,7 @@ struct PanelSection<Content: View>: View {
     }
 }
 
-/// The module's one big reading in a dropdown: a small label, the figure at 52 in its hue, and
-/// small notes stacked at the far side.
-struct PanelHero<Right: View>: View {
-    var label: String
-    var value: String
-    var unit: String? = nil
-    var color: Color
-    @ViewBuilder var right: Right
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            SmallLabel(text: label)
-            HStack(alignment: .bottom) {
-                BigValue(value: value, unit: unit, size: 52, color: color)
-                Spacer(minLength: 8)
-                VStack(alignment: .trailing, spacing: 4) { right }
-                    .ui(13).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
-                    .padding(.bottom, 4)
-            }
-        }
-        .padding(.top, 20)
-        .accessibilityElement(children: .combine)
-    }
-}
-
-/// Label / value line in a dropdown (32 pt), on hairlines when stacked in `DividedRows`.
+/// Label / value line in a dropdown (30 pt).
 struct KVRow: View {
     var key: String
     var value: String
@@ -128,9 +97,9 @@ struct KVRow: View {
         HStack(spacing: 12) {
             Text(key).ui(14).foregroundStyle(Theme.sub)
             Spacer(minLength: 8)
-            Text(value).ui(14, 500).foregroundStyle(valueColor).lineLimit(1).truncationMode(.middle)
+            Reading(text: value, color: valueColor).truncationMode(.middle)
         }
-        .frame(height: 32)
+        .frame(height: 30)
         .accessibilityElement(children: .combine)
     }
 }
@@ -148,15 +117,15 @@ struct MeterRow: View {
         HStack(spacing: 12) {
             Text(name).ui(14).foregroundStyle(Theme.sub).lineLimit(1).frame(width: nameWidth, alignment: .leading)
             LevelBar(fraction: fraction, color: color, height: 3)
-            Text(value).ui(14, 500).lineLimit(1).frame(width: valueWidth, alignment: .trailing)
+            Reading(text: value).frame(width: valueWidth, alignment: .trailing)
         }
         .frame(height: 28)
         .accessibilityElement(children: .combine)
     }
 }
 
-/// Top processes in a dropdown: name (Quit beside it under the pointer) and value on rows with
-/// inset hairlines.
+/// Top processes in a dropdown: the list icon and the way to all of them, then icon, name (Quit
+/// beside it under the pointer) and value.
 struct PanelProcessList: View {
     var title: String
     var processes: [ProcessUsage]
@@ -164,13 +133,16 @@ struct PanelProcessList: View {
     var secondary: ((ProcessUsage) -> String)? = nil
     var valueWidth: CGFloat? = nil
     var secondaryWidth: CGFloat = 74
+    var rowHeight: CGFloat = 32
+    var valueSize: CGFloat = 14
     var link: ProcessSort? = nil
-    var top: CGFloat = 18
 
     var body: some View {
-        PanelSection(title: title, link: link, top: top) {
-            ProcessTable(processes: processes, value: value, valueWidth: valueWidth, secondary: secondary, secondaryWidth: secondaryWidth)
+        VStack(alignment: .leading, spacing: 0) {
+            ListHead(tip: title, link: link)
+            ProcessTable(processes: processes, value: value, valueWidth: valueWidth, secondary: secondary, secondaryWidth: secondaryWidth, rowHeight: rowHeight, valueSize: valueSize)
         }
+        .padding(.top, 16)
     }
 }
 

@@ -57,9 +57,6 @@ enum L10n {
         static var last60s: String { tr("range.last60s") }
         static func lastSeconds(_ n: Int) -> String { tr("range.lastSeconds", n) }
         static var last24h: String { tr("range.last24h") }
-        static var ago24h: String { tr("range.ago24h") }
-        static var ago12h: String { tr("range.ago12h") }
-        static var now: String { tr("range.now") }
     }
 
     enum Time {
@@ -138,7 +135,6 @@ enum L10n {
         static var publicShort: String { tr("overview.publicShort") }
         static var cyclesLabel: String { tr("overview.cyclesLabel") }
         static func cycleCount(_ a: Int) -> String { tr("overview.cycleCount", a) }
-        static var devicesConnected: String { tr("overview.devicesConnected") }
     }
 
     enum Battery {
@@ -148,16 +144,11 @@ enum L10n {
         static var onAC: String { tr("battery.onAC") }
         static func untilFull(_ t: String) -> String { tr("battery.untilFull", t) }
         static func remaining(_ t: String) -> String { tr("battery.remaining", t) }
-        static func adapter(_ w: Int) -> String { tr("battery.adapter", w) }
         static var health: String { tr("battery.health") }
         static var cycles: String { tr("battery.cycles") }
         static var temperature: String { tr("battery.temperature") }
-        static var power: String { tr("battery.power") }
-        static var chargingPower: String { tr("battery.chargingPower") }
         static var adapterLabel: String { tr("battery.adapterLabel") }
-        static var level: String { tr("battery.level") }
         static var levelHistory: String { tr("battery.levelHistory") }
-        static func deviceCount(_ n: Int) -> String { tr("battery.deviceCount", n) }
         static var noBattery: String { tr("battery.noBattery") }
         static var ups: String { tr("battery.ups") }
         static func upsDetail(_ minutes: Int) -> String { tr("battery.upsDetail", minutes) }
@@ -170,10 +161,8 @@ enum L10n {
 
     enum Bluetooth {
         static var noDevices: String { tr("bluetooth.noDevices") }
-        static func deviceCount(_ a: Int) -> String { tr("bluetooth.deviceCount", a) }
         static func lowCount(_ a: Int) -> String { tr("bluetooth.lowCount", a) }
         static var disconnected: String { tr("bluetooth.disconnected") }
-        static func lastConnected(_ a: String) -> String { tr("bluetooth.lastConnected", a) }
         static var left: String { tr("bluetooth.left") }
         static var right: String { tr("bluetooth.right") }
         static var caseLabel: String { tr("bluetooth.case") }
@@ -189,11 +178,6 @@ enum L10n {
         static var noHistory: String { tr("bluetooth.noHistory") }
         static func daysAgo(_ a: Int) -> String { tr("bluetooth.daysAgo", a) }
         static var connected: String { tr("bluetooth.connected") }
-        static func deviceLevel(_ a: String, _ b: String) -> String { tr("bluetooth.deviceLevel", a, b) }
-        static func connectedCount(_ a: Int) -> String { tr("bluetooth.connectedCount", a) }
-        static func lowNote(_ a: String, _ b: String, _ c: String) -> String { tr("bluetooth.lowNote", a, b, c) }
-        static func lowNoteShort(_ a: String, _ b: String) -> String { tr("bluetooth.lowNoteShort", a, b) }
-        static var connectionLabel: String { tr("bluetooth.connectionLabel") }
         static var receiver: String { tr("bluetooth.receiver") }
     }
 
@@ -271,13 +255,9 @@ enum L10n {
         static func pillBelow(_ a: String) -> String { tr("alerts.pillBelow", a) }
         static func pillFreeBelow(_ a: String) -> String { tr("alerts.pillFreeBelow", a) }
         static var pillDisconnect: String { tr("alerts.pillDisconnect") }
-        static func editA11y(_ a: String) -> String { tr("alerts.editA11y", a) }
         static var edit: String { tr("alerts.edit") }
         static var add: String { tr("alerts.add") }
-        static var rules: String { tr("alerts.rules") }
-        static func rulesOn(_ a: Int) -> String { tr("alerts.rulesOn", a) }
         static var recent: String { tr("alerts.recent") }
-        static func thisWeek(_ a: Int) -> String { tr("alerts.thisWeek", a) }
         static var delivery: String { tr("alerts.delivery") }
         static var enabled: String { tr("alerts.enabled") }
         static var newA11y: String { tr("alerts.newA11y") }
@@ -313,8 +293,6 @@ enum L10n {
         static var forceQuitWarning: String { tr("panel.forceQuitWarning") }
         static func quitDone(_ n: String) -> String { tr("panel.quitDone", n) }
         static func freed(_ v: String) -> String { tr("panel.freed", v) }
-        static func chipCores(_ chip: String, _ n: Int) -> String { tr("panel.chipCores", chip, n) }
-        static func coreSplit(_ p: Int, _ e: Int) -> String { tr("panel.coreSplit", p, e) }
         static func coreCount(_ n: Int) -> String { tr("panel.coreCount", n) }
         static var pressureNormal: String { tr("panel.pressure.normal") }
         static var pressureWarning: String { tr("panel.pressure.warning") }
@@ -323,7 +301,6 @@ enum L10n {
         static var thermalFair: String { tr("panel.thermal.fair") }
         static var thermalSerious: String { tr("panel.thermal.serious") }
         static var thermalCritical: String { tr("panel.thermal.critical") }
-        static func notConnectedKind(_ k: String) -> String { tr("panel.notConnectedKind", k) }
         static var wifi: String { tr("panel.wifi") }
         static var ethernet: String { tr("panel.ethernet") }
         static var network: String { tr("panel.network") }
@@ -345,9 +322,6 @@ enum L10n {
         static var load1: String { tr("panel.load1") }
         static var load5: String { tr("panel.load5") }
         static var load15: String { tr("panel.load15") }
-        static var topUsage: String { tr("panel.topUsage") }
-        static var topTraffic: String { tr("panel.topTraffic") }
-        static var topDisk: String { tr("panel.topDisk") }
         static var utilization: String { tr("panel.utilization") }
         static var vram: String { tr("panel.vram") }
         static func limit(_ v: String) -> String { tr("panel.limit", v) }
@@ -357,7 +331,6 @@ enum L10n {
         static var power: String { tr("panel.power") }
         static func memoryUsedOf(_ used: String, _ total: String) -> String { tr("panel.memoryUsedOf", used, total) }
         static var composition: String { tr("panel.composition") }
-        static var pressure: String { tr("panel.pressure") }
         static var notConnected: String { tr("panel.notConnected") }
         static var noConnection: String { tr("panel.noConnection") }
         static var networkSettings: String { tr("panel.networkSettings") }
@@ -369,16 +342,11 @@ enum L10n {
         static var health: String { tr("panel.health") }
         static func healthValue(_ a: String, _ b: String) -> String { tr("panel.healthValue", a, b) }
         static func volumeUsedPurgeable(_ a: String, _ b: String, _ c: String) -> String { tr("panel.volumeUsedPurgeable", a, b, c) }
-        static var passiveCooling: String { tr("panel.passiveCooling") }
-        static func fanCount(_ n: Int) -> String { tr("panel.fanCount", n) }
-        static func vramLimit(_ a: String) -> String { tr("panel.vramLimit", a) }
-        static func unitUsed(_ a: String) -> String { tr("panel.unitUsed", a) }
-        static func perfAverageValue(_ a: String) -> String { tr("panel.perfAverageValue", a) }
-        static func effAverageValue(_ a: String) -> String { tr("panel.effAverageValue", a) }
         static var quitRin: String { tr("panel.quitRin") }
     }
 
     enum Sensors {
+        static var thermalShort: String { tr("sensors.thermalShort") }
         static var cpuPerformance: String { tr("sensors.cpuPerformance") }
         static var cpuEfficiency: String { tr("sensors.cpuEfficiency") }
         static var gpu: String { tr("sensors.gpu") }
@@ -388,13 +356,8 @@ enum L10n {
         static var fan: String { tr("sensors.fan") }
         static func fanNumbered(_ n: Int) -> String { tr("sensors.fanNumbered", n) }
         static var thermalState: String { tr("sensors.thermalState") }
-        static var temperatures: String { tr("sensors.temperatures") }
-        static var fans: String { tr("sensors.fans") }
-        static func maxRPM(_ n: Int) -> String { tr("sensors.maxRPM", n) }
-        static var fanless: String { tr("sensors.fanless") }
         static var systemPower: String { tr("sensors.systemPower") }
         static var cpuAverage: String { tr("sensors.cpuAverage") }
-        static var power: String { tr("sensors.power") }
         static func choice(_ c: SensorChoice) -> String {
             switch c {
             case .cpuAverage: return cpuAverage
@@ -459,7 +422,6 @@ enum L10n {
         static func networkChartA11y(_ v: String) -> String { tr("monitor.networkChartA11y", v) }
         static func diskChartA11y(_ v: String) -> String { tr("monitor.diskChartA11y", v) }
         static func tempChartA11y(_ v: String) -> String { tr("monitor.tempChartA11y", v) }
-        static var totalUsage: String { tr("monitor.totalUsage") }
         static func peakTop(_ v: String) -> String { tr("monitor.peakTop", v) }
         static var peakTopNone: String { tr("monitor.peakTopNone") }
         static var load1: String { tr("monitor.load1") }
@@ -474,17 +436,14 @@ enum L10n {
         static func peakValue(_ v: String) -> String { tr("monitor.peakValue", v) }
         static func totalValue(_ v: String) -> String { tr("monitor.totalValue", v) }
         static func usedValue(_ v: String) -> String { tr("monitor.usedValue", v) }
-        static var unifiedMemory: String { tr("monitor.unifiedMemory") }
         static func usedOfLimit(_ v: String) -> String { tr("monitor.usedOfLimit", v) }
         static var current: String { tr("monitor.current") }
-        static var highest: String { tr("monitor.highest") }
         static var appMemory: String { tr("monitor.appMemory") }
         static var compressed: String { tr("monitor.compressed") }
         static var cache: String { tr("monitor.cache") }
         static var cpuAverageShort: String { tr("monitor.cpuAverageShort") }
         static var system: String { tr("monitor.system") }
         static func compositionA11y(_ a: String, _ w: String, _ c: String, _ k: String, _ f: String) -> String { tr("monitor.compositionA11y", a, w, c, k, f) }
-        static var idleState: String { tr("monitor.idleState") }
         static var idle: String { tr("monitor.idle") }
         static var adapter: String { tr("monitor.adapter") }
         static var allCores: String { tr("monitor.allCores") }
@@ -496,20 +455,16 @@ enum L10n {
         static var capacity: String { tr("monitor.capacity") }
         static func capacityValue(_ a: String, _ b: String) -> String { tr("monitor.capacityValue", a, b) }
         static var chargePower: String { tr("monitor.chargePower") }
-        static var chargingLegend: String { tr("monitor.chargingLegend") }
-        static var connection: String { tr("monitor.connection") }
         static var connectionLog: String { tr("monitor.connectionLog") }
         static func coreGroup(_ a: Int) -> String { tr("monitor.coreGroup", a) }
         static func performanceGroup(_ a: Int) -> String { tr("monitor.performanceGroup", a) }
         static func efficiencyGroup(_ a: Int) -> String { tr("monitor.efficiencyGroup", a) }
         static func coreTotal(_ a: Int) -> String { tr("monitor.coreTotal", a) }
-        static func coresA11y(_ a: String, _ b: String) -> String { tr("monitor.coresA11y", a, b) }
         static func cpuAverageMax(_ a: String) -> String { tr("monitor.cpuAverageMax", a) }
         static func cyclesOf(_ a: Int, _ b: Int) -> String { tr("monitor.cyclesOf", a, b) }
         static func diskHealth(_ a: String) -> String { tr("monitor.diskHealth", a) }
         static var fanAuto: String { tr("monitor.fanAuto") }
         static var fanManual: String { tr("monitor.fanManual") }
-        static func fanRange(_ a: Int, _ b: Int) -> String { tr("monitor.fanRange", a, b) }
         static var fps: String { tr("monitor.fps") }
         static var frequencyGHz: String { tr("monitor.frequencyGHz") }
         static func gpuCores(_ a: Int) -> String { tr("monitor.gpuCores", a) }
@@ -525,7 +480,6 @@ enum L10n {
         static func ofTotal(_ a: String) -> String { tr("monitor.ofTotal", a) }
         static var other: String { tr("monitor.other") }
         static var peak24h: String { tr("monitor.peak24h") }
-        static var powerSource: String { tr("monitor.powerSource") }
         static func powerValue(_ a: String) -> String { tr("monitor.powerValue", a) }
         static func processThreads(_ a: String, _ b: String) -> String { tr("monitor.processThreads", a, b) }
         static func readRate(_ a: String) -> String { tr("monitor.readRate", a) }
@@ -535,15 +489,12 @@ enum L10n {
         static var smartFailing: String { tr("monitor.smartFailing") }
         static func swapFile(_ a: String) -> String { tr("monitor.swapFile", a) }
         static var systemDraw: String { tr("monitor.systemDraw") }
+        static var wholeMac: String { tr("monitor.wholeMac") }
         static var totalWritten: String { tr("monitor.totalWritten") }
-        static func usedOfTotal(_ a: String, _ b: String) -> String { tr("monitor.usedOfTotal", a, b) }
         static var videoDecode: String { tr("monitor.videoDecode") }
         static func volumeUsed(_ a: String, _ b: String) -> String { tr("monitor.volumeUsed", a, b) }
         static func volumeUsedPurgeable(_ a: String, _ b: String, _ c: String) -> String { tr("monitor.volumeUsedPurgeable", a, b, c) }
         static var vramUnified: String { tr("monitor.vramUnified") }
-        static func zoneLow(_ a: String) -> String { tr("monitor.zoneLow", a) }
-        static func zoneMid(_ a: String, _ b: String) -> String { tr("monitor.zoneMid", a, b) }
-        static func zoneHigh(_ a: String) -> String { tr("monitor.zoneHigh", a) }
         static func usedSlashLimit(_ a: String, _ b: String) -> String { tr("monitor.usedSlashLimit", a, b) }
         static func thermalLevel(_ level: Int) -> String { tr("monitor.thermalLevel.\(min(max(level, 0), 3))") }
         static func pCoreTip(_ a: Int, _ b: String, _ c: String) -> String { tr("monitor.pCoreTip", a, b, c) }
@@ -567,52 +518,29 @@ enum L10n {
         static var mAh: String { tr("monitor.mAh") }
         static var cpuAverageTitle: String { tr("monitor.cpuAverageTitle") }
         static func totalOf(_ a: String) -> String { tr("monitor.totalOf", a) }
-        static var processesLabel: String { tr("monitor.processesLabel") }
         static var threadsLabel: String { tr("monitor.threadsLabel") }
         static func userShare(_ a: String) -> String { tr("monitor.userShare", a) }
         static func systemShare(_ a: String) -> String { tr("monitor.systemShare", a) }
         static func idleShare(_ a: String) -> String { tr("monitor.idleShare", a) }
         static func peakLink(_ a: String) -> String { tr("monitor.peakLink", a) }
         static var loadAverageTitle: String { tr("monitor.loadAverageTitle") }
-        static var coreAverage: String { tr("monitor.coreAverage") }
-        static var pAverage: String { tr("monitor.pAverage") }
-        static var eAverage: String { tr("monitor.eAverage") }
-        static func ofTotalUnit(_ a: String, _ b: String) -> String { tr("monitor.ofTotalUnit", a, b) }
-        static func chipSpec(_ a: String, _ b: Int) -> String { tr("monitor.chipSpec", a, b) }
-        static func recent(_ a: String) -> String { tr("monitor.recent", a) }
-        static func unifiedSpec(_ a: String) -> String { tr("monitor.unifiedSpec", a) }
         static var usedLabel: String { tr("monitor.usedLabel") }
         static func usedSlash(_ a: String, _ b: String) -> String { tr("monitor.usedSlash", a, b) }
         static var swapFileLabel: String { tr("monitor.swapFileLabel") }
-        static func titled(_ a: String, _ b: String) -> String { tr("monitor.titled", a, b) }
         static var session: String { tr("monitor.session") }
         static var today: String { tr("monitor.today") }
         static func dropped(_ a: Int) -> String { tr("monitor.dropped", a) }
         static func connectedVia(_ a: String) -> String { tr("monitor.connectedVia", a) }
-        static func volumeCount(_ a: Int) -> String { tr("monitor.volumeCount", a) }
-        static var readWriteTitle: String { tr("monitor.readWriteTitle") }
-        static func readValue(_ a: String) -> String { tr("monitor.readValue", a) }
-        static func writeValue(_ a: String) -> String { tr("monitor.writeValue", a) }
-        static func readWritePair(_ a: String, _ b: String) -> String { tr("monitor.readWritePair", a, b) }
-        static var health: String { tr("monitor.health") }
         static var sinceBoot: String { tr("monitor.sinceBoot") }
         static var readShort: String { tr("monitor.readShort") }
-        static var readSinceBoot: String { tr("monitor.readSinceBoot") }
         static var writeShort: String { tr("monitor.writeShort") }
         static var purgeableLabel: String { tr("monitor.purgeableLabel") }
         static var totalLabel: String { tr("monitor.totalLabel") }
-        static func adapterSpec(_ a: Int) -> String { tr("monitor.adapterSpec", a) }
         static var fullCharge: String { tr("monitor.fullCharge") }
         static var designCapacity: String { tr("monitor.designCapacity") }
         static func systemDrawValue(_ a: String) -> String { tr("monitor.systemDrawValue", a) }
         static func chargeValue(_ a: String) -> String { tr("monitor.chargeValue", a) }
         static func headroomValue(_ a: String) -> String { tr("monitor.headroomValue", a) }
-        static var notThrottled: String { tr("monitor.notThrottled") }
-        static var throttled: String { tr("monitor.throttled") }
-        static var allTemps: String { tr("monitor.allTemps") }
-        static var cpuTempTitle: String { tr("monitor.cpuTempTitle") }
-        static var fansAuto: String { tr("monitor.fansAuto") }
-        static var fansManual: String { tr("monitor.fansManual") }
         static func partValue(_ a: String, _ b: String) -> String { tr("monitor.partValue", a, b) }
     }
 
@@ -802,7 +730,6 @@ enum L10n {
         static var topUsageSort: String { tr("settings.topUsageSort") }
         static var sleepBlockingApps: String { tr("settings.sleepBlockingApps") }
         static var general: String { tr("settings.general") }
-        static var settingsSpec: String { tr("settings.settingsSpec") }
     }
 
     enum Notch {
@@ -816,11 +743,7 @@ enum L10n {
 
     /// Times under a chart.
     enum Chart {
-        static func minutesAgo(_ a: Int) -> String { tr("chart.minutesAgo", a) }
-        static func hoursAgo(_ a: Int) -> String { tr("chart.hoursAgo", a) }
-        static func daysAgo(_ a: Int) -> String { tr("chart.daysAgo", a) }
         static func minutesShort(_ a: Int) -> String { tr("chart.minutesShort", a) }
-        static func secondsAgo(_ a: Int) -> String { tr("chart.secondsAgo", a) }
     }
 
     /// What she says while something runs high.
@@ -982,36 +905,33 @@ enum L10n {
         static var filterApps: String { tr("processes.filterApps") }
         static var filterMine: String { tr("processes.filterMine") }
         static var filterSystem: String { tr("processes.filterSystem") }
-        static var name: String { tr("processes.name") }
         static var energy: String { tr("processes.energy") }
         static var listLabel: String { tr("processes.listLabel") }
         static var inspector: String { tr("processes.inspector") }
         static var closeInspector: String { tr("processes.closeInspector") }
         static func pidUser(_ a: String, _ b: String) -> String { tr("processes.pidUser", a, b) }
         static var systemProcess: String { tr("processes.systemProcess") }
-        static var details: String { tr("processes.details") }
         static var cpuTime: String { tr("processes.cpuTime") }
         static var threads: String { tr("processes.threads") }
         static var diskReadWrite: String { tr("processes.diskReadWrite") }
         static var networkInOut: String { tr("processes.networkInOut") }
         static var started: String { tr("processes.started") }
-        static var relations: String { tr("processes.relations") }
         static var parent: String { tr("processes.parent") }
         static var children: String { tr("processes.children") }
         static func childGroup(_ a: String, _ b: Int) -> String { tr("processes.childGroup", a, b) }
         static func childMore(_ a: String, _ b: Int) -> String { tr("processes.childMore", a, b) }
         static func sortedBy(_ a: String) -> String { tr("processes.sortedBy", a) }
         static var topEnergy: String { tr("processes.topEnergy") }
-        static func wholeMac(_ a: String) -> String { tr("processes.wholeMac", a) }
         static var searchShortcut: String { tr("processes.searchShortcut") }
         static var pidLabel: String { tr("processes.pidLabel") }
         static var userLabel: String { tr("processes.userLabel") }
     }
 
     enum Combined {
+        static func topCPUValue(_ a: String) -> String { tr("combined.topCPUValue", a) }
+        static func topMemoryValue(_ a: String) -> String { tr("combined.topMemoryValue", a) }
+        static func sleepMore(_ n: Int) -> String { tr("combined.sleepMore", n) }
         static var settings: String { tr("combined.settings") }
-        static func topCPU(_ a: String, _ b: String) -> String { tr("combined.topCPU", a, b) }
-        static func topMemory(_ a: String, _ b: String) -> String { tr("combined.topMemory", a, b) }
         static func blockingSleep(_ a: String) -> String { tr("combined.blockingSleep", a) }
         static func more(_ a: Int) -> String { tr("combined.more", a) }
         static var openRin: String { tr("combined.openRin") }
@@ -1020,14 +940,10 @@ enum L10n {
         static var showDetails: String { tr("combined.showDetails") }
         static var topUsageRow: String { tr("combined.topUsageRow") }
         static var sleepRow: String { tr("combined.sleepRow") }
-        static func sleepApps(_ a: String, _ b: Int) -> String { tr("combined.sleepApps", a, b) }
-        static func downUp(_ a: String, _ b: String) -> String { tr("combined.downUp", a, b) }
     }
 
     enum Sleep {
         static var keepAwake: String { tr("sleep.keepAwake") }
-        static var awake: String { tr("sleep.awake") }
-        static var remaining: String { tr("sleep.remaining") }
         static var untilOff: String { tr("sleep.untilOff") }
         static func endsAt(_ a: String) -> String { tr("sleep.endsAt", a) }
         static var endsUnplugged: String { tr("sleep.endsUnplugged") }
@@ -1047,8 +963,6 @@ enum L10n {
         static var keepDisplay: String { tr("sleep.keepDisplay") }
         static func lowBattery(_ a: String) -> String { tr("sleep.lowBattery", a) }
         static var blockers: String { tr("sleep.blockers") }
-        static var preventsSystem: String { tr("sleep.preventsSystem") }
-        static var preventsDisplay: String { tr("sleep.preventsDisplay") }
         static var open: String { tr("sleep.open") }
         static func openNamed(_ a: String) -> String { tr("sleep.openNamed", a) }
         static var macOS: String { tr("sleep.macOS") }
@@ -1060,7 +974,6 @@ enum L10n {
         static var underMinute: String { tr("sleep.underMinute") }
         static func daysHours(_ a: Int, _ b: Int) -> String { tr("sleep.daysHours", a, b) }
         static var duration: String { tr("sleep.duration") }
-        static func blockerCount(_ a: Int) -> String { tr("sleep.blockerCount", a) }
         static var modeCustomEllipsis: String { tr("sleep.modeCustomEllipsis") }
         static var offShort: String { tr("sleep.offShort") }
         static var turnOffA11y: String { tr("sleep.turnOffA11y") }
@@ -1074,8 +987,6 @@ enum L10n {
         static func inches(_ a: String) -> String { tr("about.inches", a) }
         static func year(_ a: String) -> String { tr("about.year", a) }
         static func macOS(_ a: String) -> String { tr("about.macOS", a) }
-        static var hardware: String { tr("about.hardware") }
-        static var software: String { tr("about.software") }
         static var storage: String { tr("about.storage") }
         static var chip: String { tr("about.chip") }
         static var memory: String { tr("about.memory") }

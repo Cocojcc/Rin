@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The window: a title bar across the top (traffic lights, the page's controls on the right), an
-/// icon rail on the left, the page on the right; one solid surface, hairlines between them.
+/// The window: a sidebar running its full height, one bar across the top (the traffic lights over
+/// the sidebar, the page's name, what the page controls), the page under it.
 struct MainView: View {
     static let minSize = CGSize(width: UIScale.of(760), height: UIScale.of(700))
 
@@ -10,19 +10,21 @@ struct MainView: View {
     @Namespace private var pageGlass
 
     var body: some View {
-        VStack(spacing: 0) {
-            UIScaled { TitleBar().frame(height: Sidebar.titleBand) }
-                .frame(height: UIScale.of(Sidebar.titleBand))
-                .layoutPriority(1)
+        ZStack(alignment: .top) {
             HStack(spacing: 0) {
                 UIScaled { Sidebar().frame(width: Sidebar.width) }
                 PageView(page: navigator.page)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipped()
+                    .padding(.top, UIScale.of(Sidebar.titleBand))
             }
+            UIScaled { TitleBar().frame(height: Sidebar.titleBand) }
+                .frame(height: UIScale.of(Sidebar.titleBand))
         }
         // The hosting controller sets the window's minimum from this, overriding contentMinSize.
         .frame(minWidth: MainView.minSize.width, minHeight: MainView.minSize.height)
+        // The sidebar and the curves run up to the window's edge, so its corners cut them too.
+        .clipShape(RoundedRectangle(cornerRadius: UIScale.of(18), style: .continuous))
         .background(GlassBackground(radius: UIScale.of(18), tint: Theme.windowGlass, material: .underWindowBackground))
         .environment(\.textScale, Fonts.windowTextScale)
         .environment(\.pageGlass, pageGlass)
@@ -33,45 +35,100 @@ struct MainView: View {
     }
 }
 
-/// The band across the top: room for the traffic lights on the left, the page's own controls on
-/// the right (time range and the monitor / settings switch, or the process search), a rule under it.
+/// The bar across the top: the page's name, what it says about itself beside that, then what it
+/// controls on the right (the time range and the monitor / settings switch, or the process search).
 struct TitleBar: View {
     var navigator = Navigator.shared
+    var monitor = Monitor.shared
+    var alerts = Alerts.shared
 
     var body: some View {
         let page = navigator.page
-        HStack(spacing: 10) {
-            Spacer(minLength: 0)
-            switch page {
-            case .overview:
-                RangeControl(range: Binding(get: { navigator.overviewRange }, set: { navigator.overviewRange = $0 }),
-                             options: Navigator.ranges(for: .cpu))
-            case .monitor(.bluetooth):
-                // The accessories page is a list of devices; nothing on it spans time.
-                EmptyView()
-            case .monitor(let m):
-                if m != .battery || Monitor.shared.snapshot.battery.hasBattery {
-                    RangeControl(range: Binding(get: { navigator.range(m) }, set: { navigator.ranges[m] = $0 }), options: Navigator.ranges(for: m))
-                }
-            case .processes:
-                ProcessSearchField(text: Binding(get: { navigator.processQuery }, set: { navigator.processQuery = $0 }))
-            default:
-                EmptyView()
+        HStack(spacing: 0) {
+            Text(page.title).ui(15, 600).lineLimit(1).fixedSize().accessibilityAddTraits(.isHeader)
+            // In a stack, so a page with nothing to say still leaves the room between its name and its controls.
+            HStack(spacing: 0) {
+                status(page)
+                Spacer(minLength: 0)
             }
-            // Kept apart from the switch above so it keeps its identity, and its thumb slides,
-            // between a module's monitor and its settings.
-            if let module = page.module {
-                ModuleViewToggle(module: module, settingsActive: page.isModuleSettings)
+            .ui(13)
+            .lineLimit(1)
+            .padding(.leading, 14)
+            HStack(spacing: 10) {
+                switch page {
+                case .monitor(.bluetooth):
+                    // The accessories page is a list of devices; nothing on it spans time.
+                    EmptyView()
+                case .monitor(let m):
+                    if m != .battery || monitor.snapshot.battery.hasBattery {
+                        RangeControl(range: Binding(get: { navigator.range(m) }, set: { navigator.ranges[m] = $0 }), options: Navigator.ranges(for: m))
+                    }
+                case .processes:
+                    ProcessSearchField(text: Binding(get: { navigator.processQuery }, set: { navigator.processQuery = $0 }))
+                case .about:
+                    AboutCopyButton()
+                default:
+                    EmptyView()
+                }
+                // Kept apart from the switch above so it keeps its identity, and its thumb slides,
+                // between a module's monitor and its settings.
+                if let module = page.module {
+                    ModuleViewToggle(module: module, settingsActive: page.isModuleSettings)
+                }
             }
         }
-        .padding(.leading, 18)
-        .padding(.trailing, 16)
+        .padding(.leading, Sidebar.width + PageView.margin)
+        .padding(.trailing, 14)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay(alignment: .bottom) { Hairline() }
+    }
+
+    /// What a page says about itself, only when there is something to say.
+    @ViewBuilder private func status(_ page: Page) -> some View {
+        switch page {
+        case .overview:
+            if let event = alerts.current {
+                Button { alerts.show(event) } label: { Attention(text: AlertText.headline(event)).contentShape(Rectangle()) }
+                    .buttonStyle(.plain)
+                    .help(L10n.Alerts.view)
+            }
+        case .processes:
+            let s = monitor.snapshot.processes
+            HStack(spacing: 14) {
+                KeyValue(label: L10n.Monitor.totalLabel, value: grouped(s.processCount), size: 13)
+                KeyValue(label: L10n.Monitor.threadsLabel, value: grouped(s.threadCount), size: 13)
+            }
+        case .monitor(.sensors):
+            let level = monitor.snapshot.sensors.thermal
+            // The steps say what they are; the words go first where the bar runs short.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    Text(L10n.Sensors.thermalState).foregroundStyle(Theme.sub).fixedSize()
+                    ThermalSteps(level: level)
+                }
+                ThermalSteps(level: level)
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.trailing, 16)
+        default:
+            EmptyView()
+        }
     }
 }
 
 private extension Page {
+    var title: String {
+        switch self {
+        case .overview: return L10n.Overview.title
+        case .monitor(let m), .moduleSettings(let m): return m.title
+        case .settings: return L10n.Sidebar.settings
+        case .menuBar: return L10n.Settings.menubarGroup
+        case .processes: return L10n.Sidebar.processes
+        case .sleep: return L10n.Sidebar.sleep
+        case .alerts: return L10n.Sidebar.alerts
+        case .about: return L10n.Sidebar.aboutMac
+        }
+    }
+
     var module: Module? {
         switch self {
         case .monitor(let m), .moduleSettings(let m): return m
@@ -123,27 +180,38 @@ struct ProcessSearchField: View {
 struct PageView: View {
     let page: Page
 
+    /// A page's text stays this far from the sidebar and the window's edge.
+    static let margin: CGFloat = 32
+    /// What the design's window has under its bar; anything more goes to the page's main curve.
+    private static let designHeight: CGFloat = 700 - Sidebar.titleBand
+
     var body: some View {
-        if RenderContext.offscreen {
-            // ImageRenderer can't draw scroll views.
-            UIScaled { stack }.frame(maxHeight: .infinity, alignment: .top)
-        } else {
-            // The scroll view itself stays unscaled; only the page inside it is drawn at UI scale.
-            // Pages cross-fade, stacked so the outgoing one keeps its place.
-            ZStack {
-                Group {
-                    if fillsWindow {
-                        // The page scrolls its own table, so its header stays put.
-                        UIScaled { stack }
-                    } else {
-                        ScrollView { UIScaled { stack } }
-                            .scrollIndicators(.automatic)
+        GeometryReader { geo in
+            let extra = max(0, geo.size.height / UIScale.factor - Self.designHeight)
+            Group {
+                if RenderContext.offscreen {
+                    // ImageRenderer can't draw scroll views.
+                    UIScaled { stack }.frame(maxHeight: .infinity, alignment: .top)
+                } else {
+                    // The scroll view itself stays unscaled; only the page inside it is drawn at UI scale.
+                    // Pages cross-fade, stacked so the outgoing one keeps its place.
+                    ZStack {
+                        Group {
+                            if fillsWindow {
+                                // The page scrolls its own table, so its header stays put.
+                                UIScaled { stack }
+                            } else {
+                                ScrollView { UIScaled { stack } }
+                                    .scrollIndicators(.automatic)
+                            }
+                        }
+                        .id(page)
+                        .transition(.opacity)
                     }
+                    .animation(Motion.page, value: page)
                 }
-                .id(page)
-                .transition(.opacity)
             }
-            .animation(Motion.page, value: page)
+            .environment(\.pageExtra, extra)
         }
     }
 
@@ -152,18 +220,8 @@ struct PageView: View {
 
     private var stack: some View {
         content
-            .environment(\.chartTint, tint)
-            .padding(EdgeInsets(top: 28, leading: 32, bottom: Sidebar.bottomInset, trailing: 32))
+            .padding(EdgeInsets(top: 6, leading: Self.margin, bottom: Sidebar.bottomInset, trailing: Self.margin))
             .frame(maxWidth: .infinity, maxHeight: fillsWindow ? .infinity : nil, alignment: .topLeading)
-    }
-
-    /// A module page's charts (and the process inspector's) take its hue under their lines.
-    private var tint: Color? {
-        switch page {
-        case .monitor(let m): return Theme.chartTint(m, battery: Monitor.shared.snapshot.battery)
-        case .processes: return Theme.hue(.cpu)
-        default: return nil
-        }
     }
 
     @ViewBuilder private var content: some View {
@@ -191,30 +249,30 @@ struct PageView: View {
     }
 }
 
-/// The icon rail: overview and processes, the modules, then sleep, alerts and this Mac; settings
-/// at the foot. A module's icon always wears its hue; the current page's icon sits on a square,
-/// a module's tinted with its hue, the rest grey.
+/// The sidebar: overview and processes, the modules, then sleep, alerts and this Mac; settings at
+/// the foot. A module's icon always wears its hue; the current page is a solid tile, a module's in
+/// its hue, the rest in the text color.
 struct Sidebar: View {
     var navigator = Navigator.shared
     var alerts = Alerts.shared
     var settings = SettingsStore.shared
 
-    static let width: CGFloat = 64
-    /// The title bar's height.
+    static let width: CGFloat = 76
+    /// The bar across the top; the sidebar's icons start below it.
     static let titleBand: CGFloat = 52
     /// Under each page's last row.
     static let bottomInset: CGFloat = 20
 
-    /// The hardware modules in the rail's order; switched-off ones are left out.
-    static let moduleOrder: [Module] = [.cpu, .gpu, .memory, .network, .disk, .battery, .bluetooth, .sensors]
+    /// The hardware modules in the sidebar's order; switched-off ones are left out.
+    static let moduleOrder: [Module] = [.cpu, .memory, .network, .disk, .gpu, .sensors, .battery, .bluetooth]
 
     var body: some View {
         let modules = Self.moduleOrder.filter(settings.prefs.isEnabled)
-        VStack(spacing: 4) {
+        VStack(spacing: 3) {
             item(.overview, Icons.overview, L10n.Sidebar.overview)
             item(.processes, Icons.processes, L10n.Sidebar.processes)
             ForEach(modules, id: \.self) { m in
-                item(.monitor(m), Icons.module(m), m.title, hue: Theme.hue(m), tint: Theme.tint(m))
+                item(.monitor(m), Icons.module(m), m.title, hue: Theme.hue(m))
                     .padding(.top, m == modules.first ? 10 : 0)
                     .contextMenu {
                         Button(L10n.Sidebar.turnOffModule(m.title)) { settings.prefs.setEnabled(m, false) }
@@ -226,23 +284,22 @@ struct Sidebar: View {
             Spacer(minLength: 10)
             item(.settings, Icons.gear, L10n.Sidebar.settings, lineWidth: 1.3)
         }
-        .padding(.top, 10)
+        .padding(.top, Self.titleBand)
         .padding(.bottom, 14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .overlay(alignment: .trailing) { Rectangle().fill(Theme.line).frame(width: 1) }
+        .background(Theme.rail)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Sidebar.label)
     }
 
-    private func item(_ page: Page, _ d: String, _ title: String, badge: Int = 0, lineWidth: CGFloat = 1.5,
-                      hue: Color? = nil, tint: Color? = nil) -> some View {
+    private func item(_ page: Page, _ d: String, _ title: String, badge: Int = 0, lineWidth: CGFloat = 1.5, hue: Color? = nil) -> some View {
         let on = navigator.page.sidebarPage == page || (page == .settings && navigator.page == .menuBar)
-        return RailButton(d: d, title: title, on: on, badge: badge, lineWidth: lineWidth, hue: hue, tint: tint) { navigator.page = page }
+        return RailButton(d: d, title: title, on: on, badge: badge, lineWidth: lineWidth, hue: hue) { navigator.page = page }
     }
 }
 
-/// One rail item: 36 pt square, 10 pt corners, grey behind it when current or under the pointer;
-/// new alerts as a red count at its corner.
+/// One sidebar item: 38 pt square, 11 pt corners, solid when current, grey under the pointer; new
+/// alerts as a red count at its corner.
 private struct RailButton: View {
     var d: String
     var title: String
@@ -250,17 +307,20 @@ private struct RailButton: View {
     var badge: Int
     var lineWidth: CGFloat
     var hue: Color?
-    var tint: Color?
     var action: () -> Void
     @State private var hovering = false
 
     var body: some View {
         Button(action: action) {
             LineIcon(d: d, size: 18, lineWidth: lineWidth)
-                .foregroundStyle(hue ?? (on ? Theme.text : Theme.sub))
-                .frame(width: 36, height: 36)
+                .foregroundStyle(on ? Theme.onTile : hue ?? Theme.sub)
+                .frame(width: 38, height: 38)
                 .background {
-                    if on || hovering { RoundedRectangle(cornerRadius: 10, style: .continuous).fill(on ? tint ?? Theme.selection : Theme.lgHover) }
+                    if on {
+                        RoundedRectangle(cornerRadius: 11, style: .continuous).fill(hue ?? Theme.text)
+                    } else if hovering {
+                        RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Theme.lgHover)
+                    }
                 }
                 .overlay(alignment: .topTrailing) {
                     if badge > 0 {

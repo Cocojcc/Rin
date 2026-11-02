@@ -31,6 +31,7 @@ enum Format {
     static func memory(_ bytes: UInt64) -> String { memory(Double(bytes)) }
 
     static func memory(_ bytes: Double) -> String {
+        if bytes == 0 { return "0 GB" }
         let gb = bytes / 1_073_741_824
         if gb >= 1 { return gb >= 100 ? "\(Int(gb.rounded())) GB" : String(format: "%.1f GB", gb) }
         let mb = bytes / 1_048_576
@@ -156,7 +157,7 @@ enum Format {
         return String(format: "%d:%02d:%02d", total / 3600, (total / 60) % 60, total % 60)
     }
 
-    static func rpm(_ r: Double) -> String { "\(Int(r.rounded())) rpm" }
+    static func rpm(_ r: Double) -> String { "\(Int(r.rounded()).formatted(.number.grouping(.automatic))) rpm" }
 
     static func frequency(_ mhz: Double) -> String {
         mhz >= 1000 ? String(format: "%.2f GHz", mhz / 1000) : "\(Int(mhz.rounded())) MHz"

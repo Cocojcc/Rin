@@ -6,15 +6,18 @@ import SwiftUI
 extension View {
     /// The UI font at a design size and weight (the type ramp: 12 / 14 / 16 / 22 / 28 / 40; nothing smaller),
     /// enlarged by the surface's `textScale`.
-    func ui(_ size: CGFloat, _ weight: CGFloat = 400) -> some View { modifier(UIFont(size: size, weight: weight)) }
+    func ui(_ size: CGFloat, _ weight: CGFloat = 400, proportional: Bool = false) -> some View {
+        modifier(UIFont(size: size, weight: weight, proportional: proportional))
+    }
 }
 
 private struct UIFont: ViewModifier {
     var size: CGFloat
     var weight: CGFloat
+    var proportional: Bool
     @Environment(\.textScale) private var scale
 
-    func body(content: Content) -> some View { content.font(Fonts.text(size, weight, scale: scale)) }
+    func body(content: Content) -> some View { content.font(Fonts.text(size, weight, scale: scale, proportional: proportional)) }
 }
 
 private struct TextScaleKey: EnvironmentKey { static let defaultValue: CGFloat = 1 }
@@ -154,7 +157,7 @@ struct GlassShape: InsettableShape {
 
 // MARK: - Containers
 
-/// Settings group: a small grey title, then rows with hairlines between them; no card.
+/// Settings group: a small grey title, then rows with hairlines between them in a soft well.
 struct SettingsGroup<Content: View, Trailing: View>: View {
     var title: String? = nil
     @ViewBuilder var content: Content
@@ -165,8 +168,19 @@ struct SettingsGroup<Content: View, Trailing: View>: View {
             if let title {
                 HeadRow(title: title) { trailing }
             }
-            VStack(spacing: 0) { DividedRows { content } }
+            Well { DividedRows { content } }
         }
+    }
+}
+
+/// A group of rows on the soft grey that sets it off from the page.
+struct Well<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(spacing: 0) { content }
+            .padding(.horizontal, 14)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.well))
     }
 }
 
@@ -206,7 +220,7 @@ struct Hairline: View {
 /// Label on the left, control on the right (44 pt rows in settings).
 struct SettingsRow<Control: View>: View {
     var title: String
-    var height: CGFloat = 44
+    var height: CGFloat = 45
     /// Faded and locked while another setting makes it moot (the rule above stays as it is).
     var dimmed = false
     @ViewBuilder var control: Control
@@ -420,7 +434,7 @@ struct WellButton: View {
                 .fixedSize(horizontal: !expands, vertical: false)
                 .frame(maxWidth: expands ? .infinity : nil)
                 .frame(height: height)
-                .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Theme.well))
+                .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Theme.raise))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -458,7 +472,7 @@ struct IconButton: View {
     var iconSize: CGFloat = 12
     var viewBox: CGFloat = 12
     var lineWidth: CGFloat = 1.7
-    var fill: Color = Theme.well
+    var fill: Color = Theme.raise
     var tint: Color = Theme.sub
     var label: String
     var action: () -> Void

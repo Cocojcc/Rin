@@ -57,14 +57,23 @@ enum Theme {
     /// The grey behind a group of segments, a button, a popup, the selected rail item.
     static let raise = Color.dyn(RGBA(0, 0, 0, 0.05), RGBA(255, 255, 255, 0.06))
     static let lgHover = Color.dyn(RGBA(0, 0, 0, 0.04), RGBA(255, 255, 255, 0.06))
-    /// A dropdown row whose details are open beside it.
-    static let rowSelected = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.1))
-    /// The selected rail item.
-    static let selection = raise
+    /// A dropdown row whose details are open beside it: raised off the panel.
+    static let rowSelected = Color.dyn(RGBA(255, 255, 255, 0.7), RGBA(255, 255, 255, 0.1))
+    /// The sidebar, running the window's full height.
+    static let rail = Color.dyn(RGBA(0, 0, 0, 0.035), RGBA(255, 255, 255, 0.035))
+    /// An icon on the picked sidebar tile.
+    static let onTile = Color.dyn(RGBA(0xFFFFFF), RGBA(0x111113))
+    /// An instrument's outline and pins.
+    static let ink = Color.dyn(RGBA(0, 0, 0, 0.3), RGBA(255, 255, 255, 0.3))
+    /// An instrument's cell with nothing in it.
+    static let cell = Color.dyn(RGBA(0, 0, 0, 0.1), RGBA(255, 255, 255, 0.12))
+    /// Behind a plain program's black icon, which would vanish on the dark window.
+    static let iconLift = Color.dyn(RGBA(0, 0, 0, 0), RGBA(255, 255, 255, 0.28))
     /// Tags and chips that are on ("90%" in a rule, a module in the menu bar).
     static let chip = Color.dyn(RGBA(0, 0, 0, 0.06), RGBA(255, 255, 255, 0.08))
 
-    static let well = raise
+    /// Groups of settings rows sit in a soft well.
+    static let well = Color.dyn(RGBA(0, 0, 0, 0.03), RGBA(255, 255, 255, 0.045))
     static let switchOff = Color.dyn(RGBA(0, 0, 0, 0.12), RGBA(255, 255, 255, 0.16))
     static let switchKnob = Color.dyn(RGBA(0xFFFFFF), RGBA(0xD9D9DC))
     /// A switch that is on: Rin's green, with a white knob (a graphite one on the light green).
@@ -83,8 +92,6 @@ enum Theme {
     static let low = Color.dyn(RGBA(0, 0, 0, 0.16), RGBA(255, 255, 255, 0.25))
     static let track = Color.dyn(RGBA(0, 0, 0, 0.07), RGBA(255, 255, 255, 0.08))
     static let grid = line
-    /// Under a chart's line when dark; on white the wash takes a faint tint of the line instead.
-    static let area = Color.dyn(RGBA(0, 0, 0, 0.035), RGBA(255, 255, 255, 0.045))
     static let cache = low
     static let cross = Color.dyn(RGBA(0, 0, 0, 0.28), RGBA(255, 255, 255, 0.45))
     static let barFg = Color.dyn(RGBA(0x1C1C1E), RGBA(0xF2F2F3))
@@ -102,8 +109,6 @@ enum Theme {
     private static let hueColors = hues.mapValues { Color.dyn(RGBA($0.light), RGBA($0.dark)) }
     /// A module's second series (CPU system, GPU tiler, wired memory): the same hue, lighter.
     private static let softColors = hues.mapValues { Color.dyn(RGBA($0.light, 0.42), RGBA($0.dark, 0.5)) }
-    /// The selected rail item behind a module's icon.
-    private static let tintColors = hues.mapValues { Color.dyn(RGBA($0.light, 0.14), RGBA($0.dark, 0.2)) }
 
     static func hue(_ module: Module) -> Color? { hueColors[module] }
     /// Rin's own green (the CPU's hue): switches, the keep-awake timer, a charging battery, buttons.
@@ -167,13 +172,6 @@ enum Theme {
     static func color(for module: Module) -> Color { hueColors[module] ?? green }
     /// A module's second series.
     static func soft(_ module: Module) -> Color { softColors[module] ?? faint }
-    static func tint(_ module: Module) -> Color? { tintColors[module] }
-
-    /// What a module's charts tint their fills with on white: its hue; the battery's green only
-    /// while charging; nothing for Bluetooth.
-    static func chartTint(_ module: Module, battery: BatterySample) -> Color? {
-        module == .battery ? (battery.isCharging ? green : nil) : hueColors[module]
-    }
 
     /// A battery level: red when low, Rin's green while charging, else plain (`lead` for a figure,
     /// a mid grey for a line or bar).
@@ -197,18 +195,21 @@ enum Fonts {
     /// Interface text at a design size, enlarged by the surface's text scale (half points).
     /// Big readouts sit 40 units lighter: with the system's font smoothing on they would
     /// otherwise read heavier than the design's numbers.
-    static func text(_ size: CGFloat, _ weight: CGFloat = 400, scale: CGFloat = 1) -> Font {
+    static func text(_ size: CGFloat, _ weight: CGFloat = 400, scale: CGFloat = 1, proportional: Bool = false) -> Font {
         let weight = size >= 24 && weight >= 500 ? weight - 40 : weight
-        return scale == 1 ? ui(size, weight) : ui((size * scale * 2).rounded() / 2, weight)
+        return ui(scale == 1 ? size : (size * scale * 2).rounded() / 2, weight, proportional: proportional)
     }
 
-    /// The system font at a CSS weight (300...700, in between allowed), tabular figures. Menu bar
-    /// previews use this directly so they keep the menu bar's own sizes.
-    static func ui(_ size: CGFloat, _ weight: CGFloat = 400) -> Font {
-        let key = "\(size)-\(weight)"
+    /// The system font at a CSS weight (300...700, in between allowed), tabular figures unless
+    /// asked otherwise (a big lead reading). Menu bar previews use this directly so they keep the
+    /// menu bar's own sizes.
+    static func ui(_ size: CGFloat, _ weight: CGFloat = 400, proportional: Bool = false) -> Font {
+        let key = "\(size)-\(weight)-\(proportional)"
         lock.lock(); defer { lock.unlock() }
         if let f = cache[key] { return f }
-        let font = Font(NSFont.monospacedDigitSystemFont(ofSize: size, weight: systemWeight(weight)) as CTFont)
+        let nsFont = proportional ? NSFont.systemFont(ofSize: size, weight: systemWeight(weight))
+                                  : NSFont.monospacedDigitSystemFont(ofSize: size, weight: systemWeight(weight))
+        let font = Font(nsFont as CTFont)
         cache[key] = font
         return font
     }

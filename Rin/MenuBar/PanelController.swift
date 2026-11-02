@@ -232,7 +232,7 @@ struct PanelChrome<Content: View>: View {
             .ui(14)
             .foregroundStyle(Theme.text)
         }
-        .background(GlassBackground(radius: UIScale.of(14)))
+        .background(GlassBackground(radius: UIScale.of(16)))
         .focusEffectDisabled()
     }
 }

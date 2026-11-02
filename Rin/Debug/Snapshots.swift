@@ -27,7 +27,9 @@ enum Snapshots {
         for m in Module.allCases { Monitor.shared.setVisible(.popover(m), true) }
         Monitor.shared.setVisible(.window(.monitor(.battery)), true)
         Monitor.shared.setVisible(.window(.processes), true)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 7) {
+        // `RIN_SNAPSHOT_WAIT=120`: reads for longer first, so the curves have something to draw.
+        let wait = Double(ProcessInfo.processInfo.environment["RIN_SNAPSHOT_WAIT"] ?? "") ?? 7
+        DispatchQueue.main.asyncAfter(deadline: .now() + wait) {
             render(to: dir, only: only)
             NSApp.terminate(nil)
         }

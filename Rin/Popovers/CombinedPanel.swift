@@ -2,9 +2,9 @@ import AppKit
 import SwiftUI
 
 /// The "合并成一项" dropdown, for a glance: every module, in the order of the chips in 设置 › 菜单栏.
-/// The first one in the menu bar, which the merged item shows, is a big reading with its last
-/// minute; the others follow one to a row (name, last minute, reading); then the busiest app and
-/// what keeps the Mac awake. Every row opens its details beside the dropdown.
+/// The first one in the menu bar, which the merged item shows, is a big reading with its instrument
+/// and last minute; the others follow one to a row (name, a small picture, reading); then the busiest
+/// app and what keeps the Mac awake. Every row opens its details beside the dropdown.
 struct CombinedPanel: View {
     var monitor = Monitor.shared
     var settings = SettingsStore.shared
@@ -39,26 +39,34 @@ struct CombinedPanel: View {
                     .padding(.top, 8)
             }
             if let hero = modules.first {
-                CombinedHero(module: hero).padding(.top, 16)
+                CombinedHero(module: hero).padding(.top, 10)
             }
             if modules.count > 1 {
                 VStack(spacing: 0) {
-                    InsetRows { ForEach(modules.dropFirst()) { ModuleLine(module: $0) } }
+                    ForEach(modules.dropFirst()) { ModuleLine(module: $0) }
                 }
-                .padding(.top, 14)
+                .padding(.top, 10)
             }
-            if let busiest {
-                CombinedLine(label: L10n.Combined.topUsageRow,
-                             value: bar.combinedTopByMemory ? L10n.Combined.topMemory(busiest.name, Format.memory(busiest.memory))
-                                                            : L10n.Combined.topCPU(busiest.name, Format.percentValue(busiest.cpu)),
-                             detail: .top)
-                    .padding(.top, 4)
-            }
-            if let first = awake.first {
-                CombinedLine(label: L10n.Combined.sleepRow,
-                             value: awake.count > 1 ? L10n.Combined.sleepApps(Self.name(first), awake.count) : Self.name(first),
-                             detail: .sleep)
-                    .padding(.top, busiest == nil ? 4 : 0)
+            if busiest != nil || !awake.isEmpty {
+                Hairline().padding(.vertical, 8)
+                VStack(spacing: 0) {
+                    if let busiest {
+                        CombinedLine(label: L10n.Combined.topUsageRow, detail: .top) {
+                            AppIcon(process: busiest)
+                            Text(busiest.name).ui(14).lineLimit(1)
+                            Text(bar.combinedTopByMemory ? L10n.Combined.topMemoryValue(Format.memory(busiest.memory)) : L10n.Combined.topCPUValue(Format.percentValue(busiest.cpu)))
+                                .ui(14).foregroundStyle(Theme.sub).fixedSize()
+                        }
+                    }
+                    if let first = awake.first {
+                        CombinedLine(label: L10n.Combined.sleepRow, detail: .sleep) {
+                            if let icon = Self.icon(first) { AppIcon(image: icon) }
+                            Text(Self.name(first)).ui(14).lineLimit(1)
+                            if awake.count > 1 { Text(L10n.Combined.sleepMore(awake.count)).ui(14).foregroundStyle(Theme.sub).fixedSize() }
+                        }
+                    }
+                }
+                .padding(.bottom, -8)
             }
         }
         .task(id: bar.combinedSleep) {
@@ -96,6 +104,15 @@ struct CombinedPanel: View {
         }
     }
 
+    /// Whoever it is, as they look; macOS as the Finder.
+    static func icon(_ b: SleepBlocker) -> NSImage? {
+        switch b.owner {
+        case .app(let app): return app.icon
+        case .process: return AppIcon.image(bundle: nil)
+        case .system: return AppIcon.image(bundle: "/System/Library/CoreServices/Finder.app")
+        }
+    }
+
     /// A module with nothing to show leaves no row: no battery, no device reporting one.
     private func hasReading(_ m: Module, _ s: Snapshot) -> Bool {
         switch m {
@@ -103,24 +120,6 @@ struct CombinedPanel: View {
         case .bluetooth: return !s.bluetooth.withBattery.isEmpty
         case .sensors: return s.sensors.cpuAverage != nil
         default: return true
-        }
-    }
-}
-
-/// Rows with hairlines between them, inset 8 from each side like the hover box.
-private struct InsetRows<Content: View>: View {
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        _VariadicView.Tree(Layout()) { content }
-    }
-
-    private struct Layout: _VariadicView_MultiViewRoot {
-        func body(children: _VariadicView.Children) -> some View {
-            let first = children.first?.id
-            ForEach(children) { child in
-                child.overlay(alignment: .top) { if child.id != first { Hairline() } }
-            }
         }
     }
 }
@@ -161,7 +160,7 @@ private enum CombinedReading {
         }
     }
 
-    /// The last minute: a line for most, two mirrored for traffic; nil for Bluetooth.
+    /// The last minute: a line for most, two mirrored for traffic; nothing for Bluetooth, whose level barely moves.
     @ViewBuilder static func chart(_ m: Module, color: Color, width: CGFloat, fill: Bool, height: CGFloat) -> some View {
         let h = Monitor.shared.history
         switch m {
@@ -172,13 +171,12 @@ private enum CombinedReading {
         case .battery: spark(h.points(.battery, range: .m5), color, width, fill, height)
         case .network: mirrored(h.points(.netDown, range: .m5), h.points(.netUp, range: .m5), color, width, floor: 10_000, height)
         case .disk: mirrored(h.points(.diskRead, range: .m5), h.points(.diskWrite, range: .m5), color, width, floor: 1_000_000, height)
-        case .bluetooth: EmptyView()
+        case .bluetooth: Color.clear.frame(height: height)
         }
     }
 
     private static func spark(_ points: [ChartPoint], _ color: Color, _ width: CGFloat, _ fill: Bool, _ height: CGFloat) -> some View {
-        ConsoleChart(kind: .area, series: ChartSeries.line(points, color, width: width, fill: fill), span: 60, maxValue: 100, height: height,
-                     xLabels: nil, midline: false)
+        ConsoleChart(kind: .area, series: ChartSeries.line(points, color, width: width, fill: fill), span: 60, maxValue: 100, height: height, midline: false)
     }
 
     /// Up against its own last-minute peak, down against its own; a floor keeps a trickle low.
@@ -188,11 +186,25 @@ private enum CombinedReading {
             ConsoleChart.niceMax(max(points.filter { $0.date >= from }.map(\.value).max() ?? 0, floor) * 1.1)
         }
         return ConsoleChart(kind: .mirroredArea, series: ChartSeries.mirrored(top, color, bottom, color, lineWidth: width),
-                            span: 60, maxValue: peak(top), bottomMax: peak(bottom), height: height, xLabels: nil)
+                            span: 60, maxValue: peak(top), bottomMax: peak(bottom), height: height)
+    }
+
+    /// The module's small device, for the row it leads.
+    @ViewBuilder static func instrument(_ m: Module, _ s: Snapshot, scale: CGFloat) -> some View {
+        switch m {
+        case .cpu: ChipInstrument(scale: scale)
+        case .gpu: ScreenInstrument(scale: scale)
+        case .memory: StickInstrument(scale: scale)
+        case .network: TubesInstrument(scale: scale)
+        case .disk: PlatterInstrument(scale: scale, volume: s.disk.root, io: s.disk.read + s.disk.write)
+        case .battery: CellInstrument(scale: scale)
+        case .bluetooth: PackInstrument(scale: scale)
+        case .sensors: SensorInstrument(scale: scale)
+        }
     }
 }
 
-/// The first module, large: its name, the reading at 52 in its hue, its last minute beside it.
+/// The first module, large: its name, the reading at 64 in its hue and its instrument, its last minute edge to edge under them.
 private struct CombinedHero: View {
     let module: Module
     var monitor = Monitor.shared
@@ -210,33 +222,36 @@ private struct CombinedHero: View {
         let lead = low ? Theme.danger : module == .battery ? Theme.batteryLevel(s.battery) : Theme.hue(module) ?? Theme.text
         let line = low ? Theme.danger : module == .battery ? Theme.batteryLevel(s.battery, lead: false) : Theme.hue(module) ?? Theme.mid
         Button { PanelController.shared.toggleDetail(.module(module)) } label: {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 4) {
                     SmallLabel(text: CombinedReading.name(module))
-                    Spacer(minLength: 8)
-                    DetailChevron()
+                    BigValue(value: v.0, unit: v.1, size: 64, color: lead)
                 }
-                HStack(alignment: .bottom) {
-                    BigValue(value: v.0, unit: v.1, size: 52, color: lead).layoutPriority(1)
-                    Spacer(minLength: 12)
-                    CombinedReading.chart(module, color: line, width: 2, fill: true, height: 44)
-                        .frame(minWidth: 72, maxWidth: 140)
-                        .accessibilityHidden(true)
-                }
+                .padding(.horizontal, 20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+                CombinedReading.chart(module, color: line, width: 2.5, fill: true, height: 62)
+                    .padding(.top, -18)
+                    .accessibilityHidden(true)
             }
-            .padding(.vertical, 6)
-            .detailRow(selected: selected, hovering: hovering, radius: 8)
+            .padding(.top, 8)
+            .overlay(alignment: .topTrailing) {
+                CombinedReading.instrument(module, s, scale: 0.44).padding(.trailing, 20).padding(.top, 8)
+            }
+            .overlay(alignment: .trailing) { DetailChevron(visible: hovering || selected).padding(.trailing, 3) }
+            .background { if hovering { Theme.lgHover } }
+            .hoverAnimation(hovering)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .padding(.horizontal, -20)
         .onHover { hovering = $0 }
-        .environment(\.chartTint, Theme.chartTint(module, battery: s.battery))
-        .accessibilityElement(children: .combine)
         .accessibilityHint(L10n.Combined.showDetails)
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
-/// Name, the last minute as a small line in the module's hue, the reading; the row opens the module's details.
+/// Name, a small picture (a bar for how full, a curve for a rate), the reading; the row opens the module's details.
 private struct ModuleLine: View {
     let module: Module
     var monitor = Monitor.shared
@@ -244,26 +259,20 @@ private struct ModuleLine: View {
     var details = CombinedDetails.shared
     @State private var hovering = false
 
+    /// One column for all the names, as wide as the longest in this language.
+    private static let nameWidth: CGFloat = max(52, Module.allCases.map {
+        ($0.title as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 14)]).width.rounded(.up)
+    }.max() ?? 0)
+
     var body: some View {
         let s = monitor.snapshot
         let prefs = settings.prefs
         let selected = details.selection == .module(module)
         Button { PanelController.shared.toggleDetail(.module(module)) } label: {
-            HStack(spacing: 10) {
-                Text(CombinedReading.name(module)).ui(14).foregroundStyle(Theme.sub).lineLimit(1).minimumScaleFactor(0.8).frame(width: 44, alignment: .leading)
-                Group {
-                    if module == .bluetooth {
-                        LevelBar(fraction: CombinedReading.lowestDevice(s)?.level ?? 0,
-                                 color: CombinedReading.isLow(module, s, prefs) ? Theme.danger : Theme.mid, height: 3)
-                    } else {
-                        CombinedReading.chart(module, color: Theme.hue(module) ?? Theme.faint, width: 1.3, fill: false, height: module == .network || module == .disk ? 26 : 18)
-                    }
-                }
-                .frame(width: 54)
-                .accessibilityHidden(true)
-                reading(s, prefs).ui(14, 500).lineLimit(1).minimumScaleFactor(0.8)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                DetailChevron()
+            HStack(spacing: 12) {
+                Text(CombinedReading.name(module)).ui(14).foregroundStyle(Theme.sub).lineLimit(1).frame(width: Self.nameWidth, alignment: .leading)
+                picture(s, prefs).frame(maxWidth: .infinity).accessibilityHidden(true)
+                reading(s, prefs).frame(width: 112, alignment: .trailing)
             }
             .frame(height: 40)
             .detailRow(selected: selected, hovering: hovering)
@@ -273,72 +282,102 @@ private struct ModuleLine: View {
         .accessibilityElement(children: .combine)
         .accessibilityHint(L10n.Combined.showDetails)
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    @ViewBuilder private func picture(_ s: Snapshot, _ prefs: Preferences) -> some View {
+        switch module {
+        case .memory: LevelBar(fraction: s.memory.usedFraction, color: Theme.color(for: .memory))
+        case .disk: LevelBar(fraction: s.disk.root?.usedFraction ?? 0, color: Theme.color(for: .disk))
+        case .battery: LevelBar(fraction: s.battery.level, color: Theme.batteryLevel(s.battery, lead: false))
+        case .bluetooth:
+            LevelBar(fraction: CombinedReading.lowestDevice(s)?.level ?? 0, color: CombinedReading.isLow(module, s, prefs) ? Theme.danger : Theme.mid)
+        case .sensors: TempBar(celsius: s.sensors.cpuAverage ?? 0, color: Theme.color(for: .sensors))
+        case .network: CombinedReading.chart(module, color: Theme.color(for: .network), width: 1.4, fill: true, height: 26)
+        case .cpu, .gpu: CombinedReading.chart(module, color: Theme.color(for: module), width: 1.6, fill: true, height: 24)
+        }
     }
 
     @ViewBuilder private func reading(_ s: Snapshot, _ prefs: Preferences) -> some View {
         if module == .network {
             // Both directions of one reading, so they look the same.
             let n = s.network, unit = prefs.network.speedUnit
-            Text(n.connected ? L10n.Combined.downUp(Format.rate(n.down, unit: unit), Format.rate(n.up, unit: unit)) : L10n.Common.dash)
+            if n.connected {
+                VStack(alignment: .trailing, spacing: 0) {
+                    Reading(text: MenuBarText.downArrow + " " + Format.rate(n.down, unit: unit), size: 12)
+                    Reading(text: MenuBarText.upArrow + " " + Format.rate(n.up, unit: unit), size: 12)
+                }
+            } else {
+                Text(L10n.Common.dash).ui(14, 500)
+            }
+        } else if module == .sensors {
+            // The temperature and the fan, as the menu bar shows them.
+            let v = CombinedReading.value(module, s, prefs)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    Text(v.0).ui(14, 500)
+                    Text(verbatim: "°").ui(14).foregroundStyle(Theme.sub)
+                }
+                if let f = s.sensors.fans.first { Reading(text: Format.rpm(f.rpm)) }
+            }
+            .lineLimit(1)
+            .fixedSize()
         } else {
             let v = CombinedReading.value(module, s, prefs)
-            if module == .sensors {
-                // The temperature and the fan, as the menu bar shows them.
-                Text(([v.0 + "°"] + (s.sensors.fans.first.map { [Format.rpm($0.rpm)] } ?? [])).joined(separator: "  "))
-            } else {
-                Text(v.0 + (v.1 == "%" ? "%" : v.1.map { " " + $0 } ?? ""))
-                    .foregroundStyle(CombinedReading.isLow(module, s, prefs) ? Theme.danger : Theme.text)
-            }
+            Reading(text: v.0 + (v.1 == "%" ? "%" : v.1.map { " " + $0 } ?? ""), color: CombinedReading.isLow(module, s, prefs) ? Theme.danger : Theme.text)
         }
     }
 }
 
-/// "占用最多   Xcode · CPU 38.2%": a grey label and its value on a ruled row that opens its details.
-private struct CombinedLine: View {
+/// "占用最多   Xcode  CPU 38.2%": a grey label and who it is, on a row that opens its details.
+private struct CombinedLine<Value: View>: View {
     var label: String
-    var value: String
     var detail: CombinedDetail
+    @ViewBuilder var value: Value
     var details = CombinedDetails.shared
     @State private var hovering = false
 
     var body: some View {
         let selected = details.selection == detail
         Button { PanelController.shared.toggleDetail(detail) } label: {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Text(label).ui(14).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
-                Spacer(minLength: 8)
-                Text(value).ui(14).lineLimit(1).truncationMode(.middle)
-                DetailChevron()
+                HStack(spacing: 8) { value }.frame(maxWidth: .infinity, alignment: .trailing)
             }
-            .frame(height: 40)
+            .frame(height: 38)
             .detailRow(selected: selected, hovering: hovering)
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .overlay(alignment: .top) { Hairline() }
         .accessibilityElement(children: .combine)
         .accessibilityHint(L10n.Combined.showDetails)
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
-/// The small › that says a row opens something.
+/// The small › that says a row opens something, only while it is under the pointer or open.
 private struct DetailChevron: View {
+    var visible: Bool
+
     var body: some View {
-        LineIcon(d: Icons.chevronRight, size: 11, lineWidth: 1.7).foregroundStyle(Theme.sub).accessibilityHidden(true)
+        LineIcon(d: Icons.chevronRight, size: 10, lineWidth: 1.7).foregroundStyle(Theme.sub).opacity(visible ? 0.8 : 0).accessibilityHidden(true)
     }
 }
 
 private extension View {
-    /// A row that opens details: inset 8 from the sides, grey under the pointer and while its details are open.
-    func detailRow(selected: Bool, hovering: Bool, radius: CGFloat = 6) -> some View {
-        padding(.horizontal, 8)
+    /// A row that opens details: inset 14 from the sides, grey under the pointer, raised while its details are open.
+    func detailRow(selected: Bool, hovering: Bool) -> some View {
+        padding(.horizontal, 14)
+            .overlay(alignment: .trailing) { DetailChevron(visible: hovering || selected).padding(.trailing, 3) }
             .background {
-                if selected || hovering {
-                    RoundedRectangle(cornerRadius: radius, style: .continuous).fill(selected ? Theme.rowSelected : Theme.lgHover)
+                if selected {
+                    RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.rowSelected)
+                        .shadow(color: Theme.raisedShadowNear, radius: 1.5, x: 0, y: 1)
+                        .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).inset(by: -0.25).stroke(Theme.raisedRing, lineWidth: 0.5))
+                } else if hovering {
+                    RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Theme.lgHover)
                 }
             }
-            .padding(.horizontal, -8)
+            .padding(.horizontal, -14)
             .hoverAnimation(hovering)
             .contentShape(Rectangle())
     }
@@ -413,9 +452,9 @@ private struct TopUsageDetail: View {
         DetailHeader(title: L10n.Combined.topUsageRow, icon: Icons.processes, label: L10n.Combined.openProcesses) {
             MainWindowController.shared.showProcesses(sortedBy: settings.prefs.menubar.combinedTopByMemory ? .memory : .cpu)
         }
-        HeadRow(title: L10n.Module.cpu).padding(.top, 16)
+        HeadRow(title: L10n.Module.cpu).padding(.top, 14)
         ProcessTable(processes: Array(p.byCPU.prefix(5)), value: { Format.percentValue($0.cpu) }, minRows: 5)
-        HeadRow(title: L10n.Module.memory).padding(.top, 18)
+        HeadRow(title: L10n.Module.memory).padding(.top, 16)
         ProcessTable(processes: Array(p.byMemory.prefix(5)), value: { Format.memory($0.memory) }, minRows: 5)
         if let toast = quitCenter.toast { QuitToast(toast: toast).padding(.top, 12) }
     }
@@ -427,21 +466,20 @@ private struct SleepDetail: View {
 
     var body: some View {
         let now = Date()
-        DetailHeader(title: L10n.Combined.sleepRow, subtitle: L10n.Sleep.blockerCount(details.blockers.count), icon: Icons.sleep, label: L10n.Combined.openSleep) {
+        DetailHeader(title: L10n.Combined.sleepRow, icon: Icons.sleep, label: L10n.Combined.openSleep) {
             MainWindowController.shared.show(.sleep)
         }
-        VStack(spacing: 0) {
-            DividedRows { ForEach(details.blockers) { row($0, now: now) } }
-        }
-        .padding(.top, 10)
+        VStack(spacing: 0) { ForEach(details.blockers) { row($0, now: now) } }
+            .padding(.top, 10)
     }
 
     private func row(_ b: SleepBlocker, now: Date) -> some View {
         let name = CombinedPanel.name(b)
         return HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 3) {
+            if let icon = CombinedPanel.icon(b) { AppIcon(image: icon, size: 22) }
+            VStack(alignment: .leading, spacing: 2) {
                 Text(name).ui(14).lineLimit(1)
-                Text(SleepPage.detail(b.reason, display: b.display)).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
+                Text(b.reason).ui(12).foregroundStyle(Theme.sub).lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Text(SleepPage.held(now.timeIntervalSince(b.since))).ui(14, 500).lineLimit(1).fixedSize()
@@ -453,7 +491,7 @@ private struct SleepDetail: View {
             }
             .frame(width: 24, height: 24)
         }
-        .frame(height: 54)
+        .frame(height: 44)
         .accessibilityElement(children: .combine)
     }
 }

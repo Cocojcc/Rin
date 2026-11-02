@@ -10,9 +10,8 @@ struct SleepPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            PageTitle(title: L10n.Sidebar.sleep)
-            ticking { status($0) }.padding(.top, 30)
-            VStack(spacing: 0) {
+            ticking { status($0) }.padding(.top, 22)
+            Well {
                 DividedRows {
                     SettingsRow(title: L10n.Sleep.duration) { DurationControl(keepAwake: keepAwake) }
                     SettingsRow(title: L10n.Sleep.keepDisplay) {
@@ -25,27 +24,21 @@ struct SleepPage: View {
                     }
                 }
             }
-            .overlay(alignment: .top) { Hairline() }
-            .padding(.top, 22)
+            .padding(.top, 34)
             ticking { now in
                 VStack(alignment: .leading, spacing: 0) {
-                    HeadRow(title: L10n.Sleep.blockers) { Text(L10n.Sleep.blockerCount(blockers.count + (keepAwake.isOn ? 1 : 0))) }
-                    VStack(spacing: 0) {
-                        DividedRows {
-                            if keepAwake.isOn, let started = keepAwake.started {
-                                BlockerRow(name: L10n.App.name, detail: Self.detail(L10n.Sleep.keepAwake, display: keepAwake.holdsDisplay),
-                                           held: now.timeIntervalSince(started))
-                            }
-                            ForEach(blockers) { b in blockerRow(b, now: now) }
-                        }
+                    HeadRow(title: L10n.Sleep.blockers)
+                    if keepAwake.isOn, let started = keepAwake.started {
+                        BlockerRow(icon: NSApp.applicationIconImage, name: L10n.App.name, detail: L10n.Sleep.keepAwake, held: now.timeIntervalSince(started))
                     }
+                    ForEach(blockers) { b in blockerRow(b, now: now) }
                     if !keepAwake.isOn && blockers.isEmpty {
                         Text(L10n.Sleep.nothing).ui(14).foregroundStyle(Theme.sub)
                             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     }
                 }
             }
-            .padding(.top, 26)
+            .padding(.top, 36)
         }
         .task {
             // Assertions come and go with media playback and syncing; re-read while the page is up.
@@ -70,14 +63,13 @@ struct SleepPage: View {
 
     private func status(_ now: Date) -> some View {
         HStack(alignment: .bottom, spacing: 16) {
-            VStack(alignment: .leading, spacing: 0) {
-                SmallLabel(text: keepAwake.isOn ? caption : L10n.Sleep.keepAwake)
+            VStack(alignment: .leading, spacing: 16) {
                 if keepAwake.isOn {
-                    BigValue(value: Format.hms(clockSeconds(now)), size: 44, color: Theme.green).padding(.top, 10)
-                    Text(endLine).ui(12).foregroundStyle(Theme.sub).padding(.top, 12)
+                    BigValue(value: Format.hms(clockSeconds(now)), size: 96, color: Theme.green, proportional: false)
+                    Text(endLine).ui(12).foregroundStyle(Theme.sub)
                 } else {
-                    BigValue(value: L10n.Sleep.offShort, size: 44).padding(.top, 10)
-                    Text(L10n.Sleep.offSub).ui(12).foregroundStyle(Theme.sub).padding(.top, 12)
+                    BigValue(value: L10n.Sleep.offShort, size: 96)
+                    Text(L10n.Sleep.offSub).ui(12).foregroundStyle(Theme.sub)
                 }
             }
             .accessibilityElement(children: .combine)
@@ -87,10 +79,6 @@ struct SleepPage: View {
             }
         }
     }
-
-    private var timed: Bool { keepAwake.endsAt != nil }
-
-    private var caption: String { timed ? L10n.Sleep.remaining : L10n.Sleep.awake }
 
     private func clockSeconds(_ now: Date) -> Double {
         if let end = keepAwake.endsAt { return max(0, end.timeIntervalSince(now)) }
@@ -104,21 +92,17 @@ struct SleepPage: View {
 
     // MARK: Blockers
 
-    static func detail(_ reason: String, display: Bool) -> String {
-        reason + " · " + (display ? L10n.Sleep.preventsDisplay : L10n.Sleep.preventsSystem)
-    }
-
     @ViewBuilder private func blockerRow(_ b: SleepBlocker, now: Date) -> some View {
         let held = now.timeIntervalSince(b.since)
+        let icon = CombinedPanel.icon(b)
         switch b.owner {
         case .app(let app):
             let name = app.localizedName ?? ""
-            BlockerRow(name: name, detail: Self.detail(b.reason, display: b.display), held: held,
-                       open: { app.activate() }, openLabel: L10n.Sleep.openNamed(name))
+            BlockerRow(icon: icon, name: name, detail: b.reason, held: held, open: { app.activate() }, openLabel: L10n.Sleep.openNamed(name))
         case .process(let name, _):
-            BlockerRow(name: name, detail: Self.detail(b.reason, display: b.display), held: held)
+            BlockerRow(icon: icon, name: name, detail: b.reason, held: held)
         case .system:
-            BlockerRow(name: L10n.Sleep.macOS, detail: Self.detail(b.reason, display: b.display), held: held)
+            BlockerRow(icon: icon, name: L10n.Sleep.macOS, detail: b.reason, held: held)
         }
     }
 
@@ -132,8 +116,9 @@ struct SleepPage: View {
     }
 }
 
-/// One holder: its name and why on one line, how long it has held on, Open for apps.
+/// One holder: its icon, name and why on one line, how long it has held on, Open for apps.
 private struct BlockerRow: View {
+    var icon: NSImage?
     var name: String
     var detail: String
     var held: TimeInterval
@@ -142,7 +127,8 @@ private struct BlockerRow: View {
 
     var body: some View {
         HStack(spacing: 16) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
+            HStack(spacing: 10) {
+                if let icon { AppIcon(image: icon, size: 20) }
                 Text(name).ui(14).lineLimit(1).fixedSize()
                 Text(detail).ui(12).foregroundStyle(Theme.sub).lineLimit(1).truncationMode(.tail)
             }
@@ -153,9 +139,9 @@ private struct BlockerRow: View {
                 Color.clear
                 if let open { IconAction(d: Icons.openExternal, label: openLabel, size: 28, action: open) }
             }
-            .frame(width: 52, height: 28)
+            .frame(width: 28, height: 28)
         }
-        .frame(height: 44)
+        .frame(height: 48)
         .accessibilityElement(children: .combine)
     }
 }
@@ -170,13 +156,13 @@ private struct RoundAction: View {
         Button(action: action) {
             Group {
                 if on {
-                    RoundedRectangle(cornerRadius: 3, style: .continuous).frame(width: 12, height: 12)
+                    RoundedRectangle(cornerRadius: 3, style: .continuous).frame(width: 14, height: 14)
                 } else {
                     SVGShape(d: Icons.play, viewBox: CGSize(width: 16, height: 16)).frame(width: 14, height: 14).offset(x: 1)
                 }
             }
             .foregroundStyle(Theme.text)
-            .frame(width: 40, height: 40)
+            .frame(width: 48, height: 48)
             .background(Circle().fill(hovering ? Theme.chip : Theme.raise))
             .hoverAnimation(hovering)
             .contentShape(Circle())

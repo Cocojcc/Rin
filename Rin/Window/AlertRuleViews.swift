@@ -133,38 +133,3 @@ struct AlertRuleRow: View {
 }
 
 // MARK: - Chart label
-
-/// Top right of a module's chart: the rule's value as a raised bell label when it is on, a grey
-/// bell when it is off. Either opens the Alerts page with the rule pointed out.
-struct ChartAlertBadge: View {
-    var rule: Alerts.Rule
-    var settings = SettingsStore.shared
-    @State private var hovering = false
-
-    var body: some View {
-        let p = settings.prefs
-        let on = p.alerts.enabled && p[keyPath: rule.enabledKey]
-        Button { MainWindowController.shared.showAlerts(focus: rule) } label: {
-            if on {
-                HStack(spacing: 4) {
-                    LineIcon(d: Icons.bell, size: 12, lineWidth: 1.5)
-                    Text(AlertText.pill(rule, p)).ui(12).lineLimit(1)
-                }
-                .foregroundStyle(Theme.danger)
-                .frame(height: 20)
-                .contentShape(Rectangle())
-            } else {
-                LineIcon(d: Icons.bell, size: 12, lineWidth: 1.5)
-                    .foregroundStyle(hovering ? Theme.text : Theme.sub)
-                    .frame(width: 22, height: 22)
-                    .background { if hovering { RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.lgHover) } }
-                    .hoverAnimation(hovering)
-                    .contentShape(Rectangle())
-            }
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .help(on ? L10n.Alerts.edit : L10n.Alerts.add)
-        .accessibilityLabel(on ? L10n.Alerts.editA11y(AlertText.pill(rule, p)) : L10n.Alerts.add)
-    }
-}

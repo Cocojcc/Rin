@@ -25,9 +25,7 @@ struct SettingsPage: View {
         let prefs = settings.prefs
         let g = prefs.general
         let blocked = prefs.menubar.displayMode == .separate ? notch.hidden : []
-        VStack(alignment: .leading, spacing: 30) {
-            PageTitle(title: L10n.Sidebar.settings)
-
+        VStack(alignment: .leading, spacing: 22) {
             SettingsGroup(title: L10n.Settings.general) {
                 SettingsRow(title: L10n.Settings.launchAtLogin) {
                     RinSwitch(isOn: Binding(get: { launchAtLogin }, set: { setLaunchAtLogin($0) }), label: L10n.Settings.launchAtLogin)
@@ -153,6 +151,7 @@ struct SettingsPage: View {
                 }
             }
         }
+        .padding(.top, 22)
     }
 
     private func setLaunchAtLogin(_ on: Bool) {
@@ -178,9 +177,7 @@ struct MenuBarSettingsPage: View {
     var body: some View {
         let prefs = settings.prefs
         let bar = prefs.menubar
-        VStack(alignment: .leading, spacing: 30) {
-            PageTitle(title: L10n.Settings.menubarGroup)
-
+        VStack(alignment: .leading, spacing: 22) {
             SettingsGroup(title: L10n.Settings.displayMode) {
                 SettingsRow(title: L10n.Settings.displayMode) {
                     Segmented(label: L10n.Settings.displayMode, options: [(DisplayMode.separate, L10n.Settings.separate), (.combined, L10n.Settings.combined)],
@@ -513,7 +510,7 @@ struct MenubarPreview: View {
                 }
             }
         }
-        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.raise))
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.windowGlass))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(L10n.Settings.previewA11y(modules.map { MenuBarText.accessibility($0, monitor.snapshot, prefs) }.joined(separator: L10n.A11y.separator)))
@@ -583,13 +580,14 @@ struct ModuleSettingsPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            PageHeader(title: module.title, spec: L10n.Settings.settingsSpec)
-            SettingsRow(title: L10n.Settings.showInMenubar) {
-                RinSwitch(isOn: Binding(get: { settings.prefs.showsInMenubar(module) }, set: { settings.prefs.setInMenubar(module, $0) }),
-                          label: L10n.Settings.showInMenubar)
+            Well {
+                SettingsRow(title: L10n.Settings.showInMenubar) {
+                    RinSwitch(isOn: Binding(get: { settings.prefs.showsInMenubar(module) }, set: { settings.prefs.setInMenubar(module, $0) }),
+                              label: L10n.Settings.showInMenubar)
+                }
             }
-            .padding(.top, 18)
-            WidgetStrip(module: module).padding(.top, 6)
+            .padding(.top, 8)
+            WidgetStrip(module: module).padding(.top, 10)
             Segmented(label: L10n.Settings.tabsA11y,
                       options: [(ModuleSettingsTab.module, L10n.Settings.tabModule), (.widgets, L10n.Settings.tabWidgets),
                                 (.panel, L10n.Settings.tabPanel)],

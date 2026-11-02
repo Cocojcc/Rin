@@ -142,6 +142,7 @@
 		DAD18912EF69593F9C0888EF /* KeepAwake.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0491643C067FB5400B3825E7 /* KeepAwake.swift */; };
 		DB276E9030C987C2890B77EE /* runner-cat-1x-18.png in Resources */ = {isa = PBXBuildFile; fileRef = D330CFB4E2596174A1696051 /* runner-cat-1x-18.png */; };
 		DC728F851566BBC53D1F4A2F /* runner-cat-1x-17.png in Resources */ = {isa = PBXBuildFile; fileRef = DCDDE8E7E24715C68C37E69F /* runner-cat-1x-17.png */; };
+		DCD1AA604406489B5C63E394 /* Instruments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CCE233CF5EB4025CFD8E6F5 /* Instruments.swift */; };
 		DEFC065CF8033268DADE4EB1 /* runner-cat-2x-16.png in Resources */ = {isa = PBXBuildFile; fileRef = 807C18D00B5BB44DC0773E3F /* runner-cat-2x-16.png */; };
 		DF7632E9F81AD8CD9C60E08F /* DiskReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9C0095D6CCA97178D90B6C3 /* DiskReader.swift */; };
 		E148CDD0FC1067586A1B4BDF /* runner-girl-2x-14.png in Resources */ = {isa = PBXBuildFile; fileRef = CB5389BAA760E62A94454A8F /* runner-girl-2x-14.png */; };
@@ -222,6 +223,7 @@
 		4BB44CBB0072D79C19536590 /* runner-girl-1x-0.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-1x-0.png"; sourceTree = "<group>"; };
 		4BCE811B8495C9C7027E813D /* runner-cat-2x-10.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-2x-10.png"; sourceTree = "<group>"; };
 		4C2ED765AB8CBAF95DA732D2 /* PanelComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelComponents.swift; sourceTree = "<group>"; };
+		4CCE233CF5EB4025CFD8E6F5 /* Instruments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Instruments.swift; sourceTree = "<group>"; };
 		4E1C573511A924522A1956F8 /* History.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = History.swift; sourceTree = "<group>"; };
 		4F901F01D3A6513C468F4FF4 /* runner-cat-2x-17.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-2x-17.png"; sourceTree = "<group>"; };
 		5362551DC119E9CC3A237999 /* runner-girl-2x-3.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-2x-3.png"; sourceTree = "<group>"; };
@@ -375,6 +377,7 @@
 				844141E9C2A7CCD22F2095F8 /* Charts.swift */,
 				683B616EF6FE582932090D2C /* Components.swift */,
 				5D2A7215A6FDCDE4D8226638 /* Console.swift */,
+				4CCE233CF5EB4025CFD8E6F5 /* Instruments.swift */,
 				D54AD06C5F3D1FFBC47E2EF0 /* MainView.swift */,
 				17E8278671F8A6D720F53E16 /* MainWindowController.swift */,
 				39F49ABD0586DA40DB1FA7DB /* MonitorComponents.swift */,
@@ -773,6 +776,7 @@
 				8D9EBE17B49C71DB4C9CCDB9 /* GPUReader.swift in Sources */,
 				A9F2E06DCB68672177706B47 /* History.swift in Sources */,
 				15F7B9497CE48D952CE65ACB /* Icons.swift in Sources */,
+				DCD1AA604406489B5C63E394 /* Instruments.swift in Sources */,
 				DAD18912EF69593F9C0888EF /* KeepAwake.swift in Sources */,
 				AE6F792DC88789521CD5E818 /* L10n.swift in Sources */,
 				9264D87000C09F16B5D4BB45 /* LogitechReader.swift in Sources */,

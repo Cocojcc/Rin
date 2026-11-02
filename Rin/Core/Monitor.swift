@@ -117,8 +117,10 @@ final class Monitor {
         var read = shown.union(prefs.alertedModules)
         let allProcesses = consumers.contains(.window(.processes))
         let batteryPage = consumers.contains(.window(.monitor(.battery)))
-        // The battery page's "整机" figure comes from the SMC on Macs without a battery.
-        if batteryPage && prefs.isEnabled(.sensors) { read.insert(.sensors) }
+        // The battery page's "整机" figure comes from the SMC on Macs without a battery; the CPU
+        // and GPU show their temperature, which the sensors read too.
+        let wantsSensors = batteryPage || consumers.contains(.window(.monitor(.cpu))) || consumers.contains(.window(.monitor(.gpu))) || consumers.contains(.popover(.gpu))
+        if wantsSensors && prefs.isEnabled(.sensors) { read.insert(.sensors) }
         config.monitored = read
         config.processesWanted = allProcesses || batteryPage
         config.processes.full = allProcesses
@@ -129,8 +131,9 @@ final class Monitor {
         }
         let anyUI = !consumers.isEmpty
         // With nothing open, processes are only needed for the CPU peaks' names and alert
-        // culprits, which a slower scan serves as well.
-        config.processInterval = anyUI ? min(prefs.cpu.processRefresh, prefs.memory.processRefresh) : Self.backgroundProcessInterval
+        // culprits, which a slower scan serves as well; the overview lists none either.
+        let listsProcesses = !consumers.subtracting([.window(.overview)]).isEmpty
+        config.processInterval = listsProcesses ? min(prefs.cpu.processRefresh, prefs.memory.processRefresh) : Self.backgroundProcessInterval
         config.cpuFrequency = consumers.contains(.window(.monitor(.cpu)))
         config.latency = prefs.network.showLatency
         config.processes.includeOtherUsers = anyUI
@@ -139,7 +142,6 @@ final class Monitor {
         // rates from its first read; nettop runs every process read only while one is on screen.
         config.processes.network = config.monitored.contains(.network) || allProcesses
         config.processes.networkLive = allProcesses || consumers.contains(.popover(.network)) || consumers.contains(.window(.monitor(.network)))
-            || consumers.contains(.window(.overview)) || consumers.contains(.combinedPanel)
         config.processes.gpu = allProcesses || config.monitored.contains(.gpu)
             && (consumers.contains(.popover(.gpu)) || consumers.contains(.window(.monitor(.gpu))))
         config.processes.limit = max(8, prefs.cpu.processCount, prefs.memory.processCount, prefs.gpu.processCount)

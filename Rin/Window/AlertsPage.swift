@@ -16,34 +16,25 @@ struct AlertsPage: View {
 
     var body: some View {
         let prefs = settings.prefs
-        let enabledCount = Alerts.Rule.allCases.filter { prefs[keyPath: $0.enabledKey] && prefs.isEnabled($0.module) }.count
         VStack(alignment: .leading, spacing: 0) {
-            PageTitle(title: L10n.Sidebar.alerts)
-            HeadRow(title: L10n.Alerts.rules) {
-                Text(L10n.Alerts.rulesOn(enabledCount))
+            HStack {
+                Spacer(minLength: 0)
                 addButton
             }
-            .padding(.top, 26)
-            VStack(spacing: 0) {
+            .padding(.bottom, 6)
+            Well {
                 DividedRows {
-                    ForEach(Alerts.Rule.allCases, id: \.self) { AlertRuleRow(rule: $0, minHeight: 42, highlighted: highlighted == $0) }
+                    ForEach(Alerts.Rule.allCases, id: \.self) { AlertRuleRow(rule: $0, minHeight: 43, highlighted: highlighted == $0) }
                 }
             }
             .opacity(prefs.alerts.enabled ? 1 : 0.5)
-            HeadRow(title: L10n.Alerts.recent) {
-                if !alerts.events.isEmpty { Text(L10n.Alerts.thisWeek(alerts.thisWeek)) }
-            }
-            .padding(.top, 32)
+            HeadRow(title: L10n.Alerts.recent).padding(.top, 26)
             if alerts.events.isEmpty {
                 Text(L10n.Alerts.noneYet).ui(14).foregroundStyle(Theme.sub)
                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             }
-            VStack(spacing: 0) {
-                DividedRows {
-                    ForEach(alerts.events.prefix(Self.recentShown)) { e in
-                        EventRow(event: e, fresh: fresh.contains(e.id)) { alerts.show(e) }
-                    }
-                }
+            ForEach(alerts.events.prefix(Self.recentShown)) { e in
+                EventRow(event: e, fresh: fresh.contains(e.id)) { alerts.show(e) }
             }
             SettingsGroup(title: L10n.Alerts.delivery) {
                 SettingsRow(title: L10n.Alerts.enabled) { RinSwitch(isOn: pref(\.alerts.enabled), label: L10n.Alerts.enabled) }
@@ -65,7 +56,7 @@ struct AlertsPage: View {
                 SettingsRow(title: L10n.Settings.playSound) { RinSwitch(isOn: pref(\.alerts.sound), label: L10n.Settings.playSound) }
                 SettingsRow(title: L10n.Settings.colorMenubar) { RinSwitch(isOn: pref(\.alerts.colorMenubar), label: L10n.Settings.colorMenubar) }
             }
-            .padding(.top, 32)
+            .padding(.top, 26)
         }
         .onAppear {
             takeNew()
@@ -84,7 +75,7 @@ struct AlertsPage: View {
         }
     }
 
-    /// "+" beside the count: a menu of the rules that are off; picking one turns it on.
+    /// "+" above the rules: a menu of the ones that are off; picking one turns it on.
     @ViewBuilder private var addButton: some View {
         let off = Alerts.Rule.allCases.filter { !settings.prefs[keyPath: $0.enabledKey] && settings.prefs.isEnabled($0.module) }
         Menu {
@@ -96,8 +87,9 @@ struct AlertsPage: View {
             }
         } label: {
             LineIcon(d: Icons.plusLarge, size: 14, lineWidth: 1.5)
-                .foregroundStyle(Theme.sub)
-                .frame(width: 24, height: 24)
+                .foregroundStyle(Theme.text)
+                .frame(width: 28, height: 28)
+                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Theme.raise))
                 .contentShape(Rectangle())
         }
         .menuStyle(.button)
@@ -108,7 +100,6 @@ struct AlertsPage: View {
         .opacity(off.isEmpty ? 0.4 : 1)
         .help(L10n.Alerts.add)
         .accessibilityLabel(L10n.Alerts.add)
-        .padding(EdgeInsets(top: -5, leading: 0, bottom: -5, trailing: -6))
     }
 
     /// New triggers get their dot here and stop counting on the sidebar badge.
