@@ -63,10 +63,6 @@ enum Theme {
     static let rail = Color.dyn(RGBA(0, 0, 0, 0.035), RGBA(255, 255, 255, 0.035))
     /// An icon on the picked sidebar tile.
     static let onTile = Color.dyn(RGBA(0xFFFFFF), RGBA(0x111113))
-    /// An instrument's outline and pins.
-    static let ink = Color.dyn(RGBA(0, 0, 0, 0.3), RGBA(255, 255, 255, 0.3))
-    /// An instrument's cell with nothing in it.
-    static let cell = Color.dyn(RGBA(0, 0, 0, 0.1), RGBA(255, 255, 255, 0.12))
     /// Behind a plain program's black icon, which would vanish on the dark window.
     static let iconLift = Color.dyn(RGBA(0, 0, 0, 0), RGBA(255, 255, 255, 0.28))
     /// Tags and chips that are on ("90%" in a rule, a module in the menu bar).
@@ -173,12 +169,12 @@ enum Theme {
     /// A module's second series.
     static func soft(_ module: Module) -> Color { softColors[module] ?? faint }
 
-    /// A battery level: red when low, Rin's green while charging, else plain (`lead` for a figure,
-    /// a mid grey for a line or bar).
+    /// A battery level: red when low, else plain for a figure (`lead`); a line or bar is Rin's green
+    /// while charging, else a mid grey.
     static func batteryLevel(_ b: BatterySample, lead: Bool = true) -> Color {
         if b.level <= 0.2 && !b.onAC { return danger }
-        if b.isCharging { return green }
-        return lead ? text : mid
+        if lead { return text }
+        return b.isCharging ? green : mid
     }
 }
 

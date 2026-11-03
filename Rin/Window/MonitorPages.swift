@@ -105,9 +105,9 @@ struct CPUPage: View {
         VStack(alignment: .leading, spacing: 0) {
             Stand {
                 HStack(alignment: .bottom, spacing: 36) {
-                    BigValue(value: Format.percentNumber(s.cpu.total), unit: "%", size: 76, color: Theme.color(for: .cpu))
+                    BigValue(value: Format.percentNumber(s.cpu.total), unit: "%", size: BigValue.lead)
                     VStack(alignment: .leading, spacing: 10) {
-                        SegmentBar(parts: [(s.cpu.user, Theme.color(for: .cpu)), (s.cpu.system, Theme.soft(.cpu)), (idle, Theme.raise)], height: 8)
+                        SegmentBar(parts: [(s.cpu.user, Theme.color(for: .cpu)), (s.cpu.system, Theme.soft(.cpu)), (idle, Theme.raise)])
                         HStack(spacing: 16) {
                             KeyDot(text: L10n.Monitor.userShare(Format.percent(s.cpu.user)), color: Theme.color(for: .cpu), size: 12)
                             KeyDot(text: L10n.Monitor.systemShare(Format.percent(s.cpu.system)), color: Theme.soft(.cpu), size: 12)
@@ -129,12 +129,10 @@ struct CPUPage: View {
                     }
                     .padding(.bottom, 8)
                 }
-            } device: {
-                ChipInstrument(scale: 0.7)
             }
             ConsoleChart(
                 kind: .area, series: ChartSeries.cpuStack(total: history.points(.cpu, range: range), system: history.points(.cpuSystem, range: range)),
-                range: range, maxValue: 100, height: 316 + extra,
+                range: range, maxValue: 100, height: 355 + extra,
                 rules: AlertMarks.mark(.cpu, fraction: settings.prefs.alerts.cpuThreshold / 100, settings.prefs),
                 markers: lookback ? peaks : [], selectedMarker: lookback ? selected?.date : nil, markerColor: Theme.color(for: .cpu),
                 hoverText: { hoverLines($0, range) },
@@ -266,7 +264,7 @@ struct GPUPage: View {
         VStack(alignment: .leading, spacing: 0) {
             Stand {
                 HStack(alignment: .top, spacing: 36) {
-                    BigValue(value: Format.percentNumber(g.utilization), unit: "%", size: 76, color: Theme.color(for: .gpu))
+                    BigValue(value: Format.percentNumber(g.utilization), unit: "%", size: BigValue.lead)
                     let vram = GPUText.vram(g)
                     Stat(name: L10n.Panel.vram, tight: true) { BigValue(value: vram.0, unit: vram.1, size: 28) }
                     Stat(name: L10n.Panel.frequency, tight: true) { BigValue(value: frequency.0, unit: frequency.1, size: 28) }
@@ -277,15 +275,13 @@ struct GPUPage: View {
                         if let w = g.power { KeyValue(label: L10n.Panel.power, value: Format.watts(w)) }
                     }
                 }
-            } device: {
-                ScreenInstrument(scale: 0.7)
             }
-            ConsoleChart(kind: .area, series: ChartSeries.line(history.points(.gpu, range: range), Theme.color(for: .gpu), width: 2.5),
-                         range: range, maxValue: 100, height: 334 + extra,
+            ConsoleChart(kind: .area, series: ChartSeries.line(history.points(.gpu, range: range), Theme.color(for: .gpu)),
+                         range: range, maxValue: 100, height: 354 + extra,
                          rules: AlertMarks.mark(.gpu, fraction: settings.prefs.alerts.gpuThreshold / 100, settings.prefs),
                          hoverText: { date in hoverLine(.gpu, range, date) { Format.percent($0 / 100) } })
                 .acrossPage()
-                .padding(.top, 10)
+                .padding(.top, 11.5)
                 .accessibilityLabel(L10n.Monitor.gpuChartA11y(range.title))
             ListHead(tip: L10n.Monitor.topGPU, link: .gpu).padding(.top, 22)
             ProcessTable(processes: Array(monitor.snapshot.processes.byGPU.prefix(3)), value: { Format.percentValue($0.gpu) }, rowHeight: 38, minRows: 3)
@@ -317,10 +313,10 @@ struct MemoryPage: View {
         let alertAt = settings.prefs.alerts.memoryLevel == .critical ? 0.8 : 0.5
         let parts = MemoryParts.of(m)
         VStack(alignment: .leading, spacing: 0) {
-            Stand {
+            Stand(rule: false) {
                 HStack(alignment: .top, spacing: 36) {
                     HStack(alignment: .firstTextBaseline, spacing: 14) {
-                        BigValue(value: Format.percentNumber(m.usedFraction), unit: "%", size: 76, color: Theme.color(for: .memory))
+                        BigValue(value: Format.percentNumber(m.usedFraction), unit: "%", size: BigValue.lead)
                         Text(L10n.Monitor.usedSlash(Format.memory(m.used), Format.memoryTotal(m.total))).ui(12).foregroundStyle(Theme.sub).fixedSize()
                     }
                     Spacer(minLength: 0)
@@ -336,11 +332,9 @@ struct MemoryPage: View {
                         if m.swapTotal > 0 { KeyValue(label: L10n.Monitor.swapFileLabel, value: Format.memory(m.swapTotal)) }
                     }
                 }
-            } device: {
-                StickInstrument(scale: 0.7)
             }
-            SegmentBar(parts: parts.map { ($0.bytes, $0.color) }, height: 10)
-                .padding(.top, 18)
+            SegmentBar(parts: parts.map { ($0.bytes, $0.color) })
+                .padding(.top, 10)
                 .accessibilityElement()
                 .accessibilityLabel(L10n.Monitor.compositionA11y(Format.memory(m.app), Format.memory(m.wired), Format.memory(m.compressed), Format.memory(m.cached), Format.memory(m.free)))
             ShareRow(spacing: 2) {
@@ -354,10 +348,10 @@ struct MemoryPage: View {
                     .share(max(p.bytes / 1_073_741_824, m.total > 0 ? Double(m.total) / 1_073_741_824 * 0.1 : 1))
                 }
             }
-            .padding(.top, 10)
+            .padding(.top, 10.5)
             .accessibilityHidden(true)
-            ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(.memoryPressure, range: range), Theme.color(for: .memory), width: 2.5),
-                         range: range, maxValue: 100, height: 238 + extra,
+            ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(.memoryPressure, range: range), Theme.color(for: .memory)),
+                         range: range, maxValue: 100, height: 276 + extra,
                          rules: AlertMarks.mark(.memory, fraction: alertAt, label: L10n.Alerts.memoryMarkShort, settings.prefs),
                          hoverText: { date in hoverLine(.memoryPressure, range, date) { Format.percent($0 / 100) } })
                 .acrossPage()
@@ -415,17 +409,15 @@ struct NetworkPage: View {
                     // Nothing to say without a reading, so no empty figure.
                     if settings.prefs.network.showLatency, let latency = n.latencyMS {
                         Stat(name: L10n.Monitor.latency, tight: true) {
-                            BigValue(value: "\(Int(latency.rounded()))", unit: L10n.Monitor.ms, size: 64)
+                            BigValue(value: "\(Int(latency.rounded()))", unit: L10n.Monitor.ms, size: 48)
                         } foot: {
                             if failures > 0 { Text(L10n.Monitor.dropped(failures)).ui(12).foregroundStyle(Theme.danger).fixedSize() }
                         }
                     }
                 }
-            } device: {
-                TubesInstrument(scale: 0.7)
             }
-            ConsoleChart(kind: .mirroredArea, series: ChartSeries.mirrored(down, Theme.color(for: .network), up, Theme.color(for: .network), lineWidth: 2.5),
-                         range: range, maxValue: dMax, bottomMax: uMax, height: 294 + extra,
+            ConsoleChart(kind: .mirroredArea, series: ChartSeries.mirrored(down, Theme.color(for: .network), up, Theme.color(for: .network)),
+                         range: range, maxValue: dMax, bottomMax: uMax, height: 310 + extra,
                          labels: [(0.94, MenuBarText.downArrow + " " + Format.rate(dMax, unit: unit)), (0.06, MenuBarText.upArrow + " " + Format.rate(uMax, unit: unit))],
                          hoverText: { hover($0, range) })
                 .acrossPage()
@@ -458,7 +450,7 @@ struct NetworkPage: View {
     private func flow(_ label: String, _ rate: Double, unit: SpeedUnit, session: UInt64, today: UInt64) -> some View {
         let parts = Format.rateParts(rate, unit: unit)
         return Stat(name: label, tight: true) {
-            BigValue(value: parts.0, unit: parts.1, size: 64, color: Theme.color(for: .network))
+            BigValue(value: parts.0, unit: parts.1, size: 48)
         } foot: {
             KeyValues(pairs: [(L10n.Monitor.session, Format.storage(session)), (L10n.Monitor.today, Format.storage(today))])
         }
@@ -494,22 +486,18 @@ struct DiskPage: View {
             if !d.volumes.isEmpty {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 28, alignment: .topLeading), count: min(d.volumes.count, 2)),
                           alignment: .leading, spacing: 18) {
-                    ForEach(d.volumes) { v in
-                        // Reads and writes are only known for all disks together, so only a lone volume's arm can swing with them.
-                        VolumeBlock(volume: v, alert: v.isRoot ? diskAlert : nil, io: d.volumes.count == 1 ? d.read + d.write : nil)
-                    }
+                    ForEach(d.volumes) { VolumeBlock(volume: $0, alert: $0.isRoot ? diskAlert : nil) }
                 }
                 .padding(.top, 8)
-                Rectangle().fill(Theme.low).frame(height: 1)
             }
             HStack(spacing: 18) {
                 KeyValue(label: MenuBarText.downArrow, value: Format.rate(d.read), size: 13)
                 KeyValue(label: MenuBarText.upArrow, value: Format.rate(d.write), size: 13)
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
-            .padding(.top, 18)
+            .padding(.top, 5.5)
             ConsoleChart(kind: .mirroredArea, series: ChartSeries.mirrored(reads, Theme.color(for: .disk), writes, Theme.color(for: .disk)),
-                         range: range, maxValue: top, bottomMax: top, height: 278 + extra,
+                         range: range, maxValue: top, bottomMax: top, height: 265 + extra,
                          labels: [(0.94, Format.rate(top)), (0.06, Format.rate(top))], hoverText: { hover($0, range) })
                 .acrossPage()
                 .padding(.top, 8)
@@ -538,16 +526,15 @@ struct DiskPage: View {
                                  secondary: { L10n.Monitor.writeRate(Format.rate($0.diskWrite)) }, secondaryWidth: 84, rowHeight: 34, minRows: 4)
                 }
             }
-            .padding(.top, 22)
+            .padding(.top, 21)
         }
     }
 
-    /// The free-space rule on the startup volume: where it sits on the platter and its words.
-    private var diskAlert: (Double, String)? {
+    /// The free-space rule on the startup volume, in words.
+    private var diskAlert: String? {
         let p = settings.prefs
-        guard Alerts.Rule.disk.isOn(p), let root = monitor.snapshot.disk.root, root.total > 0 else { return nil }
-        let limit = p.alerts.diskFreeGB * 1_000_000_000
-        return (1 - limit / Double(root.total), L10n.Alerts.belowValue(L10n.Settings.gigabytes(Int(p.alerts.diskFreeGB))))
+        guard Alerts.Rule.disk.isOn(p) else { return nil }
+        return L10n.Alerts.belowValue(L10n.Settings.gigabytes(Int(p.alerts.diskFreeGB)))
     }
 
     private func hover(_ date: Date, _ range: TimeRange) -> [String] {
@@ -558,13 +545,12 @@ struct DiskPage: View {
     }
 }
 
-/// A volume's figures beside its platter: name and internal / external (eject for removable ones),
-/// free space in the module's hue, then the details; the free-space rule is a red tick on the platter.
+/// A volume's figures: name and internal / external (eject for removable ones), free space, the
+/// details, then a thin bar of how full it is; the free-space rule says in red what it watches for.
 struct VolumeBlock: View {
     var volume: Volume
-    /// The free-space rule: its place on the platter (0...1 used) and its words.
-    var alert: (Double, String)? = nil
-    var io: Double? = nil
+    /// The free-space rule's words.
+    var alert: String? = nil
 
     /// A volume's used, purgeable and total, the purgeable only when there is any.
     static func details(_ v: Volume) -> [(String, String)] {
@@ -575,22 +561,22 @@ struct VolumeBlock: View {
 
     var body: some View {
         let free = Format.parts(Format.storage(volume.available))
-        HStack(alignment: .bottom, spacing: 12) {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(volume.name).ui(13, 500).foregroundStyle(Theme.text).lineLimit(1)
-                    Text(volume.isInternal ? L10n.Disk.internalDrive : L10n.Disk.external).ui(12).foregroundStyle(Theme.sub).fixedSize()
-                    if volume.isEjectable && !volume.isRoot { EjectButton(volume: volume, size: 18) }
-                    Spacer(minLength: 0)
-                    if let alert { BellLabel(text: alert.1).ui(12).foregroundStyle(Theme.danger).lineLimit(1).fixedSize() }
-                }
-                BigValue(value: free.0, unit: L10n.Monitor.unitFree(free.1), size: 44, color: Theme.color(for: .disk)).padding(.top, 6)
-                KeyValues(pairs: Self.details(volume)).padding(.top, 12)
+        let rest = max(0, volume.total - volume.used - volume.purgeable)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(volume.name).ui(13, 500).foregroundStyle(Theme.text).lineLimit(1)
+                Text(volume.isInternal ? L10n.Disk.internalDrive : L10n.Disk.external).ui(12).foregroundStyle(Theme.sub).fixedSize()
+                if volume.isEjectable && !volume.isRoot { EjectButton(volume: volume, size: 18) }
+                Spacer(minLength: 0)
+                if let alert { BellLabel(text: alert).ui(12).foregroundStyle(Theme.danger).lineLimit(1).fixedSize() }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.bottom, 10)
-            PlatterInstrument(scale: 0.6, volume: volume, tick: alert?.0, io: io)
+            BigValue(value: free.0, unit: L10n.Monitor.unitFree(free.1), size: BigValue.lead).padding(.top, 6)
+            KeyValues(pairs: Self.details(volume)).padding(.top, 11)
+            SegmentBar(parts: [(Double(volume.used), Theme.color(for: .disk)), (Double(volume.purgeable), Theme.soft(.disk)), (Double(rest), Theme.raise)])
+                .padding(.top, 14.5)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, 10)
         .accessibilityElement(children: .combine)
     }
 }
@@ -635,7 +621,7 @@ struct BatteryPage: View {
                 Stand {
                     HStack(alignment: .bottom, spacing: 36) {
                         VStack(alignment: .leading, spacing: 8) {
-                            BigValue(value: Format.percentNumber(b.level), unit: "%", size: 76, color: Theme.batteryLevel(b))
+                            BigValue(value: Format.percentNumber(b.level), unit: "%", size: BigValue.lead, color: Theme.batteryLevel(b))
                             HStack(spacing: 5) {
                                 if b.isCharging { ChargingBolt() }
                                 Text(statusLine(b)).ui(13).lineLimit(1).fixedSize()
@@ -643,15 +629,13 @@ struct BatteryPage: View {
                         }
                         powerSection(b).padding(.bottom, 2)
                     }
-                } device: {
-                    CellInstrument(scale: 0.7)
                 }
-                ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(.battery, range: range), Theme.batteryLevel(b, lead: false), width: 2.5),
-                             range: range, maxGap: range.batteryGap, maxValue: 100, height: 206 + extra,
+                ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(.battery, range: range), Theme.batteryLevel(b, lead: false)),
+                             range: range, maxGap: range.batteryGap, maxValue: 100, height: 227 + extra,
                              rules: AlertMarks.mark(.battery, fraction: settings.prefs.alerts.batteryPercent / 100, settings.prefs),
                              bands: ChargingBands.of(range), hoverText: { hover($0, range) })
                     .acrossPage()
-                    .padding(.top, 10)
+                    .padding(.top, 12)
                     .accessibilityLabel(L10n.Monitor.batteryChartA11y(range.title))
                 HStack(alignment: .top, spacing: 36) {
                     VStack(alignment: .leading, spacing: 12) {
@@ -706,7 +690,7 @@ struct BatteryPage: View {
             : [.init(label: L10n.Monitor.systemDrawValue(Format.watts(system)), value: max(system, 0.01), color: Theme.mid)]
         return VStack(alignment: .trailing, spacing: 8) {
             if adapter > 0 { Text("\(Int(adapter)) " + L10n.Common.wattUnit).ui(12).foregroundStyle(Theme.sub).lineLimit(1) }
-            StackedBar(parts: parts, height: 8, keySize: 12)
+            StackedBar(parts: parts, keySize: 12)
         }
     }
 
@@ -775,6 +759,9 @@ struct SensorsPage: View {
     var navigator = Navigator.shared
     @Environment(\.pageExtra) private var extra
 
+    /// One column for the names, wide enough for the longest in this language.
+    private static let nameWidth: CGFloat = max(76, (L10n.Sensors.cpuPerformance as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 14)]).width.rounded(.up) + 2)
+
     var body: some View {
         let s = monitor.snapshot.sensors
         let unit = settings.prefs.general.temperatureUnit
@@ -786,13 +773,12 @@ struct SensorsPage: View {
             Stand {
                 Stat(name: L10n.Module.cpu, tight: true) {
                     BigValue(value: s.cpuAverage.map { Format.temperatureNumber($0, unit: unit) } ?? L10n.Common.dash,
-                             unit: Format.temperatureSymbol(unit), size: 76, color: Theme.color(for: .sensors))
+                             unit: Format.temperatureSymbol(unit), size: BigValue.lead)
+                        .padding(.top, -2)
                 }
-            } device: {
-                SensorInstrument(scale: 0.7)
             }
-            ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(.cpuTemp, range: range), Theme.color(for: .sensors), width: 2.5),
-                         range: range, maxValue: 100, height: 283 + extra,
+            ConsoleChart(kind: .area, series: ChartSeries.line(monitor.history.points(.cpuTemp, range: range), Theme.color(for: .sensors)),
+                         range: range, maxValue: 100, height: 310 + extra,
                          labels: [(0.9, Format.temperatureNumber(90, unit: unit)), (0.7, Format.temperatureNumber(70, unit: unit))],
                          rules: [ChartRule(fraction: 0.7, color: Theme.warn), ChartRule(fraction: 0.9, color: Theme.danger)]
                             + AlertMarks.mark(.temperature, fraction: settings.prefs.alerts.tempThreshold / 100, settings.prefs),
@@ -810,7 +796,7 @@ struct SensorsPage: View {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(s.fans.enumerated()), id: \.offset) { _, f in
                         HStack(spacing: 12) {
-                            Text(PanelText.fanName(f.id, count: s.fans.count)).ui(14).foregroundStyle(Theme.sub).lineLimit(1).frame(width: 76, alignment: .leading)
+                            Text(PanelText.fanName(f.id, count: s.fans.count)).ui(14).foregroundStyle(Theme.sub).lineLimit(1).frame(width: Self.nameWidth, alignment: .leading)
                             LevelBar(fraction: f.max > f.min ? (f.rpm - f.min) / (f.max - f.min) : 0, color: Theme.mid)
                             Reading(text: Format.rpm(f.rpm)).frame(width: 76, alignment: .trailing)
                         }
@@ -821,7 +807,7 @@ struct SensorsPage: View {
             } b: {
                 VStack(alignment: .trailing, spacing: 10) {
                     if let w = s.systemPower { KeyValue(label: L10n.Monitor.wholeMac, value: Format.watts(w)) }
-                    StackedBar(parts: PowerParts.of(s), height: 8, keySize: 12)
+                    StackedBar(parts: PowerParts.of(s), keySize: 12)
                 }
             }
             .padding(.top, 18)
@@ -830,7 +816,7 @@ struct SensorsPage: View {
 
     private func tempRow(_ r: TempReading, _ unit: TemperatureUnit) -> some View {
         HStack(spacing: 12) {
-            Text(PanelText.tempName(r.group)).ui(14).foregroundStyle(Theme.sub).lineLimit(1).frame(width: 76, alignment: .leading)
+            Text(PanelText.tempName(r.group)).ui(14).foregroundStyle(Theme.sub).lineLimit(1).frame(width: Self.nameWidth, alignment: .leading)
             TempBar(celsius: r.value)
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 Text(Format.temperatureNumber(r.value, unit: unit)).ui(14, 500).foregroundStyle(TempZone.color(r.value))
@@ -865,7 +851,7 @@ struct TempBar: View {
             .overlay {
                 GeometryReader { geo in
                     ForEach([(0.7, Theme.warn), (0.9, Theme.danger)], id: \.0) { x, c in
-                        Rectangle().fill(c).frame(width: 1, height: 10).offset(x: geo.size.width * x, y: -3)
+                        Rectangle().fill(c).frame(width: 1, height: 8).offset(x: geo.size.width * x, y: -3)
                     }
                 }
             }

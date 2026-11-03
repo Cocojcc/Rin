@@ -996,3 +996,6 @@
 "combined.topCPUValue" = "CPU %@";
 "combined.topMemoryValue" = "内存 %@";
 "combined.sleepMore" = "等 %d 个";
+"overview.detailGap" = "　";
+"overview.downloadSpeed" = "下载速度";
+"overview.freeSpace" = "可用空间";

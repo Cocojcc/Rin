@@ -53,11 +53,9 @@ struct BluetoothPanel: View {
         PanelHeader(module: .bluetooth)
         if let lowest {
             PanelStand {
-                BigValue(value: Format.percentNumber(lowest.level ?? 0), unit: "%", size: 64, color: lowestIsLow ? Theme.danger : Theme.text)
+                BigValue(value: Format.percentNumber(lowest.level ?? 0), unit: "%", size: BigValue.panelLead, color: lowestIsLow ? Theme.danger : Theme.text)
             } foot: {
                 Text(BluetoothText.lowestLine(lowest)).foregroundStyle(lowestIsLow ? Theme.danger : Theme.sub).truncationMode(.middle)
-            } device: {
-                PackInstrument(scale: 0.64)
             }
         }
         VStack(spacing: 0) {
@@ -145,15 +143,15 @@ struct FilledIcon: View {
 
 // MARK: - Monitor page
 
-/// The lowest device's level beside one battery per device, then one row per device: connected ones
-/// with their level, then the paired ones that aren't connected, greyed, with when Rin last saw them.
+/// The lowest device's level, then one row per device: connected ones with their level, then the
+/// paired ones that aren't connected, greyed, with when Rin last saw them.
 /// The list is the whole page, so its rows take the height there is.
 struct BluetoothPage: View {
     var monitor = Monitor.shared
     var settings = SettingsStore.shared
     @Environment(\.pageExtra) private var extra
 
-    private static let room: CGFloat = 450
+    private static let room: CGFloat = 509
 
     var body: some View {
         let bt = monitor.snapshot.bluetooth
@@ -162,16 +160,14 @@ struct BluetoothPage: View {
         let lowest = MenuBarText.lowestDevice(monitor.snapshot)
         let low = lowest.map { BluetoothText.isLow($0, prefs) } ?? false
         let shown = bt.withBattery.count + bt.disconnected.count
-        let height = min(100, max(52, (Self.room + extra - (bt.disconnected.isEmpty ? 0 : 48)) / CGFloat(max(shown, 1))))
+        let height = min(114, max(52, (Self.room + extra - (bt.disconnected.isEmpty ? 0 : 48)) / CGFloat(max(shown, 1))))
         VStack(alignment: .leading, spacing: 0) {
             if let lowest {
                 Stand {
                     VStack(alignment: .leading, spacing: 8) {
-                        BigValue(value: Format.percentNumber(lowest.level ?? 0), unit: "%", size: 76, color: low ? Theme.danger : Theme.text)
+                        BigValue(value: Format.percentNumber(lowest.level ?? 0), unit: "%", size: BigValue.lead, color: low ? Theme.danger : Theme.text)
                         Text(BluetoothText.lowestLine(lowest)).ui(13).foregroundStyle(low ? Theme.danger : Theme.sub).lineLimit(1)
                     }
-                } device: {
-                    PackInstrument()
                 }
             }
             if bt.withBattery.isEmpty {

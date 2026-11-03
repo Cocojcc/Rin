@@ -3,6 +3,21 @@ import SwiftUI
 // The pages' vocabulary: small grey labels over large figures, values on plain rows, section heads
 // with a note or link on the right. No cards: space and the odd rule do the grouping.
 
+/// A lead reading and what goes with it, standing on a hairline unless a thin bar follows it.
+struct Stand<Reading: View>: View {
+    var top: CGFloat = 6
+    var rule = true
+    @ViewBuilder var reading: Reading
+
+    var body: some View {
+        VStack(spacing: 0) {
+            reading.frame(maxWidth: .infinity, alignment: .leading).padding(.bottom, 10)
+            if rule { Rectangle().fill(Theme.line).frame(height: 1) }
+        }
+        .padding(.top, top)
+    }
+}
+
 /// The small grey label over a figure ("使用率", "CPU").
 struct SmallLabel: View {
     var text: String
@@ -259,7 +274,7 @@ struct StackedBar: View {
     }
 
     var parts: [Part]
-    var height: CGFloat = 6
+    var height: CGFloat = 2
     var keySize: CGFloat = 13
 
     var body: some View {

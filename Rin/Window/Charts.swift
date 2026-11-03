@@ -6,25 +6,25 @@ struct ChartSeries: Identifiable {
     var points: [ChartPoint]
     var color: Color
     var fill: Double = 0.13
-    var lineWidth: CGFloat = 2
+    var lineWidth: CGFloat = 1.5
     var opacity: Double = 1
     var dash: [CGFloat] = []
 }
 
 extension ChartSeries {
     /// CPU: the system share as a lighter line, the total in the CPU's hue over the wash.
-    static func cpuStack(total: [ChartPoint], system: [ChartPoint], lineWidth: CGFloat = 2) -> [ChartSeries] {
-        [ChartSeries(id: "s", points: system, color: Theme.soft(.cpu), fill: 0, lineWidth: max(1.3, lineWidth - 0.5)),
+    static func cpuStack(total: [ChartPoint], system: [ChartPoint], lineWidth: CGFloat = 1.5) -> [ChartSeries] {
+        [ChartSeries(id: "s", points: system, color: Theme.soft(.cpu), fill: 0, lineWidth: lineWidth - 0.5),
          ChartSeries(id: "t", points: total, color: Theme.color(for: .cpu), fill: 1, lineWidth: lineWidth)]
     }
 
     /// One reading as a line over the wash (`fill: false` for a bare line, the overview's sparks).
-    static func line(_ points: [ChartPoint], _ color: Color, width: CGFloat = 2, fill: Bool = true) -> [ChartSeries] {
+    static func line(_ points: [ChartPoint], _ color: Color, width: CGFloat = 1.5, fill: Bool = true) -> [ChartSeries] {
         [ChartSeries(id: "l", points: points, color: color, fill: fill ? 1 : 0, lineWidth: width)]
     }
 
     /// A reading's two directions for `.mirroredArea`: the first up, the second down, each over the wash.
-    static func mirrored(_ top: [ChartPoint], _ topColor: Color, _ bottom: [ChartPoint], _ bottomColor: Color, lineWidth: CGFloat = 2) -> [ChartSeries] {
+    static func mirrored(_ top: [ChartPoint], _ topColor: Color, _ bottom: [ChartPoint], _ bottomColor: Color, lineWidth: CGFloat = 1.5) -> [ChartSeries] {
         [ChartSeries(id: "a", points: top, color: topColor, fill: 1, lineWidth: lineWidth),
          ChartSeries(id: "b", points: bottom, color: bottomColor, fill: 1, lineWidth: lineWidth)]
     }

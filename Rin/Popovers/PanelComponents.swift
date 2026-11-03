@@ -116,7 +116,7 @@ struct MeterRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Text(name).ui(14).foregroundStyle(Theme.sub).lineLimit(1).frame(width: nameWidth, alignment: .leading)
-            LevelBar(fraction: fraction, color: color, height: 3)
+            LevelBar(fraction: fraction, color: color)
             Reading(text: value).frame(width: valueWidth, alignment: .trailing)
         }
         .frame(height: 28)

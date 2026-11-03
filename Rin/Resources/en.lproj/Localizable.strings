@@ -156,7 +156,7 @@
 "panel.cores" = "Cores";
 "panel.perfAverage" = "Performance avg";
 "panel.effAverage" = "Efficiency avg";
-"panel.loadAverage" = "Load average";
+"panel.loadAverage" = "Load";
 "panel.load1" = "1 m";
 "panel.load5" = "5 m";
 "panel.load15" = "15 m";
@@ -432,8 +432,8 @@
 "monitor.idle" = "Idle";
 "monitor.adapter" = "Power adapter";
 "monitor.allCores" = "All cores";
-"monitor.performanceCores" = "Performance cores";
-"monitor.efficiencyCores" = "Efficiency cores";
+"monitor.performanceCores" = "P-cores";
+"monitor.efficiencyCores" = "E-cores";
 "monitor.averageMax" = "Avg %1$@ · Max %2$@";
 "monitor.batteryChartA11y" = "Battery level over the last %@; shaded spans are charging";
 "monitor.batteryHealth" = "Battery health";
@@ -948,7 +948,7 @@
 "monitor.systemShare" = "System %@";
 "monitor.idleShare" = "Idle %@";
 "monitor.peakLink" = "24-hour peak %@ ›";
-"monitor.loadAverageTitle" = "Load average";
+"monitor.loadAverageTitle" = "Load";
 "monitor.usedLabel" = "Used";
 "monitor.usedSlash" = "%@ / %@";
 "monitor.swapFileLabel" = "Swap file";
@@ -996,3 +996,6 @@
 "combined.topCPUValue" = "CPU %@";
 "combined.topMemoryValue" = "Memory %@";
 "combined.sleepMore" = "+%d more";
+"overview.detailGap" = "   ";
+"overview.downloadSpeed" = "Download speed";
+"overview.freeSpace" = "Free space";

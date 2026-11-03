@@ -23,7 +23,7 @@ struct AboutPage: View {
                     cell(v.name) {
                         let free = Format.parts(Format.storage(v.available))
                         BigValue(value: free.0, unit: L10n.Monitor.unitFree(free.1), size: 44)
-                        LevelBar(fraction: v.total > 0 ? Double(v.total - v.available) / Double(v.total) : 0, color: Theme.mid)
+                        LevelBar(fraction: v.total > 0 ? Double(v.total - v.available) / Double(v.total) : 0, color: Theme.mid, height: 4)
                             .frame(width: 160).padding(.top, 12)
                         Text(L10n.Monitor.totalOf(Format.storage(v.total))).ui(12).foregroundStyle(Theme.sub).padding(.top, 14)
                     }

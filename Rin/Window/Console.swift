@@ -6,10 +6,12 @@ import SwiftUI
 
 // MARK: - Numbers
 
-/// A reading at one of the big sizes: a page's lead at 76, a dropdown's at 64, figures at 44 / 34 / 28 / 22.
+/// A reading at one of the big sizes: a page's lead at 56, a dropdown's at 44, figures at 48 / 36 / 34 / 28 / 26 / 22.
 /// The larger, the lighter, with tight tracking; its unit quiet beside it. A big lead reading sets
 /// its figures proportionally, so "31" has no hole in it.
 struct BigValue: View {
+    static let lead: CGFloat = 56, panelLead: CGFloat = 44
+
     var value: String
     var unit: String? = nil
     var size: CGFloat = 28
@@ -97,7 +99,7 @@ struct KeyValue: View {
 struct LevelBar: View {
     var fraction: Double
     var color: Color
-    var height: CGFloat = 4
+    var height: CGFloat = 2
     var trackColor: Color = Theme.track
 
     var body: some View {
@@ -115,7 +117,7 @@ struct LevelBar: View {
 /// Parts side by side with 2 pt gaps in one thin rounded bar (CPU, memory, power).
 struct SegmentBar: View {
     var parts: [(Double, Color)]
-    var height: CGFloat = 6
+    var height: CGFloat = 2
 
     var body: some View {
         GeometryReader { geo in
@@ -322,7 +324,7 @@ struct ConsoleChart: View {
                 p.move(to: CGPoint(x: 0, y: y))
                 p.addLine(to: CGPoint(x: size.width, y: y))
             }
-            .stroke(rule.color, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+            .stroke(rule.color, style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
             if let label = rule.label {
                 Button { rule.action?() } label: {
                     HStack(spacing: 3) {
@@ -470,7 +472,7 @@ struct ConsoleChart: View {
                 fill.addLine(to: CGPoint(x: points[points.count - 1].x, y: floor))
                 fill.addLine(to: CGPoint(x: points[0].x, y: floor))
                 fill.closeSubpath()
-                ctx.fill(fill, with: .color(s.color.opacity(ctx.environment.colorScheme == .light ? 0.1 : 0.14)))
+                ctx.fill(fill, with: .color(s.color.opacity(ctx.environment.colorScheme == .light ? 0.05 : 0.08)))
             }
             if s.lineWidth > 0 {
                 ctx.stroke(line, with: .color(s.color.opacity(s.opacity)),

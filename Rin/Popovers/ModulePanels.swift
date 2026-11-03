@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// The per-module dropdown: header, the big reading beside its instrument, then the module's parts.
+/// The per-module dropdown: header, the big reading, then the module's parts.
 struct ModulePanel: View {
     let module: Module
     var quitCenter = QuitCenter.shared
@@ -94,23 +94,26 @@ enum PanelText {
 
 // MARK: - Shared pieces
 
-/// A dropdown's lead: the reading at 64 and a line under it, beside the module's instrument, both standing on one rule.
-struct PanelStand<Reading: View, Foot: View, Device: View>: View {
+/// A dropdown's lead: the reading and, when there is one, a line under it, standing on a rule.
+struct PanelStand<Reading: View, Foot: View>: View {
     @ViewBuilder var reading: Reading
     @ViewBuilder var foot: Foot
-    @ViewBuilder var device: Device
 
     var body: some View {
-        Stand(top: 12, gap: 12) {
+        Stand(top: 12) {
             VStack(alignment: .leading, spacing: 8) {
                 reading
-                HStack(spacing: 12) { foot }.ui(13).foregroundStyle(Theme.sub).lineLimit(1)
+                if Foot.self != EmptyView.self {
+                    HStack(spacing: 12) { foot }.ui(13).foregroundStyle(Theme.sub).lineLimit(1)
+                }
             }
             .accessibilityElement(children: .combine)
-        } device: {
-            device
         }
     }
+}
+
+extension PanelStand where Foot == EmptyView {
+    init(@ViewBuilder reading: () -> Reading) { self.init(reading: reading, foot: { EmptyView() }) }
 }
 
 /// The last minute (or the network's chosen span) in a dropdown, edge to edge.
@@ -156,14 +159,12 @@ struct CPUPanel: View {
         let _ = monitor.tick
         PanelHeader(module: .cpu)
         PanelStand {
-            BigValue(value: Format.percentNumber(s.cpu.total), unit: "%", size: 64, color: Theme.color(for: .cpu))
+            BigValue(value: Format.percentNumber(s.cpu.total), unit: "%", size: BigValue.panelLead)
         } foot: {
             KeyDot(text: L10n.Monitor.userShare(Format.percent(s.cpu.user)), color: Theme.color(for: .cpu))
             KeyDot(text: L10n.Monitor.systemShare(Format.percent(s.cpu.system)), color: Theme.soft(.cpu))
-        } device: {
-            ChipInstrument(scale: 0.64)
         }
-        PanelChart(kind: .area, series: ChartSeries.cpuStack(total: monitor.history.points(.cpu, range: .m5), system: monitor.history.points(.cpuSystem, range: .m5), lineWidth: 2.5))
+        PanelChart(kind: .area, series: ChartSeries.cpuStack(total: monitor.history.points(.cpu, range: .m5), system: monitor.history.points(.cpuSystem, range: .m5)))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(L10n.Panel.cpuChartA11y)
         if p.showCores, p.splitCoreKinds, SystemInfo.efficiencyCores > 0 {
@@ -226,13 +227,9 @@ struct GPUPanel: View {
         let _ = monitor.tick
         PanelHeader(module: .gpu)
         PanelStand {
-            BigValue(value: Format.percentNumber(g.utilization), unit: "%", size: 64, color: Theme.color(for: .gpu))
-        } foot: {
-            EmptyView()
-        } device: {
-            ScreenInstrument(scale: 0.64)
+            BigValue(value: Format.percentNumber(g.utilization), unit: "%", size: BigValue.panelLead)
         }
-        PanelChart(kind: .area, series: ChartSeries.line(monitor.history.points(.gpu, range: .m5), Theme.color(for: .gpu), width: 2.5))
+        PanelChart(kind: .area, series: ChartSeries.line(monitor.history.points(.gpu, range: .m5), Theme.color(for: .gpu)))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(L10n.Panel.gpuChartA11y)
         if p.showMemory || p.showFrequency || p.showVideo || p.showTempPower {
@@ -276,15 +273,13 @@ struct MemoryPanel: View {
         let pr = PanelText.pressure(m.pressure)
         PanelHeader(module: .memory)
         PanelStand {
-            BigValue(value: Format.percentNumber(m.usedFraction), unit: "%", size: 64, color: Theme.color(for: .memory))
+            BigValue(value: Format.percentNumber(m.usedFraction), unit: "%", size: BigValue.panelLead)
         } foot: {
             Text(Format.memory(used: m.used, of: m.total))
-        } device: {
-            StickInstrument(scale: 0.64)
         }
         if p.showComposition {
             StackedBar(parts: MemoryParts.of(m).map { .init(label: L10n.Monitor.partValue($0.label, Format.memory(UInt64($0.bytes))), value: $0.bytes, color: $0.color,
-                                                            ring: $0.label == L10n.Memory.free) }, height: 8, keySize: 12)
+                                                            ring: $0.label == L10n.Memory.free) }, keySize: 12)
                 .padding(.top, 14)
         }
         if p.showPressure || p.showSwap {
@@ -296,7 +291,7 @@ struct MemoryPanel: View {
             .padding(.top, 18)
         }
         if p.showPressure {
-            PanelChart(kind: .area, series: ChartSeries.line(monitor.history.points(.memoryPressure, range: .m5), Theme.color(for: .memory), width: 2.5), height: 44, top: 6)
+            PanelChart(kind: .area, series: ChartSeries.line(monitor.history.points(.memoryPressure, range: .m5), Theme.color(for: .memory)), height: 44, top: 6)
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(L10n.Panel.pressureChartA11y)
         }
@@ -329,10 +324,6 @@ struct NetworkPanel: View {
                     speed(MenuBarText.downArrow, n.down, p.speedUnit)
                     speed(MenuBarText.upArrow, n.up, p.speedUnit)
                 }
-            } foot: {
-                EmptyView()
-            } device: {
-                TubesInstrument(scale: 0.64)
             }
         } else {
             VStack(spacing: 8) {
@@ -351,7 +342,7 @@ struct NetworkPanel: View {
             .frame(height: 100)
             .padding(.top, 12)
         }
-        PanelChart(kind: .mirroredArea, series: ChartSeries.mirrored(down, Theme.color(for: .network), up, Theme.color(for: .network), lineWidth: 2.2),
+        PanelChart(kind: .mirroredArea, series: ChartSeries.mirrored(down, Theme.color(for: .network), up, Theme.color(for: .network)),
                    seconds: seconds, maxValue: dMax, bottomMax: uMax)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(L10n.Panel.networkChartA11y)
@@ -373,12 +364,12 @@ struct NetworkPanel: View {
         }
     }
 
-    /// Download and upload alike, in the network's hue.
+    /// Download and upload alike.
     private func speed(_ label: String, _ v: Double, _ unit: SpeedUnit) -> some View {
         let parts = Format.rateParts(v, unit: unit)
         return VStack(alignment: .leading, spacing: 4) {
             SmallLabel(text: label)
-            BigValue(value: parts.0, unit: parts.1, size: 42, color: Theme.color(for: .network), proportional: true)
+            BigValue(value: parts.0, unit: parts.1, size: 36, proportional: true)
         }
         .accessibilityElement(children: .combine)
     }
@@ -397,12 +388,10 @@ struct DiskPanel: View {
         let _ = monitor.tick
         PanelHeader(module: .disk)
         PanelStand {
-            BigValue(value: volume.map { Format.percentNumber($0.usedFraction) } ?? L10n.Common.dash, unit: volume == nil ? nil : "% " + L10n.Disk.used, size: 64, color: Theme.color(for: .disk))
+            BigValue(value: volume.map { Format.percentNumber($0.usedFraction) } ?? L10n.Common.dash, unit: volume == nil ? nil : "% " + L10n.Disk.used, size: BigValue.panelLead)
         } foot: {
             KeyValue(label: MenuBarText.downArrow, value: Format.rate(d.read), size: 13)
             KeyValue(label: MenuBarText.upArrow, value: Format.rate(d.write), size: 13)
-        } device: {
-            PlatterInstrument(scale: 0.64, volume: volume, io: d.read + d.write)
         }
         if p.showGraph {
             let reads = monitor.history.points(.diskRead, range: .m5), writes = monitor.history.points(.diskWrite, range: .m5)
@@ -460,7 +449,7 @@ struct BatteryPanel: View {
         PanelHeader(module: .battery)
         if b.hasBattery {
             PanelStand {
-                BigValue(value: Format.percentNumber(b.level), unit: "%", size: 64, color: Theme.batteryLevel(b))
+                BigValue(value: Format.percentNumber(b.level), unit: "%", size: BigValue.panelLead, color: Theme.batteryLevel(b))
             } foot: {
                 HStack(spacing: 5) {
                     if b.isCharging { ChargingBolt(size: 13) }
@@ -471,10 +460,8 @@ struct BatteryPanel: View {
                 } else if !b.onAC, let m = b.minutesToEmpty {
                     Text(L10n.Battery.remaining(BatteryTime.text(m)))
                 }
-            } device: {
-                CellInstrument(scale: 0.64)
             }
-            PanelChart(kind: .area, series: ChartSeries.line(monitor.history.points(.battery, range: .h24), Theme.batteryLevel(b, lead: false), width: 2.5),
+            PanelChart(kind: .area, series: ChartSeries.line(monitor.history.points(.battery, range: .h24), Theme.batteryLevel(b, lead: false)),
                        seconds: TimeRange.h24.seconds, maxGap: TimeRange.h24.batteryGap, height: 64, bands: ChargingBands.of(.h24))
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(L10n.Panel.batteryChartA11y)
@@ -520,13 +507,11 @@ struct SensorsPanel: View {
         let reading = MenuBarText.sensorValue(s, p.sensor)
         PanelHeader(module: .sensors)
         PanelStand {
-            BigValue(value: reading.map { Format.temperatureNumber($0, unit: unit) } ?? L10n.Common.dash, unit: reading == nil ? nil : "°", size: 64, color: Theme.color(for: .sensors))
+            BigValue(value: reading.map { Format.temperature($0, unit: unit) } ?? L10n.Common.dash, size: BigValue.panelLead)
         } foot: {
             if p.showThermal {
                 KeyValue(label: L10n.Sensors.thermalShort, value: L10n.Monitor.thermalLevel(s.thermal.rawValue), valueColor: s.thermal == .nominal ? Theme.text : ThermalText.color(s.thermal), size: 13)
             }
-        } device: {
-            SensorInstrument(scale: 0.64)
         }
         if p.showAllTemps, !s.temps.isEmpty {
             VStack(spacing: 0) {
@@ -549,7 +534,7 @@ struct SensorsPanel: View {
         if p.showPower, s.systemPower != nil || s.cpuPower != nil || s.gpuPower != nil {
             VStack(alignment: .trailing, spacing: 8) {
                 if let w = s.systemPower { KeyValue(label: L10n.Monitor.wholeMac, value: Format.watts(w)) }
-                StackedBar(parts: PowerParts.of(s, keyed: false), height: 6, keySize: 12)
+                StackedBar(parts: PowerParts.of(s, keyed: false), keySize: 12)
             }
             .padding(.top, 14)
         }

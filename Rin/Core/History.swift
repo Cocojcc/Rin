@@ -124,22 +124,7 @@ final class History {
 
     // MARK: Recording
 
-    /// The last readings of each core (0...1), newest last, for the CPU instrument's heat map, which
-    /// has as many columns as the chip has cores. Readings from before a pause are dropped, so a
-    /// column always means the moment beside it.
-    private(set) var recentCores: [[Double]] = []
-    private var lastCoreReading = Date.distantPast
-    private static let coresKept = 64
-    private static let coresMaxGap: TimeInterval = 20
-
     func record(_ s: Snapshot) {
-        if s.monitored.contains(.cpu), !s.cpu.perCore.isEmpty {
-            let now = Date()
-            if now.timeIntervalSince(lastCoreReading) > Self.coresMaxGap { recentCores.removeAll() }
-            lastCoreReading = now
-            recentCores.append(s.cpu.perCore)
-            if recentCores.count > Self.coresKept { recentCores.removeFirst() }
-        }
         var values = [Float](repeating: .nan, count: metricCount)
         // Modules switched off record nothing, so their charts show a gap rather than zeros.
         let on = s.monitored.contains

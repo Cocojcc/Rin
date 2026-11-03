@@ -2,8 +2,7 @@ import AppKit
 import SwiftUI
 
 /// The "合并成一项" dropdown, for a glance: every module, in the order of the chips in 设置 › 菜单栏.
-/// The first one in the menu bar, which the merged item shows, is a big reading with its instrument
-/// and last minute; the others follow one to a row (name, a small picture, reading); then the busiest
+/// The first one in the menu bar, which the merged item shows, is a big reading with its last minute; the others follow one to a row (name, a small picture, reading); then the busiest
 /// app and what keeps the Mac awake. Every row opens its details beside the dropdown.
 struct CombinedPanel: View {
     var monitor = Monitor.shared
@@ -188,23 +187,9 @@ private enum CombinedReading {
         return ConsoleChart(kind: .mirroredArea, series: ChartSeries.mirrored(top, color, bottom, color, lineWidth: width),
                             span: 60, maxValue: peak(top), bottomMax: peak(bottom), height: height)
     }
-
-    /// The module's small device, for the row it leads.
-    @ViewBuilder static func instrument(_ m: Module, _ s: Snapshot, scale: CGFloat) -> some View {
-        switch m {
-        case .cpu: ChipInstrument(scale: scale)
-        case .gpu: ScreenInstrument(scale: scale)
-        case .memory: StickInstrument(scale: scale)
-        case .network: TubesInstrument(scale: scale)
-        case .disk: PlatterInstrument(scale: scale, volume: s.disk.root, io: s.disk.read + s.disk.write)
-        case .battery: CellInstrument(scale: scale)
-        case .bluetooth: PackInstrument(scale: scale)
-        case .sensors: SensorInstrument(scale: scale)
-        }
-    }
 }
 
-/// The first module, large: its name, the reading at 64 in its hue and its instrument, its last minute edge to edge under them.
+/// The first module, large: its name, the reading, its last minute edge to edge under them.
 private struct CombinedHero: View {
     let module: Module
     var monitor = Monitor.shared
@@ -218,26 +203,21 @@ private struct CombinedHero: View {
         let selected = details.selection == .module(module)
         let v = CombinedReading.value(module, s, prefs)
         let low = CombinedReading.isLow(module, s, prefs)
-        // Battery and Bluetooth levels stay plain unless charging or low.
-        let lead = low ? Theme.danger : module == .battery ? Theme.batteryLevel(s.battery) : Theme.hue(module) ?? Theme.text
         let line = low ? Theme.danger : module == .battery ? Theme.batteryLevel(s.battery, lead: false) : Theme.hue(module) ?? Theme.mid
         Button { PanelController.shared.toggleDetail(.module(module)) } label: {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 4) {
                     SmallLabel(text: CombinedReading.name(module))
-                    BigValue(value: v.0, unit: v.1, size: 64, color: lead)
+                    BigValue(value: v.0, unit: v.1, size: BigValue.panelLead, color: low ? Theme.danger : Theme.text)
                 }
                 .padding(.horizontal, 20)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityElement(children: .combine)
-                CombinedReading.chart(module, color: line, width: 2.5, fill: true, height: 62)
-                    .padding(.top, -18)
+                CombinedReading.chart(module, color: line, width: 1.5, fill: true, height: 62)
+                    .padding(.top, 6)
                     .accessibilityHidden(true)
             }
             .padding(.top, 8)
-            .overlay(alignment: .topTrailing) {
-                CombinedReading.instrument(module, s, scale: 0.44).padding(.trailing, 20).padding(.top, 8)
-            }
             .overlay(alignment: .trailing) { DetailChevron(visible: hovering || selected).padding(.trailing, 3) }
             .background { if hovering { Theme.lgHover } }
             .hoverAnimation(hovering)
@@ -292,8 +272,8 @@ private struct ModuleLine: View {
         case .bluetooth:
             LevelBar(fraction: CombinedReading.lowestDevice(s)?.level ?? 0, color: CombinedReading.isLow(module, s, prefs) ? Theme.danger : Theme.mid)
         case .sensors: TempBar(celsius: s.sensors.cpuAverage ?? 0, color: Theme.color(for: .sensors))
-        case .network: CombinedReading.chart(module, color: Theme.color(for: .network), width: 1.4, fill: true, height: 26)
-        case .cpu, .gpu: CombinedReading.chart(module, color: Theme.color(for: module), width: 1.6, fill: true, height: 24)
+        case .network: CombinedReading.chart(module, color: Theme.color(for: .network), width: 1.25, fill: true, height: 26)
+        case .cpu, .gpu: CombinedReading.chart(module, color: Theme.color(for: module), width: 1.25, fill: true, height: 24)
         }
     }
 

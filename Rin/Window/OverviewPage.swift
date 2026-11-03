@@ -1,135 +1,137 @@
+import AppKit
+import QuartzCore
 import SwiftUI
 
-/// A shelf of instruments, four to a row in the sidebar's order: each module's small device standing
-/// on a rule, its reading underneath, a second reading beside it where one matters. A piece opens its
-/// page. Who uses the most stays on the Processes page and each module's own.
+/// How things stand now, one row a module in the sidebar's order: its name and what the figure means
+/// on the left, the figure on the right, and the line under the row filled to the share in use. A row
+/// opens its module's page, where the history lives. CPU, memory and network come first and a size up.
 struct OverviewPage: View {
     var monitor = Monitor.shared
     var settings = SettingsStore.shared
     var alerts = Alerts.shared
     @Environment(\.pageExtra) private var extra
 
+    /// What the design's window leaves for the rows, and the bigger rows' share of it against the others' 1.
+    private static let designHeight: CGFloat = 622, leadShare: CGFloat = 1.42
+
+    private static func isLead(_ m: Module) -> Bool { m == .cpu || m == .memory || m == .network }
+
     var body: some View {
         let s = monitor.snapshot
         let _ = monitor.tick
-        let modules = Sidebar.moduleOrder.filter(settings.prefs.isEnabled)
+        // A Mac without a battery has no row for one.
+        let modules = Sidebar.moduleOrder.filter(settings.prefs.isEnabled).filter { $0 != .battery || s.battery.hasBattery }
         if modules.isEmpty {
             Text(L10n.Overview.allOff).ui(14).foregroundStyle(Theme.sub).padding(.top, 20)
         } else {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14, alignment: .topLeading), count: 4), alignment: .leading, spacing: 70 + extra / 2) {
-                ForEach(modules) { piece($0, s) }
+            let shares = modules.reduce(0) { $0 + (Self.isLead($1) ? Self.leadShare : 1) }
+            // Every row has its space above the line first; the shares divide what's left, as in the design.
+            let unit = (Self.designHeight + extra - OverviewRow.linePad * CGFloat(modules.count)) / shares
+            VStack(spacing: 0) {
+                ForEach(modules) { m in
+                    let lead = Self.isLead(m)
+                    OverviewRow(module: m, lead: lead, height: OverviewRow.linePad + unit * (lead ? Self.leadShare : 1), content: content(m, s))
+                }
             }
-            .padding(.top, 38 + extra / 4)
         }
     }
 
-    /// A reading's color: plain, red while one of the module's alerts is on.
-    private func lead(_ kind: Alerts.Rule) -> Color { alerts.firing(kind) == nil ? Theme.text : Theme.danger }
-
-    @ViewBuilder private func piece(_ m: Module, _ s: Snapshot) -> some View {
+    /// What a module's row says: the figure, the words under its name, how full its line is and whether it is past a limit.
+    private func content(_ m: Module, _ s: Snapshot) -> OverviewRow.Content {
+        let gap = L10n.Overview.detailGap
         switch m {
         case .cpu:
-            ShelfPiece(module: m, value: Format.percentNumber(s.cpu.total), unit: "%", color: lead(.cpu)) { ChipInstrument() } beside: { EmptyView() }
-        case .gpu:
-            ShelfPiece(module: m, value: Format.percentNumber(s.gpu.utilization), unit: "%", color: lead(.gpu)) { ScreenInstrument(history: true) } beside: { EmptyView() }
+            return .init(value: Format.percentNumber(s.cpu.total), unit: "%",
+                         detail: L10n.Monitor.userShare(Format.percent(s.cpu.user)) + gap + L10n.Monitor.systemShare(Format.percent(s.cpu.system)),
+                         share: s.cpu.total, hot: s.cpu.total >= 0.9 || alerts.firing(.cpu) != nil)
         case .memory:
-            let used = Format.parts(Format.memory(used: s.memory.used, of: s.memory.total))
-            ShelfPiece(module: m, value: Format.percentNumber(s.memory.usedFraction), unit: "%", color: lead(.memory)) { StickInstrument() } beside: {
-                strong(used.0, " " + used.1)
-            }
+            let mem = s.memory
+            return .init(value: Format.percentNumber(mem.usedFraction), unit: "%", detail: Format.memory(used: mem.used, of: mem.total),
+                         share: mem.usedFraction, hot: mem.pressure == .critical || alerts.firing(.memory) != nil)
         case .network:
-            let n = s.network, speed = settings.prefs.network.speedUnit
-            let down = Format.rateParts(n.down, unit: speed), up = Format.rateParts(n.up, unit: speed)
-            ShelfPiece(module: m, value: n.connected ? down.0 : L10n.Common.dash, unit: n.connected ? down.1 : nil, color: lead(.network)) { TubesInstrument() } beside: {
-                if n.connected {
-                    HStack(alignment: .firstTextBaseline, spacing: 0) {
-                        Text(MenuBarText.upArrow + " ")
-                        strong(up.0, " " + up.1)
-                    }
-                } else {
-                    Text(L10n.Overview.disconnected)
-                }
-            }
+            let n = s.network
+            guard n.connected else { return .init(value: L10n.Common.dash, unit: nil, detail: L10n.Overview.disconnected, share: 0, hot: false) }
+            let speed = settings.prefs.network.speedUnit
+            let down = Format.rateParts(n.down, unit: speed)
+            // A speed has no natural 100%: against the last hour's peak, with a floor so a quiet line stays low.
+            let peak = max(monitor.history.points(.netDown, range: .h1).map(\.value).max() ?? 0, n.down, 10_000)
+            return .init(value: down.0, unit: down.1,
+                         detail: L10n.Overview.downloadSpeed + gap + L10n.Monitor.partValue(L10n.Panel.upload, Format.rate(n.up, unit: speed)),
+                         share: n.down / peak, hot: false)
         case .disk:
             let root = s.disk.root
             let free = Format.parts(Format.storage(root?.available ?? 0))
-            ShelfPiece(module: m, value: free.0, unit: L10n.Monitor.unitFree(free.1), color: lead(.disk)) {
-                PlatterInstrument(volume: root, io: s.disk.read + s.disk.write)
-            } beside: { EmptyView() }
+            let used = root?.usedFraction ?? 0
+            return .init(value: free.0, unit: free.1,
+                         detail: L10n.Overview.freeSpace + gap + L10n.Monitor.partValue(L10n.Disk.used, Format.percent(used)),
+                         share: used, hot: false)
+        case .gpu:
+            let g = s.gpu
+            let vram = g.memoryLimit > 0 ? Format.memory(used: g.memoryUsed, of: g.memoryLimit) : Format.memory(g.memoryUsed)
+            return .init(value: Format.percentNumber(g.utilization), unit: "%", detail: L10n.Monitor.partValue(L10n.Panel.vram, vram), share: g.utilization, hot: false)
+        case .sensors:
+            let t = s.sensors.cpuAverage
+            // Read to the nearest ten: the last figure only ever jitters.
+            let fan = s.sensors.fans.first.map { L10n.Monitor.partValue(L10n.Overview.fan, Format.rpm(($0.rpm / 10).rounded() * 10)) }
+            return .init(value: t.map { Format.temperature($0, unit: settings.prefs.general.temperatureUnit) } ?? L10n.Common.dash, unit: nil,
+                         detail: L10n.Overview.cpuTemp + (fan.map { gap + $0 } ?? ""),
+                         // The line stays in Celsius whatever the figure is shown in.
+                         share: (t ?? 0) / 100, hot: (t ?? 0) >= 90)
         case .battery:
             let b = s.battery
-            ShelfPiece(module: m, value: b.hasBattery ? Format.percentNumber(b.level) : L10n.Common.dash, unit: b.hasBattery ? "%" : nil,
-                       color: b.hasBattery && b.level <= 0.2 && !b.onAC ? Theme.danger : Theme.text) {
-                CellInstrument()
-            } beside: {
-                Text(b.hasBattery ? PanelText.batteryState(b) : L10n.Battery.noBattery)
-            }
+            return .init(value: Format.percentNumber(b.level), unit: "%", detail: PanelText.batteryState(b), share: b.level, hot: !b.onAC && b.level <= 0.2)
         case .bluetooth:
-            let lowest = MenuBarText.lowestDevice(s)
-            let low = lowest.map { BluetoothText.isLow($0, settings.prefs) } ?? false
-            ShelfPiece(module: m, value: lowest?.level.map(Format.percentNumber) ?? L10n.Common.dash, unit: lowest == nil ? nil : "%", color: low ? Theme.danger : Theme.text) {
-                PackInstrument()
-            } beside: {
-                if let lowest, let left = BluetoothText.estimate(lowest) {
-                    Text(left).foregroundStyle(low ? Theme.danger : Theme.sub)
-                }
-            }
-        case .sensors:
-            let t = s.sensors
-            let unit = settings.prefs.general.temperatureUnit
-            ShelfPiece(module: m, value: t.cpuAverage.map { Format.temperatureNumber($0, unit: unit) } ?? L10n.Common.dash, unit: Format.temperatureSymbol(unit),
-                       color: alerts.firing(.temperature) != nil ? Theme.danger : t.cpuAverage.map(TempZone.color) ?? Theme.text) {
-                SensorInstrument()
-            } beside: {
-                // Read to the nearest ten: the last figure only ever jitters.
-                if let f = t.fans.first {
-                    let rpm = Format.parts(Format.rpm((f.rpm / 10).rounded() * 10))
-                    strong(rpm.0, " " + rpm.1)
-                }
-            }
-        }
-    }
-
-    /// A second reading's figure at full strength, the rest quiet.
-    private func strong(_ figure: String, _ rest: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 0) {
-            Text(figure).ui(12, 500).foregroundStyle(Theme.text)
-            Text(rest)
+            let devices = s.bluetooth.withBattery.sorted { ($0.level ?? 1) < ($1.level ?? 1) }
+            guard let lowest = devices.first else { return .init(value: L10n.Common.dash, unit: nil, detail: "", share: 0, hot: false) }
+            let others = devices.dropFirst().map { L10n.Monitor.partValue($0.name, Format.percent($0.level ?? 0)) }
+            return .init(value: Format.percentNumber(lowest.level ?? 0), unit: "%", detail: ([lowest.name] + others).joined(separator: gap),
+                         share: lowest.level ?? 0, hot: BluetoothText.isLow(lowest, settings.prefs))
         }
     }
 }
 
-/// One module on the shelf: its device on the rule, then its icon and name, the reading and what goes beside it.
-private struct ShelfPiece<Device: View, Beside: View>: View {
+/// One module's row.
+private struct OverviewRow: View {
+    struct Content {
+        var value: String
+        var unit: String?
+        var detail: String
+        var share: Double
+        var hot: Bool
+    }
+
     let module: Module
-    var value: String
-    var unit: String?
-    var color: Color
-    @ViewBuilder var device: Device
-    @ViewBuilder var beside: Beside
+    var lead: Bool
+    var height: CGFloat
+    var content: Content
     @State private var hovering = false
+
+    /// How far the hover's background reaches past the row's text and line.
+    private static let reach: CGFloat = 12
+    /// The space between a row's text and its line.
+    static let linePad: CGFloat = 8
 
     var body: some View {
         Button { Navigator.shared.page = .monitor(module) } label: {
-            VStack(alignment: .leading, spacing: 0) {
-                device.frame(maxWidth: .infinity).frame(height: 176, alignment: .bottom)
-                Rectangle().fill(Theme.low).frame(height: 1)
-                HStack(spacing: 5) {
-                    LineIcon(d: Icons.module(module), size: 14, lineWidth: 1.5).foregroundStyle(Theme.hue(module) ?? Theme.sub)
-                    Text(module.title).ui(12, 500).lineLimit(1)
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(module.title).ui(lead ? 16 : 15, 500).lineLimit(1).frame(height: 20).accessibilityAddTraits(.isHeader)
+                    Text(content.detail).ui(12.5).foregroundStyle(Theme.sub).lineLimit(1).truncationMode(.tail).frame(height: 17)
                 }
-                .frame(height: 18)
-                .padding(.top, 12)
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    BigValue(value: value, unit: unit, size: 34, color: color).layoutPriority(1)
-                    beside.ui(12).foregroundStyle(Theme.sub).lineLimit(1).truncationMode(.tail)
-                }
-                .padding(.top, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                BigValue(value: content.value, unit: content.unit, size: lead ? 34 : 26, color: content.hot ? Theme.danger : Theme.text, proportional: false)
+                    .fixedSize()
             }
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
-            .background { if hovering { RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.lgHover) } }
-            .padding(.horizontal, -7)
+            .padding(.bottom, Self.linePad)
+            .frame(maxHeight: .infinity)
+            .overlay(alignment: .bottom) {
+                OverviewLine(share: min(max(content.share, 0), 1), color: content.hot ? Theme.danger : Theme.hue(module) ?? Theme.sub)
+                    .frame(height: 1.5)
+            }
+            .padding(.horizontal, Self.reach)
+            .frame(height: height)
+            .background { if hovering { RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.lgHover) } }
+            .padding(.horizontal, -Self.reach)
             .hoverAnimation(hovering)
             .contentShape(Rectangle())
         }
@@ -137,5 +139,99 @@ private struct ShelfPiece<Device: View, Beside: View>: View {
         .onHover { hovering = $0 }
         .accessibilityElement(children: .combine)
         .accessibilityHint(L10n.Panel.openMonitor(module.title))
+    }
+}
+
+/// The line under a row, filled to a share. Core Animation glides it in the window server: a line that
+/// changes with most readings would otherwise have the app redrawing without pause.
+private struct OverviewLine: View {
+    var share: Double
+    var color: Color
+
+    var body: some View {
+        if RenderContext.offscreen {
+            // Snapshots can't draw AppKit views.
+            LevelBar(fraction: share, color: color, height: 1.5)
+        } else {
+            OverviewLineLayers(share: share, color: color)
+        }
+    }
+}
+
+private struct OverviewLineLayers: NSViewRepresentable {
+    var share: Double
+    var color: Color
+
+    func makeNSView(context: Context) -> OverviewLineView { OverviewLineView() }
+
+    func updateNSView(_ view: OverviewLineView, context: Context) {
+        view.update(share: share, color: color, glide: !context.environment.accessibilityReduceMotion)
+    }
+}
+
+private final class OverviewLineView: NSView {
+    private let track = CALayer(), fill = CALayer()
+    private var share = 0.0
+    private var color = Color.clear
+
+    override var isFlipped: Bool { true }
+    // Clicks go through to the row.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    init() {
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.addSublayer(track)
+        track.addSublayer(fill)
+        track.masksToBounds = true
+        track.cornerRadius = 0.75
+        fill.cornerRadius = 0.75
+        fill.anchorPoint = .zero
+    }
+
+    @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
+
+    func update(share new: Double, color newColor: Color, glide: Bool) {
+        color = newColor
+        paint()
+        // Before the first layout there is no width to tell a change by: keep the share for layout() to place.
+        guard bounds.width == 0 || abs(new - share) * bounds.width >= 0.5 else { return }
+        share = new
+        place(duration: glide && bounds.width > 0 ? 0.5 : 0)
+    }
+
+    override func layout() {
+        super.layout()
+        place(duration: 0)
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        paint()
+    }
+
+    private func place(duration: TimeInterval) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        track.frame = bounds
+        fill.position = .zero
+        fill.bounds.size.height = bounds.height
+        CATransaction.commit()
+        CATransaction.begin()
+        CATransaction.setDisableActions(duration == 0)
+        CATransaction.setAnimationDuration(duration)
+        CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(name: .easeOut))
+        fill.bounds.size.width = bounds.width * CGFloat(share)
+        CATransaction.commit()
+    }
+
+    private func paint() {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            track.backgroundColor = NSColor(Theme.track).cgColor
+            fill.backgroundColor = NSColor(color).cgColor
+        }
+        CATransaction.commit()
     }
 }
