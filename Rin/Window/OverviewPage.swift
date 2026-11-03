@@ -53,11 +53,9 @@ struct OverviewPage: View {
             guard n.connected else { return .init(value: L10n.Common.dash, unit: nil, detail: L10n.Overview.disconnected, share: 0, hot: false) }
             let speed = settings.prefs.network.speedUnit
             let down = Format.rateParts(n.down, unit: speed)
-            // A speed has no natural 100%: against the last hour's peak, with a floor so a quiet line stays low.
-            let peak = max(monitor.history.points(.netDown, range: .h1).map(\.value).max() ?? 0, n.down, 10_000)
             return .init(value: down.0, unit: down.1,
                          detail: L10n.Overview.downloadSpeed + gap + L10n.Monitor.partValue(L10n.Panel.upload, Format.rate(n.up, unit: speed)),
-                         share: n.down / peak, hot: false)
+                         share: monitor.history.downloadShare(n.down), hot: false)
         case .disk:
             let root = s.disk.root
             let free = Format.parts(Format.storage(root?.available ?? 0))

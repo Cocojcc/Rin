@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// The "合并成一项" dropdown, for a glance: every module, in the order of the chips in 设置 › 菜单栏.
-/// The first one in the menu bar, which the merged item shows, is a big reading with its last minute; the others follow one to a row (name, a small picture, reading); then the busiest
+/// The first one in the menu bar, which the merged item shows, is a big reading with its last minute; the others follow one to a row (name, a thin bar, reading); then the busiest
 /// app and what keeps the Mac awake. Every row opens its details beside the dropdown.
 struct CombinedPanel: View {
     var monitor = Monitor.shared
@@ -139,12 +139,14 @@ private enum CombinedReading {
         case .cpu: return (Format.percentNumber(s.cpu.total), "%")
         case .gpu: return (Format.percentNumber(s.gpu.utilization), "%")
         case .memory: return (Format.percentNumber(s.memory.usedFraction), "%")
-        case .disk: return (s.disk.root.map { Format.percentNumber($0.usedFraction) } ?? L10n.Common.dash, "%")
+        case .disk: return (s.disk.root.map { Format.percentNumber($0.usedFraction) } ?? L10n.Common.dash, s.disk.root == nil ? nil : "%")
         case .battery: return (Format.percentNumber(s.battery.level), "%")
         case .sensors:
-            let unit = prefs.general.temperatureUnit
-            return (s.sensors.cpuAverage.map { Format.temperatureNumber($0, unit: unit) } ?? L10n.Common.dash, Format.temperatureSymbol(unit))
-        case .bluetooth: return (lowestDevice(s)?.level.map(Format.percentNumber) ?? L10n.Common.dash, "%")
+            let t = s.sensors.cpuAverage
+            return (t.map { Format.temperatureNumber($0, unit: prefs.general.temperatureUnit) } ?? L10n.Common.dash, t == nil ? nil : "°")
+        case .bluetooth:
+            let level = lowestDevice(s)?.level
+            return (level.map(Format.percentNumber) ?? L10n.Common.dash, level == nil ? nil : "%")
         case .network:
             let p = Format.rateParts(s.network.down, unit: prefs.network.speedUnit)
             return (s.network.connected ? p.0 : L10n.Common.dash, s.network.connected ? p.1 : nil)
@@ -159,32 +161,61 @@ private enum CombinedReading {
         }
     }
 
-    /// The last minute: a line for most, two mirrored for traffic; nothing for Bluetooth, whose level barely moves.
-    @ViewBuilder static func chart(_ m: Module, color: Color, width: CGFloat, fill: Bool, height: CGFloat) -> some View {
-        let h = Monitor.shared.history
+    /// Past its limit, so its row's bar and figure turn red.
+    static func isHot(_ m: Module, _ s: Snapshot, _ prefs: Preferences) -> Bool {
         switch m {
-        case .cpu: spark(h.points(.cpu, range: .m5), color, width, fill, height)
-        case .gpu: spark(h.points(.gpu, range: .m5), color, width, fill, height)
-        case .memory: spark(h.points(.memory, range: .m5), color, width, fill, height)
-        case .sensors: spark(h.points(.cpuTemp, range: .m5), color, width, fill, height)
-        case .battery: spark(h.points(.battery, range: .m5), color, width, fill, height)
-        case .network: mirrored(h.points(.netDown, range: .m5), h.points(.netUp, range: .m5), color, width, floor: 10_000, height)
-        case .disk: mirrored(h.points(.diskRead, range: .m5), h.points(.diskWrite, range: .m5), color, width, floor: 1_000_000, height)
-        case .bluetooth: Color.clear.frame(height: height)
+        case .cpu: return s.cpu.total >= 0.9
+        case .sensors: return (s.sensors.cpuAverage ?? 0) >= 90
+        default: return isLow(m, s, prefs)
         }
     }
 
-    private static func spark(_ points: [ChartPoint], _ color: Color, _ width: CGFloat, _ fill: Bool, _ height: CGFloat) -> some View {
-        ConsoleChart(kind: .area, series: ChartSeries.line(points, color, width: width, fill: fill), span: 60, maxValue: 100, height: height, midline: false)
+    /// How much of it is in use, for its row's bar. A temperature is against 100 °C whatever it's shown in.
+    static func share(_ m: Module, _ s: Snapshot, _ history: History) -> Double {
+        switch m {
+        case .cpu: return s.cpu.total
+        case .gpu: return s.gpu.utilization
+        case .memory: return s.memory.usedFraction
+        case .disk: return s.disk.root?.usedFraction ?? 0
+        case .battery: return s.battery.level
+        case .sensors: return (s.sensors.cpuAverage ?? 0) / 100
+        case .bluetooth: return lowestDevice(s)?.level ?? 0
+        case .network: return s.network.connected ? history.downloadShare(s.network.down) : 0
+        }
+    }
+
+    /// A curve's or bar's color: red past its limit, else its hue; the battery is green only while charging.
+    static func color(_ m: Module, _ s: Snapshot, hot: Bool) -> Color {
+        if hot { return Theme.danger }
+        return m == .battery ? Theme.batteryLevel(s.battery, lead: false) : Theme.hue(m) ?? Theme.mid
+    }
+
+    /// The last minute: a line for most, two mirrored for traffic; nothing for Bluetooth, which keeps no such history.
+    @ViewBuilder static func chart(_ m: Module, color: Color, height: CGFloat) -> some View {
+        let h = Monitor.shared.history
+        switch m {
+        case .cpu: spark(h.points(.cpu, range: .m5), color, height)
+        case .gpu: spark(h.points(.gpu, range: .m5), color, height)
+        case .memory: spark(h.points(.memory, range: .m5), color, height)
+        case .sensors: spark(h.points(.cpuTemp, range: .m5), color, height)
+        case .battery: spark(h.points(.battery, range: .m5), color, height)
+        case .network: mirrored(h.points(.netDown, range: .m5), h.points(.netUp, range: .m5), color, floor: 10_000, height)
+        case .disk: mirrored(h.points(.diskRead, range: .m5), h.points(.diskWrite, range: .m5), color, floor: 1_000_000, height)
+        case .bluetooth: EmptyView()
+        }
+    }
+
+    private static func spark(_ points: [ChartPoint], _ color: Color, _ height: CGFloat) -> some View {
+        ConsoleChart(kind: .area, series: ChartSeries.line(points, color), span: 60, maxValue: 100, height: height, midline: false)
     }
 
     /// Up against its own last-minute peak, down against its own; a floor keeps a trickle low.
-    private static func mirrored(_ top: [ChartPoint], _ bottom: [ChartPoint], _ color: Color, _ width: CGFloat, floor: Double, _ height: CGFloat) -> some View {
+    private static func mirrored(_ top: [ChartPoint], _ bottom: [ChartPoint], _ color: Color, floor: Double, _ height: CGFloat) -> some View {
         let from = Date().addingTimeInterval(-60)
         func peak(_ points: [ChartPoint]) -> Double {
             ConsoleChart.niceMax(max(points.filter { $0.date >= from }.map(\.value).max() ?? 0, floor) * 1.1)
         }
-        return ConsoleChart(kind: .mirroredArea, series: ChartSeries.mirrored(top, color, bottom, color, lineWidth: width),
+        return ConsoleChart(kind: .mirroredArea, series: ChartSeries.mirrored(top, color, bottom, color),
                             span: 60, maxValue: peak(top), bottomMax: peak(bottom), height: height)
     }
 }
@@ -203,7 +234,6 @@ private struct CombinedHero: View {
         let selected = details.selection == .module(module)
         let v = CombinedReading.value(module, s, prefs)
         let low = CombinedReading.isLow(module, s, prefs)
-        let line = low ? Theme.danger : module == .battery ? Theme.batteryLevel(s.battery, lead: false) : Theme.hue(module) ?? Theme.mid
         Button { PanelController.shared.toggleDetail(.module(module)) } label: {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -213,9 +243,11 @@ private struct CombinedHero: View {
                 .padding(.horizontal, 20)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityElement(children: .combine)
-                CombinedReading.chart(module, color: line, width: 1.5, fill: true, height: 62)
-                    .padding(.top, 6)
-                    .accessibilityHidden(true)
+                if module != .bluetooth {
+                    CombinedReading.chart(module, color: CombinedReading.color(module, s, hot: low), height: 62)
+                        .padding(.top, 6)
+                        .accessibilityHidden(true)
+                }
             }
             .padding(.top, 8)
             .overlay(alignment: .trailing) { DetailChevron(visible: hovering || selected).padding(.trailing, 3) }
@@ -231,7 +263,8 @@ private struct CombinedHero: View {
     }
 }
 
-/// Name, a small picture (a bar for how full, a curve for a rate), the reading; the row opens the module's details.
+/// Name, how much of it is in use as a thin bar, its one figure; the row opens the module's details,
+/// where the rest of what there is to say is.
 private struct ModuleLine: View {
     let module: Module
     var monitor = Monitor.shared
@@ -248,11 +281,14 @@ private struct ModuleLine: View {
         let s = monitor.snapshot
         let prefs = settings.prefs
         let selected = details.selection == .module(module)
+        let v = CombinedReading.value(module, s, prefs)
+        let hot = CombinedReading.isHot(module, s, prefs)
+        let unit = v.1.map { $0 == "%" || $0 == "°" ? $0 : " " + $0 } ?? ""
         Button { PanelController.shared.toggleDetail(.module(module)) } label: {
             HStack(spacing: 12) {
                 Text(CombinedReading.name(module)).ui(14).foregroundStyle(Theme.sub).lineLimit(1).frame(width: Self.nameWidth, alignment: .leading)
-                picture(s, prefs).frame(maxWidth: .infinity).accessibilityHidden(true)
-                reading(s, prefs).frame(width: 112, alignment: .trailing)
+                LevelBar(fraction: CombinedReading.share(module, s, monitor.history), color: CombinedReading.color(module, s, hot: hot)).frame(maxWidth: .infinity)
+                Reading(text: v.0 + unit, color: hot ? Theme.danger : Theme.text).frame(width: 76, alignment: .trailing)
             }
             .frame(height: 40)
             .detailRow(selected: selected, hovering: hovering)
@@ -262,49 +298,6 @@ private struct ModuleLine: View {
         .accessibilityElement(children: .combine)
         .accessibilityHint(L10n.Combined.showDetails)
         .accessibilityAddTraits(selected ? .isSelected : [])
-    }
-
-    @ViewBuilder private func picture(_ s: Snapshot, _ prefs: Preferences) -> some View {
-        switch module {
-        case .memory: LevelBar(fraction: s.memory.usedFraction, color: Theme.color(for: .memory))
-        case .disk: LevelBar(fraction: s.disk.root?.usedFraction ?? 0, color: Theme.color(for: .disk))
-        case .battery: LevelBar(fraction: s.battery.level, color: Theme.batteryLevel(s.battery, lead: false))
-        case .bluetooth:
-            LevelBar(fraction: CombinedReading.lowestDevice(s)?.level ?? 0, color: CombinedReading.isLow(module, s, prefs) ? Theme.danger : Theme.mid)
-        case .sensors: TempBar(celsius: s.sensors.cpuAverage ?? 0, color: Theme.color(for: .sensors))
-        case .network: CombinedReading.chart(module, color: Theme.color(for: .network), width: 1.25, fill: true, height: 26)
-        case .cpu, .gpu: CombinedReading.chart(module, color: Theme.color(for: module), width: 1.25, fill: true, height: 24)
-        }
-    }
-
-    @ViewBuilder private func reading(_ s: Snapshot, _ prefs: Preferences) -> some View {
-        if module == .network {
-            // Both directions of one reading, so they look the same.
-            let n = s.network, unit = prefs.network.speedUnit
-            if n.connected {
-                VStack(alignment: .trailing, spacing: 0) {
-                    Reading(text: MenuBarText.downArrow + " " + Format.rate(n.down, unit: unit), size: 12)
-                    Reading(text: MenuBarText.upArrow + " " + Format.rate(n.up, unit: unit), size: 12)
-                }
-            } else {
-                Text(L10n.Common.dash).ui(14, 500)
-            }
-        } else if module == .sensors {
-            // The temperature and the fan, as the menu bar shows them.
-            let v = CombinedReading.value(module, s, prefs)
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                HStack(alignment: .firstTextBaseline, spacing: 0) {
-                    Text(v.0).ui(14, 500)
-                    Text(verbatim: "°").ui(14).foregroundStyle(Theme.sub)
-                }
-                if let f = s.sensors.fans.first { Reading(text: Format.rpm(f.rpm)) }
-            }
-            .lineLimit(1)
-            .fixedSize()
-        } else {
-            let v = CombinedReading.value(module, s, prefs)
-            Reading(text: v.0 + (v.1 == "%" ? "%" : v.1.map { " " + $0 } ?? ""), color: CombinedReading.isLow(module, s, prefs) ? Theme.danger : Theme.text)
-        }
     }
 }
 

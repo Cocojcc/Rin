@@ -844,10 +844,9 @@ enum PowerParts {
 /// A temperature on a 0–100 °C track, a mid grey below amber and red ticks at 70 and 90.
 struct TempBar: View {
     var celsius: Double
-    var color: Color? = nil
 
     var body: some View {
-        LevelBar(fraction: celsius / 100, color: celsius >= 90 ? Theme.danger : celsius >= 70 ? Theme.warn : color ?? Theme.mid)
+        LevelBar(fraction: celsius / 100, color: celsius >= 90 ? Theme.danger : celsius >= 70 ? Theme.warn : Theme.mid)
             .overlay {
                 GeometryReader { geo in
                     ForEach([(0.7, Theme.warn), (0.9, Theme.danger)], id: \.0) { x, c in

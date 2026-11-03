@@ -18,7 +18,7 @@ extension ChartSeries {
          ChartSeries(id: "t", points: total, color: Theme.color(for: .cpu), fill: 1, lineWidth: lineWidth)]
     }
 
-    /// One reading as a line over the wash (`fill: false` for a bare line, the overview's sparks).
+    /// One reading as a line over the wash (`fill: false` for a bare line).
     static func line(_ points: [ChartPoint], _ color: Color, width: CGFloat = 1.5, fill: Bool = true) -> [ChartSeries] {
         [ChartSeries(id: "l", points: points, color: color, fill: fill ? 1 : 0, lineWidth: width)]
     }
