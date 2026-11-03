@@ -426,9 +426,7 @@ struct NetworkPage: View {
             Columns(ratio: 1.5, gap: 40) {
                 VStack(alignment: .leading, spacing: 0) {
                     ListHead.blank
-                    ValueRow(label: n.interface.isEmpty ? PanelText.kindName(n.kind) : PanelText.kindName(n.adapterKind ?? n.kind), height: 36) {
-                        Reading(text: !n.connected ? L10n.Panel.notConnected : n.kind == .vpn ? L10n.Monitor.connectedVia(L10n.Panel.vpn) : L10n.Overview.connected)
-                    }
+                    ValueRow(label: PanelText.adapterName(n), height: 36) { Reading(text: PanelText.connection(n)) }
                     ValueRow(label: L10n.Monitor.localIPTitle, value: n.localIP.isEmpty ? L10n.Common.dash : n.localIP, height: 36)
                     ValueRow(label: L10n.Network.router, value: n.router.isEmpty ? L10n.Common.dash : n.router, height: 36)
                     if settings.prefs.network.showPublicIP {

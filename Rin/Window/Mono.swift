@@ -18,6 +18,19 @@ struct Stand<Reading: View>: View {
     }
 }
 
+/// A figure with the direction it is for, as network readings come in pairs.
+struct Arrowed<Figure: View>: View {
+    var arrow: String
+    @ViewBuilder var figure: Figure
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 5) {
+            Text(arrow).ui(13).foregroundStyle(Theme.sub)
+            figure
+        }
+    }
+}
+
 /// The small grey label over a figure ("使用率", "CPU").
 struct SmallLabel: View {
     var text: String

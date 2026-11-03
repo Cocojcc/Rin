@@ -116,7 +116,6 @@ enum L10n {
         static func diskOf(_ total: String) -> String { tr("overview.disk.of", total) }
         static var cpuTemp: String { tr("overview.sensors.cpuTemp") }
         static var detailGap: String { tr("overview.detailGap") }
-        static var downloadSpeed: String { tr("overview.downloadSpeed") }
         static var freeSpace: String { tr("overview.freeSpace") }
         static var fan: String { tr("overview.sensors.fan") }
         static var power: String { tr("overview.sensors.power") }

@@ -238,7 +238,14 @@ private struct CombinedHero: View {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 4) {
                     SmallLabel(text: CombinedReading.name(module))
-                    BigValue(value: v.0, unit: v.1, size: BigValue.panelLead, color: low ? Theme.danger : Theme.text)
+                    if module == .network, s.network.connected {
+                        HStack(alignment: .firstTextBaseline, spacing: 18) {
+                            speed(MenuBarText.downArrow, s.network.down, prefs)
+                            speed(MenuBarText.upArrow, s.network.up, prefs)
+                        }
+                    } else {
+                        BigValue(value: v.0, unit: v.1, size: BigValue.panelLead, color: low ? Theme.danger : Theme.text)
+                    }
                 }
                 .padding(.horizontal, 20)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -261,10 +268,15 @@ private struct CombinedHero: View {
         .accessibilityHint(L10n.Combined.showDetails)
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
+
+    private func speed(_ arrow: String, _ rate: Double, _ prefs: Preferences) -> some View {
+        let parts = Format.rateParts(rate, unit: prefs.network.speedUnit)
+        return Arrowed(arrow: arrow) { BigValue(value: parts.0, unit: parts.1, size: 36) }
+    }
 }
 
-/// Name, how much of it is in use as a thin bar, its one figure; the row opens the module's details,
-/// where the rest of what there is to say is.
+/// Name, how much of it is in use as a thin bar, its figure; the row opens the module's details, where
+/// the rest of what there is to say is. The network has two directions, so a bar and a figure for each.
 private struct ModuleLine: View {
     let module: Module
     var monitor = Monitor.shared
@@ -287,8 +299,18 @@ private struct ModuleLine: View {
         Button { PanelController.shared.toggleDetail(.module(module)) } label: {
             HStack(spacing: 12) {
                 Text(CombinedReading.name(module)).ui(14).foregroundStyle(Theme.sub).lineLimit(1).frame(width: Self.nameWidth, alignment: .leading)
-                LevelBar(fraction: CombinedReading.share(module, s, monitor.history), color: CombinedReading.color(module, s, hot: hot)).frame(maxWidth: .infinity)
-                Reading(text: v.0 + unit, color: hot ? Theme.danger : Theme.text).frame(width: 76, alignment: .trailing)
+                VStack(spacing: 0) { bars(s, hot: hot) }.frame(maxWidth: .infinity)
+                Group {
+                    if module == .network, s.network.connected {
+                        VStack(alignment: .trailing, spacing: 0) {
+                            rate(MenuBarText.downArrow, s.network.down, prefs)
+                            rate(MenuBarText.upArrow, s.network.up, prefs)
+                        }
+                    } else {
+                        Reading(text: v.0 + unit, color: hot ? Theme.danger : Theme.text)
+                    }
+                }
+                .frame(width: 76, alignment: .trailing)
             }
             .frame(height: 40)
             .detailRow(selected: selected, hovering: hovering)
@@ -298,6 +320,19 @@ private struct ModuleLine: View {
         .accessibilityElement(children: .combine)
         .accessibilityHint(L10n.Combined.showDetails)
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    @ViewBuilder private func bars(_ s: Snapshot, hot: Bool) -> some View {
+        let color = CombinedReading.color(module, s, hot: hot)
+        LevelBar(fraction: CombinedReading.share(module, s, monitor.history), color: color)
+        if module == .network, s.network.connected {
+            // Each level with its figure.
+            LevelBar(fraction: monitor.history.uploadShare(s.network.up), color: Theme.soft(module)).padding(.top, 13)
+        }
+    }
+
+    private func rate(_ arrow: String, _ rate: Double, _ prefs: Preferences) -> some View {
+        Reading(text: arrow + " " + Format.rate(rate, unit: prefs.network.speedUnit), size: 12).frame(height: 15)
     }
 }
 

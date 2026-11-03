@@ -997,5 +997,4 @@
 "combined.topMemoryValue" = "Memory %@";
 "combined.sleepMore" = "+%d more";
 "overview.detailGap" = "   ";
-"overview.downloadSpeed" = "Download speed";
 "overview.freeSpace" = "Free space";

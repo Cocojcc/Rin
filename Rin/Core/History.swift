@@ -202,9 +202,12 @@ final class History {
     // MARK: Queries
 
     /// Points for a chart, at most ~`maxPoints` (raw ranges are averaged down when dense).
-    /// A speed has no natural 100%: how much of the last hour's peak this one is, with a floor so a quiet line stays low.
-    func downloadShare(_ down: Double) -> Double {
-        down / max(points(.netDown, range: .h1).map(\.value).max() ?? 0, down, 10_000)
+    func downloadShare(_ down: Double) -> Double { share(down, of: .netDown) }
+    func uploadShare(_ up: Double) -> Double { share(up, of: .netUp) }
+
+    /// A speed has no natural 100%: how much of its own last hour's peak this one is, with a floor so a quiet line stays low.
+    private func share(_ rate: Double, of metric: Metric) -> Double {
+        rate / max(points(metric, range: .h1).map(\.value).max() ?? 0, rate, 10_000)
     }
 
     func points(_ metric: Metric, range: TimeRange, now: Date = Date(), maxPoints: Int = 300) -> [ChartPoint] {

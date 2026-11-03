@@ -33,6 +33,16 @@ enum PanelText {
         n.adapterKind.map { L10n.Network.ipVia(n.localIP, kindName($0)) } ?? n.localIP
     }
 
+    /// What the Mac is on, whatever a VPN carries over it ("Wi-Fi").
+    static func adapterName(_ n: NetworkSample) -> String {
+        kindName(n.interface.isEmpty ? n.kind : n.adapterKind ?? n.kind)
+    }
+
+    /// "已连接（VPN）".
+    static func connection(_ n: NetworkSample) -> String {
+        !n.connected ? L10n.Panel.notConnected : n.kind == .vpn ? L10n.Monitor.connectedVia(L10n.Panel.vpn) : L10n.Overview.connected
+    }
+
     static func pressure(_ p: MemoryPressure) -> (String, Color, Color) {
         switch p {
         case .normal: return (L10n.Panel.pressureNormal, Theme.ok, Theme.okBg)

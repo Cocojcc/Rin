@@ -52,10 +52,10 @@ struct OverviewPage: View {
             let n = s.network
             guard n.connected else { return .init(value: L10n.Common.dash, unit: nil, detail: L10n.Overview.disconnected, share: 0, hot: false) }
             let speed = settings.prefs.network.speedUnit
-            let down = Format.rateParts(n.down, unit: speed)
-            return .init(value: down.0, unit: down.1,
-                         detail: L10n.Overview.downloadSpeed + gap + L10n.Monitor.partValue(L10n.Panel.upload, Format.rate(n.up, unit: speed)),
-                         share: monitor.history.downloadShare(n.down), hot: false)
+            let down = Format.rateParts(n.down, unit: speed), up = Format.rateParts(n.up, unit: speed)
+            return .init(value: down.0, unit: down.1, detail: L10n.Monitor.partValue(PanelText.adapterName(n), PanelText.connection(n)),
+                         share: monitor.history.downloadShare(n.down), hot: false,
+                         upload: .init(value: up.0, unit: up.1, share: monitor.history.uploadShare(n.up)))
         case .disk:
             let root = s.disk.root
             let free = Format.parts(Format.storage(root?.available ?? 0))
@@ -96,6 +96,14 @@ private struct OverviewRow: View {
         var detail: String
         var share: Double
         var hot: Bool
+        /// The network has two directions, so a second figure and a second line, under the first.
+        var upload: Upload? = nil
+    }
+
+    struct Upload {
+        var value: String
+        var unit: String?
+        var share: Double
     }
 
     let module: Module
@@ -117,14 +125,15 @@ private struct OverviewRow: View {
                     Text(content.detail).ui(12.5).foregroundStyle(Theme.sub).lineLimit(1).truncationMode(.tail).frame(height: 17)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                BigValue(value: content.value, unit: content.unit, size: lead ? 34 : 26, color: content.hot ? Theme.danger : Theme.text, proportional: false)
-                    .fixedSize()
+                reading.fixedSize()
             }
             .padding(.bottom, Self.linePad)
             .frame(maxHeight: .infinity)
             .overlay(alignment: .bottom) {
-                OverviewLine(share: min(max(content.share, 0), 1), color: content.hot ? Theme.danger : Theme.hue(module) ?? Theme.sub)
-                    .frame(height: 1.5)
+                VStack(spacing: 2.5) {
+                    line(content.share, content.hot ? Theme.danger : Theme.hue(module) ?? Theme.sub)
+                    if let up = content.upload { line(up.share, Theme.soft(module)) }
+                }
             }
             .padding(.horizontal, Self.reach)
             .frame(height: height)
@@ -137,6 +146,25 @@ private struct OverviewRow: View {
         .onHover { hovering = $0 }
         .accessibilityElement(children: .combine)
         .accessibilityHint(L10n.Panel.openMonitor(module.title))
+    }
+
+    @ViewBuilder private var reading: some View {
+        if let up = content.upload {
+            HStack(alignment: .firstTextBaseline, spacing: 22) {
+                Arrowed(arrow: MenuBarText.downArrow) { figure(content.value, content.unit) }
+                Arrowed(arrow: MenuBarText.upArrow) { figure(up.value, up.unit) }
+            }
+        } else {
+            figure(content.value, content.unit)
+        }
+    }
+
+    private func figure(_ value: String, _ unit: String?) -> some View {
+        BigValue(value: value, unit: unit, size: lead ? 34 : 26, color: content.hot ? Theme.danger : Theme.text, proportional: false)
+    }
+
+    private func line(_ share: Double, _ color: Color) -> some View {
+        OverviewLine(share: min(max(share, 0), 1), color: color).frame(height: 1.5)
     }
 }
 
