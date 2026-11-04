@@ -39,6 +39,7 @@ final class ProcessReader {
     }
 
     private struct Counters { var cpu: UInt64; var read: UInt64; var write: UInt64; var energy: UInt64 }
+    private struct Moved { var at: Date; var read: Double; var write: Double; var down: Double; var up: Double }
 
     private var previous: [pid_t: Counters] = [:]
     private var previousDate: Date?
@@ -52,6 +53,10 @@ final class ProcessReader {
     private var gpuPrevious: [pid_t: UInt64] = [:]
     private var gpuDate: Date?
     private let footprints = FootprintProbe()
+    /// What each app moved lately, while the full list is read.
+    private var moved: [String: [Moved]] = [:]
+    private var movedSince: Date?
+    private static let movedWindow: TimeInterval = 60
     private let myUID = getuid()
     /// Seconds between background nettop reads that keep per-app traffic ready to show.
     private static let networkBaseline: TimeInterval = 30
@@ -111,15 +116,25 @@ final class ProcessReader {
             }
         }
 
+        var netMoved: [String: (down: Double, up: Double)] = [:]
+        var netSpan: TimeInterval = 0
         if request.network {
             let due = request.networkLive || netDate.map { now.timeIntervalSince($0) >= Self.networkBaseline } ?? true
             if due {
+                netSpan = netDate.map { now.timeIntervalSince($0) } ?? 0
                 let rates = networkRates(now: now)
                 if request.networkLive {
                     for (pid, down, up) in rates {
                         if rows[pid] == nil { rows[pid] = usage(for: pid) }
                         rows[pid]?.netDown = down
                         rows[pid]?.netUp = up
+                    }
+                }
+                if request.full {
+                    for (pid, down, up) in rates {
+                        let id = identity(for: pid).groupID
+                        netMoved[id, default: (0, 0)].down += down * netSpan
+                        netMoved[id, default: (0, 0)].up += up * netSpan
                     }
                 }
             }
@@ -148,7 +163,13 @@ final class ProcessReader {
             peaks.append(PeakProcess(name: identities[row.pid]?.name ?? row.name, cpu: row.cpu))
         }
 
-        let grouped = group(Array(rows.values))
+        var grouped = group(Array(rows.values))
+        if request.full {
+            grouped = withRecent(grouped, network: netMoved, since: now.addingTimeInterval(-max(dt, netSpan, 1)), dt: dt, now: now)
+        } else {
+            moved = [:]
+            movedSince = nil
+        }
         var snapshot = ProcessSnapshot()
         snapshot.date = now
         let n = request.limit
@@ -173,6 +194,32 @@ final class ProcessReader {
         snapshot.processCount = load?.tasks ?? pids.count
         snapshot.threadCount = load?.threads ?? 0
         return (snapshot, peaks)
+    }
+
+    /// Adds this read to what each app moved lately, and gives each its last minute's average.
+    private func withRecent(_ groups: [ProcessUsage], network: [String: (down: Double, up: Double)], since: Date, dt: TimeInterval, now: Date) -> [ProcessUsage] {
+        // The first read's amounts go back further than this read, to the one before it.
+        let start = movedSince ?? since
+        movedSince = start
+        for g in groups {
+            let entry = Moved(at: now, read: g.diskRead * dt, write: g.diskWrite * dt, down: network[g.id]?.down ?? 0, up: network[g.id]?.up ?? 0)
+            if entry.read + entry.write + entry.down + entry.up > 0 { moved[g.id, default: []].append(entry) }
+        }
+        let cutoff = now.addingTimeInterval(-Self.movedWindow)
+        moved = moved.compactMapValues { entries in
+            let kept = entries.filter { $0.at > cutoff }
+            return kept.isEmpty ? nil : kept
+        }
+        let span = max(min(now.timeIntervalSince(start), Self.movedWindow), 1)
+        return groups.map { group in
+            guard let entries = moved[group.id] else { return group }
+            var g = group
+            g.recentRead = entries.reduce(0) { $0 + $1.read } / span
+            g.recentWrite = entries.reduce(0) { $0 + $1.write } / span
+            g.recentDown = entries.reduce(0) { $0 + $1.down } / span
+            g.recentUp = entries.reduce(0) { $0 + $1.up } / span
+            return g
+        }
     }
 
     // MARK: - Identity and grouping

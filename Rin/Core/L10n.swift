@@ -908,6 +908,10 @@ enum L10n {
         static var filterMine: String { tr("processes.filterMine") }
         static var filterSystem: String { tr("processes.filterSystem") }
         static var energy: String { tr("processes.energy") }
+        static var tabsLabel: String { tr("processes.tabsLabel") }
+        static var usage: String { tr("processes.usage") }
+        static var share: String { tr("processes.share") }
+        static var power: String { tr("processes.power") }
         static var listLabel: String { tr("processes.listLabel") }
         static var inspector: String { tr("processes.inspector") }
         static var closeInspector: String { tr("processes.closeInspector") }

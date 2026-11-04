@@ -64,6 +64,9 @@ struct TitleBar: View {
                         RangeControl(range: Binding(get: { navigator.range(m) }, set: { navigator.ranges[m] = $0 }), options: Navigator.ranges(for: m))
                     }
                 case .processes:
+                    Segmented(label: L10n.Processes.tabsLabel, options: ProcessTab.allCases.map { ($0, $0.title) },
+                              selection: Binding(get: { navigator.processTab }, set: { navigator.processTab = $0 }), style: .range)
+                        .fixedSize()
                     ProcessSearchField(text: Binding(get: { navigator.processQuery }, set: { navigator.processQuery = $0 }))
                 case .about:
                     AboutCopyButton()
@@ -93,9 +96,13 @@ struct TitleBar: View {
             }
         case .processes:
             let s = monitor.snapshot.processes
-            HStack(spacing: 14) {
-                KeyValue(label: L10n.Monitor.totalLabel, value: grouped(s.processCount), size: 13)
-                KeyValue(label: L10n.Monitor.threadsLabel, value: grouped(s.threadCount), size: 13)
+            // The counts give way to the tabs and the search where the bar runs short.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 14) {
+                    KeyValue(label: L10n.Monitor.totalLabel, value: grouped(s.processCount), size: 13)
+                    KeyValue(label: L10n.Monitor.threadsLabel, value: grouped(s.threadCount), size: 13)
+                }
+                Color.clear.frame(width: 0, height: 0)
             }
         case .monitor(.sensors):
             let level = monitor.snapshot.sensors.thermal
@@ -147,20 +154,23 @@ struct ProcessSearchField: View {
     @Binding var text: String
     @FocusState private var focused: Bool
 
+    /// As wide as its prompt, so the tabs beside it keep their room in either language.
+    private static let width = (L10n.Processes.search as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 13)]).width.rounded(.up) + 22
+
     var body: some View {
         HStack(spacing: 8) {
             if RenderContext.offscreen {
                 // ImageRenderer can't draw text fields.
-                Text(L10n.Processes.search).ui(13).foregroundStyle(Theme.sub).frame(width: 96, alignment: .leading)
+                Text(L10n.Processes.search).ui(13).foregroundStyle(Theme.sub).lineLimit(1).frame(width: Self.width, alignment: .leading)
             } else {
                 TextField(L10n.Processes.search, text: $text, prompt: Text(L10n.Processes.search).foregroundStyle(Theme.sub))
                     .textFieldStyle(.plain)
                     .ui(13)
                     .foregroundStyle(Theme.text)
                     .focused($focused)
-                    .frame(width: 96)
+                    .frame(width: Self.width)
             }
-            Text(L10n.Processes.searchShortcut).ui(11).foregroundStyle(Theme.sub)
+            Text(L10n.Processes.searchShortcut).ui(11).foregroundStyle(Theme.sub).fixedSize()
                 .padding(.horizontal, 6).padding(.vertical, 1)
                 .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Theme.chip))
         }

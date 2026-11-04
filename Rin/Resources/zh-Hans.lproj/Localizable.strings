@@ -750,6 +750,10 @@
 "processes.filterMine" = "我的进程";
 "processes.filterSystem" = "系统";
 "processes.energy" = "能耗";
+"processes.tabsLabel" = "进程指标";
+"processes.usage" = "占用";
+"processes.share" = "占比";
+"processes.power" = "功率";
 "processes.listLabel" = "进程";
 "processes.inspector" = "进程检查器";
 "processes.closeInspector" = "关闭检查器";

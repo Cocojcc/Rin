@@ -10,11 +10,10 @@ All notable changes to Rin are documented in this file. The format is based on [
 
 ### Changed
 
+- Processes: five tabs replace the table of columns: CPU, Memory, Network, Disk and Energy, each with the two columns that answer it. Upload and download, and read and write, are now shown apart.
+- Processes: Network and Disk show the last minute's average and list only the apps active lately. Energy lists only the apps drawing power or using the GPU.
+- Processes: the process type filter moved to a menu above the list.
 - Sidebar: the selected page uses the same pale tile on every page, and module icons keep their color.
-
-### Removed
-
-- The GPU column on the Processes page, and the link to it from the GPU page and dropdown. Their own lists of top GPU apps remain.
 
 ### Fixed
 

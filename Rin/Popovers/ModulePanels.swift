@@ -265,7 +265,7 @@ struct GPUPanel: View {
             .padding(.top, 18)
         }
         if p.showProcesses {
-            PanelProcessList(title: L10n.Monitor.topGPU, processes: Array(monitor.snapshot.processes.byGPU.prefix(p.processCount)), value: { Format.percentValue($0.gpu) })
+            PanelProcessList(title: L10n.Monitor.topGPU, processes: Array(monitor.snapshot.processes.byGPU.prefix(p.processCount)), value: { Format.percentValue($0.gpu) }, link: .gpu)
         }
     }
 }

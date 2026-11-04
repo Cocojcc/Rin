@@ -38,8 +38,12 @@ final class Navigator {
         }
     }
 
-    /// The Processes page's sort column, set by the "全部" links on the way in.
-    var processSort: ProcessSort = .cpu
+    /// The Processes page's tab, set by the "›" links on the way in. Some readings follow it.
+    var processTab: ProcessTab = .cpu {
+        didSet { if processTab != oldValue { Monitor.shared.applyConfiguration() } }
+    }
+    /// The column each tab sorts by, once one has been picked.
+    var processColumns: [ProcessTab: Int] = [:]
     /// What the title bar's search field filters the Processes page by.
     var processQuery = ""
     /// Each monitor page's time range; the title bar switches it.
@@ -67,9 +71,10 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     /// Whether the page can be seen; a minimized window reads no more than a closed one.
     var isVisible: Bool { window.map { $0.isVisible && !$0.isMiniaturized } ?? false }
 
-    /// Opens the Processes page sorted by the list the "全部" link sat on.
+    /// Opens the Processes page on the tab of the list the "›" link sat on.
     func showProcesses(sortedBy sort: ProcessSort) {
-        Navigator.shared.processSort = sort
+        Navigator.shared.processColumns[sort.tab] = sort.column
+        Navigator.shared.processTab = sort.tab
         show(.processes)
     }
 

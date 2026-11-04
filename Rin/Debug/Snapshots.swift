@@ -92,6 +92,13 @@ enum Snapshots {
                 save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-processes-open-\(tag).png"))
                 ProcessesPage.initialSelection = nil
             }
+            for tab in ProcessTab.allCases where want("page-processes-\(tab)") && only != nil {
+                Navigator.shared.page = .processes
+                Navigator.shared.processTab = tab
+                ProcessesPage.initialSelection = nil
+                save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-processes-\(tab)-\(tag).png"))
+                Navigator.shared.processTab = .cpu
+            }
             if want("page") || want("page-menubar") {
                 let saved = SettingsStore.shared.prefs
                 SettingsStore.shared.prefs.menubar.displayMode = .combined

@@ -292,6 +292,12 @@ struct ProcessUsage: Identifiable, Hashable {
     var cpuTime: Double = 0
     /// Owner of the representative process.
     var uid: uid_t = 0
+    /// What it moved per second over the last minute, while the full list is read. Apps move data
+    /// in bursts, so a moment's rate would leave most rows empty and reshuffle the rest.
+    var recentRead: Double = 0
+    var recentWrite: Double = 0
+    var recentDown: Double = 0
+    var recentUp: Double = 0
 
     var netTotal: Double { netDown + netUp }
     var diskTotal: Double { diskRead + diskWrite }

@@ -140,10 +140,12 @@ final class Monitor {
         // Per-app traffic is a difference between two nettop reads (a subprocess, about 15 ms of
         // CPU each). While the network is read a slow baseline is kept, so a list that opens has
         // rates from its first read; nettop runs every process read only while one is on screen.
+        // On the Processes page, that and the per-app GPU time follow the tab that shows them.
+        let processTab = allProcesses ? Navigator.shared.processTab : nil
         config.processes.network = config.monitored.contains(.network) || allProcesses
-        config.processes.networkLive = allProcesses || consumers.contains(.popover(.network)) || consumers.contains(.window(.monitor(.network)))
-        config.processes.gpu = config.monitored.contains(.gpu)
-            && (consumers.contains(.popover(.gpu)) || consumers.contains(.window(.monitor(.gpu))))
+        config.processes.networkLive = processTab == .network || consumers.contains(.popover(.network)) || consumers.contains(.window(.monitor(.network)))
+        config.processes.gpu = processTab == .energy || (config.monitored.contains(.gpu)
+            && (consumers.contains(.popover(.gpu)) || consumers.contains(.window(.monitor(.gpu)))))
         config.processes.footprints = allProcesses || consumers.contains(.popover(.memory)) || consumers.contains(.window(.monitor(.memory)))
         config.processes.limit = max(8, prefs.cpu.processCount, prefs.memory.processCount, prefs.gpu.processCount)
         sampler.configure(config)

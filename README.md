@@ -62,7 +62,7 @@ Rin shows CPU, GPU, memory, network, disk, sensor, battery and accessory reading
 
 - **Overview:** every module on one list
 - **Module pages:** history over 5 minutes, 1 hour, 24 hours and 7 days
-- **Processes:** a searchable table with details and quit actions
+- **Processes:** tabs for CPU, memory, network, disk and energy, with search, details and quit actions
 - **Alerts:** rules for each module, with notifications and a log of recent alerts
 - **Sleep:** keep the Mac awake on a timer, and see what is preventing sleep
 - **About This Mac:** model, chip, memory and storage
