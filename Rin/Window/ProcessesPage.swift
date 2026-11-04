@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// One question the Processes page answers: who is busy, who holds memory, who moves data, who reads
-/// and writes, who draws power. Each tab has the two columns that answer it, so the directions stay
-/// apart and the list still fits beside the inspector.
+/// and writes, who draws power. Each tab has the columns that answer it and nothing else: how the
+/// whole Mac stands is what the module pages are for. A row is an app with its helpers folded in, so
+/// PID is the main process's.
 enum ProcessTab: CaseIterable, Hashable {
     case cpu, memory, network, disk, energy
 
@@ -16,36 +17,62 @@ enum ProcessTab: CaseIterable, Hashable {
         }
     }
 
-    var columns: [String] {
+    var columns: [(title: String, width: CGFloat)] {
+        let threads = L10n.Processes.threads, pid = L10n.Processes.pidLabel
         switch self {
-        case .cpu: return [L10n.Processes.usage, L10n.Processes.cpuTime]
-        case .memory: return [L10n.Processes.usage, L10n.Processes.share]
-        case .network: return [L10n.Panel.download, L10n.Panel.upload]
-        case .disk: return [L10n.Disk.read, L10n.Disk.write]
-        case .energy: return [L10n.Processes.power, L10n.Module.gpu]
+        case .cpu: return [(L10n.Processes.usage, 60), (L10n.Processes.cpuTime, 76), (threads, 48), (pid, 52)]
+        case .memory: return [(L10n.Processes.usage, 68), (L10n.Processes.share, 52), (L10n.Memory.compressed, 68), (threads, 48), (pid, 52)]
+        case .network: return [(L10n.Panel.download, 76), (L10n.Panel.upload, 76), (L10n.Processes.downloaded, 72), (L10n.Processes.uploaded, 72), (pid, 52)]
+        case .disk: return [(L10n.Disk.read, 76), (L10n.Disk.write, 76), (L10n.Processes.totalRead, 72), (L10n.Processes.totalWritten, 72), (pid, 52)]
+        case .energy: return [(L10n.Processes.power, 68), (L10n.Processes.energyUsed, 76), (pid, 52)]
         }
     }
+
+    /// The last column, which is quieter than the readings.
+    var pidColumn: Int { columns.count - 1 }
 
     /// Both directions count towards the order until a column is picked.
     var defaultColumn: Int? { self == .network || self == .disk ? nil : 0 }
 
-    /// Network, disk and energy list only the apps doing that lately; anything else would be a row of dashes.
+    /// Network, disk and energy list only the apps that have done any of it; anything else would be a row of dashes.
     func lists(_ p: ProcessUsage) -> Bool {
         switch self {
         case .cpu, .memory: return true
-        case .network: return max(p.recentDown, p.recentUp) >= Self.quietRate
-        case .disk: return max(p.recentRead, p.recentWrite) >= Self.quietRate
-        case .energy: return p.energy >= 0.005 || p.gpu >= 0.05
+        case .network: return p.totalDown + p.totalUp > 0
+        case .disk: return p.totalRead + p.totalWritten > 0
+        case .energy: return p.energyUsed >= 0.01
         }
     }
 
     func value(_ p: ProcessUsage, column: Int?) -> Double {
-        switch self {
-        case .cpu: return column == 1 ? p.cpuTime : p.cpu
-        case .memory: return Double(p.memory)
-        case .network: return column == 0 ? p.recentDown : column == 1 ? p.recentUp : p.recentDown + p.recentUp
-        case .disk: return column == 0 ? p.recentRead : column == 1 ? p.recentWrite : p.recentRead + p.recentWrite
-        case .energy: return column == 1 ? p.gpu : p.energy
+        switch (self, column) {
+        case (.cpu, 1): return p.cpuTime
+        case (.cpu, 2), (.memory, 3): return Double(p.threads)
+        case (.cpu, 3), (.memory, 4), (.network, 4), (.disk, 4), (.energy, 2): return Double(p.pid)
+        case (.cpu, _): return p.cpu
+        case (.memory, 2): return Double(p.compressed)
+        case (.memory, _): return Double(p.memory)
+        case (.network, 0): return p.recentDown
+        case (.network, 1): return p.recentUp
+        case (.network, 2): return Double(p.totalDown)
+        case (.network, 3): return Double(p.totalUp)
+        case (.network, _): return p.recentDown + p.recentUp
+        case (.disk, 0): return p.recentRead
+        case (.disk, 1): return p.recentWrite
+        case (.disk, 2): return Double(p.totalRead)
+        case (.disk, 3): return Double(p.totalWritten)
+        case (.disk, _): return p.recentRead + p.recentWrite
+        case (.energy, 1): return p.energyUsed
+        case (.energy, _): return p.energy
+        }
+    }
+
+    /// What orders the rows a column leaves level: what has piled up while both directions count, the second column after the first.
+    func next(_ p: ProcessUsage, column: Int?) -> Double {
+        switch column {
+        case nil: return value(p, column: 2) + value(p, column: 3)
+        case 0: return value(p, column: 1)
+        default: return 0
         }
     }
 
@@ -53,15 +80,23 @@ enum ProcessTab: CaseIterable, Hashable {
     func text(_ p: ProcessUsage, column: Int) -> String? {
         switch (self, column) {
         case (.cpu, 0): return Format.percentValue(p.cpu)
-        case (.cpu, _): return p.cpuTime > 0 ? Format.hms(p.cpuTime) : nil
+        case (.cpu, 1): return p.cpuTime > 0 ? Format.hms(p.cpuTime) : nil
+        case (.cpu, 2), (.memory, 3): return p.threads > 0 ? "\(p.threads)" : nil
         case (.memory, 0): return p.memory > 0 ? Format.memory(p.memory) : nil
-        case (.memory, _): return p.memory > 0 ? Format.percentValue(Double(p.memory) / Double(ProcessInfo.processInfo.physicalMemory) * 100) : nil
+        case (.memory, 1): return p.memory > 0 ? Format.percentValue(Double(p.memory) / Double(ProcessInfo.processInfo.physicalMemory) * 100) : nil
+        case (.memory, 2): return p.compressed > 0 ? Format.memory(p.compressed) : nil
         case (.network, 0): return Self.speed(p.recentDown)
-        case (.network, _): return Self.speed(p.recentUp)
+        case (.network, 1): return Self.speed(p.recentUp)
+        case (.network, 2): return Self.size(p.totalDown)
+        case (.network, 3): return Self.size(p.totalUp)
         case (.disk, 0): return Self.rate(p.recentRead)
-        case (.disk, _): return Self.rate(p.recentWrite)
-        case (.energy, 0): return p.energy >= 0.005 ? Format.appWatts(p.energy) : nil
-        case (.energy, _): return p.gpu >= 0.05 ? Format.percentValue(p.gpu) : nil
+        case (.disk, 1): return Self.rate(p.recentWrite)
+        case (.disk, 2): return Self.size(p.totalRead)
+        case (.disk, 3): return Self.size(p.totalWritten)
+        // In a list of who draws power, next to nothing reads 0.00 W rather than a dash.
+        case (.energy, 0): return Format.appWatts(p.energy)
+        case (.energy, 1): return Format.wattHours(p.energyUsed)
+        default: return "\(p.pid)"
         }
     }
 
@@ -70,23 +105,22 @@ enum ProcessTab: CaseIterable, Hashable {
 
     private static func rate(_ v: Double) -> String? { v >= quietRate ? Format.rate(v) : nil }
     private static func speed(_ v: Double) -> String? { v >= quietRate ? Format.rate(v, unit: SettingsStore.shared.prefs.network.speedUnit) : nil }
+    private static func size(_ v: UInt64) -> String? { v > 0 ? Format.storage(v) : nil }
 }
 
-/// Where a "›" link opens the Processes page: the list's tab, and its column where that isn't the first.
+/// Which tab a "›" link opens the Processes page on.
 enum ProcessSort {
     case cpu, memory, network, disk, energy, gpu
 
     var tab: ProcessTab {
         switch self {
-        case .cpu: return .cpu
+        case .cpu, .gpu: return .cpu
         case .memory: return .memory
         case .network: return .network
         case .disk: return .disk
-        case .energy, .gpu: return .energy
+        case .energy: return .energy
         }
     }
-
-    var column: Int? { self == .gpu ? 1 : nil }
 }
 
 enum ProcessFilter: CaseIterable {
@@ -125,22 +159,30 @@ struct AllProcessesLink: View {
 // MARK: - Page
 
 struct ProcessesPage: View {
-    /// The row selected when the page opens (debug snapshots render the inspector this way).
+    /// The row selected and the filter when the page opens (debug snapshots render them this way).
     static var initialSelection: String?
+    static var initialFilter = ProcessFilter.all
 
     var monitor = Monitor.shared
     var navigator = Navigator.shared
-    @State private var filter: ProcessFilter = .all
+    @State private var filter = ProcessesPage.initialFilter
     @State private var selected: String? = ProcessesPage.initialSelection
 
     var body: some View {
-        let s = monitor.snapshot.processes
+        let s = monitor.processes
         let tab = navigator.processTab
-        let column = navigator.processColumns[tab] ?? tab.defaultColumn
-        let rows = sorted(s.all, tab: tab, column: column)
+        let listed = s.all.filter { tab.lists($0) && filter.includes($0) }
+        // A column with nothing to say for these rows isn't drawn. Searching doesn't count, or columns would come and go while typing.
+        let present = tab.columns.indices.filter { i in listed.isEmpty || listed.contains { tab.text($0, column: i) != nil } }
+        let wanted = navigator.processColumns[tab] ?? tab.defaultColumn
+        let column = wanted.map { present.contains($0) ? $0 : present[0] } ?? (present.contains { $0 < 2 } ? nil : present.first)
+        let rows = sorted(listed, tab: tab, column: column)
         let selection = selected.flatMap { id in s.all.first { $0.id == id } }
+        // The inspector needs the room: the first two columns stay, or the first and the one being sorted by.
+        let at = column.flatMap(present.firstIndex(of:)) ?? 0
+        let shown = selection == nil ? present : at > 1 ? [present[0], present[at]] : Array(present.prefix(2))
         HStack(alignment: .top, spacing: 24) {
-            ProcessGrid(rows: rows, tab: tab, column: column, filter: $filter, selected: $selected) { navigator.processColumns[tab] = $0 }
+            ProcessGrid(rows: rows, tab: tab, column: column, shown: shown, filter: $filter, selected: $selected) { navigator.processColumns[tab] = $0 }
             if let selection {
                 ProcessInspector(process: selection) { selected = nil }
                     .frame(width: 212)
@@ -150,31 +192,32 @@ struct ProcessesPage: View {
             }
         }
         .frame(maxHeight: .infinity, alignment: .top)
+        // The list runs out under the window's edge, as a scrolling list does.
+        .padding(.bottom, -Sidebar.bottomInset)
         .animation(Motion.slide, value: selection?.id)
     }
 
-    private func sorted(_ all: [ProcessUsage], tab: ProcessTab, column: Int?) -> [ProcessUsage] {
+    private func sorted(_ listed: [ProcessUsage], tab: ProcessTab, column: Int?) -> [ProcessUsage] {
         let query = navigator.processQuery.trimmingCharacters(in: .whitespaces)
-        return all
-            .filter { tab.lists($0) && filter.includes($0) }
+        return listed
             .filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) || "\($0.pid)" == query }
+            .map { (process: $0, value: tab.value($0, column: column), next: tab.next($0, column: column)) }
             .sorted {
-                let a = tab.value($0, column: column), b = tab.value($1, column: column)
-                return a != b ? a > b : $0.name.localizedStandardCompare($1.name) == .orderedAscending
+                if $0.value != $1.value { return $0.value > $1.value }
+                if $0.next != $1.next { return $0.next > $1.next }
+                return $0.process.name.localizedStandardCompare($1.process.name) == .orderedAscending
             }
+            .map(\.process)
     }
 }
 
 // MARK: - Table
 
-private enum ProcessColumn {
-    static let width: CGFloat = 84
-}
-
 private struct ProcessGrid: View {
     var rows: [ProcessUsage]
     var tab: ProcessTab
     var column: Int?
+    var shown: [Int]
     @Binding var filter: ProcessFilter
     @Binding var selected: String?
     var onSort: (Int) -> Void
@@ -184,7 +227,7 @@ private struct ProcessGrid: View {
             header
             if RenderContext.offscreen {
                 // Snapshots can't scroll; the first screenful stands in for the list.
-                list(Array(rows.prefix(18))).frame(maxHeight: .infinity, alignment: .top).clipped()
+                list(Array(rows.prefix(21))).frame(minHeight: 0, maxHeight: .infinity, alignment: .top).clipped()
             } else {
                 ScrollView { list(rows) }.scrollIndicators(.automatic)
             }
@@ -195,22 +238,25 @@ private struct ProcessGrid: View {
     private var header: some View {
         HStack(spacing: 12) {
             ProcessFilterMenu(selection: $filter).frame(maxWidth: .infinity, alignment: .leading)
-            ForEach(Array(tab.columns.enumerated()), id: \.offset) { i, title in
+            ForEach(shown, id: \.self) { i in
+                let info = tab.columns[i]
                 // With no column picked, both directions lead together.
-                let strong = column == nil || column == i
+                let strong = column == i || (column == nil && i < 2)
                 Button {
                     onSort(i)
                 } label: {
                     HStack(spacing: 3) {
                         if column == i { LineIcon(d: Icons.sortChevron, size: 8, viewBox: 8, lineWidth: 1.4) }
-                        Text(title).ui(12, strong ? 500 : 400).lineLimit(1)
+                        Text(info.title).ui(12, strong ? 500 : 400).lineLimit(1)
                     }
+                    // A long name may reach into the gap beside it rather than be cut short.
+                    .fixedSize()
                     .foregroundStyle(strong ? Theme.text : Theme.sub)
-                    .frame(width: ProcessColumn.width, alignment: .trailing)
+                    .frame(width: info.width, alignment: .trailing)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(title)
+                .accessibilityLabel(info.title)
                 .accessibilityAddTraits(column == i ? [.isSelected] : [])
             }
         }
@@ -225,8 +271,8 @@ private struct ProcessGrid: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .frame(height: 30)
             }
-            ForEach(rows) { p in
-                ProcessGridRow(process: p, tab: tab, column: column, selected: selected == p.id) {
+            ForEach(Array(rows.enumerated()), id: \.element.id) { index, p in
+                ProcessGridRow(process: p, tab: tab, column: column, shown: shown, striped: index % 2 == 1, selected: selected == p.id) {
                     selected = selected == p.id ? nil : p.id
                 }
             }
@@ -275,6 +321,8 @@ private struct ProcessGridRow: View {
     var process: ProcessUsage
     var tab: ProcessTab
     var column: Int?
+    var shown: [Int]
+    var striped: Bool
     var selected: Bool
     var action: () -> Void
     @State private var hovering = false
@@ -287,16 +335,16 @@ private struct ProcessGridRow: View {
                     Text(process.name).lineLimit(1).truncationMode(.tail)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                ForEach(0..<2, id: \.self) { i in
+                ForEach(shown, id: \.self) { i in
                     Group {
                         if let text = tab.text(process, column: i) {
-                            Reading(text: text, weight: column == nil || column == i ? 500 : 400)
+                            Reading(text: text, weight: column == i || (column == nil && i < 2) ? 500 : 400, color: i == tab.pidColumn ? Theme.sub : Theme.text)
                         } else {
                             Text(L10n.Common.dash).foregroundStyle(Theme.sub)
                         }
                     }
                     .lineLimit(1)
-                    .frame(width: ProcessColumn.width, alignment: .trailing)
+                    .frame(width: tab.columns[i].width, alignment: .trailing)
                 }
             }
             .ui(14)
@@ -304,8 +352,8 @@ private struct ProcessGridRow: View {
             .padding(.horizontal, 8)
             .frame(height: 30)
             .background {
-                if selected || hovering {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous).fill(selected ? Theme.raise : Theme.lgHover)
+                if selected || hovering || striped {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous).fill(selected ? Theme.raise : hovering ? Theme.lgHover : Theme.well)
                 }
             }
             .padding(.horizontal, -8)
@@ -364,7 +412,8 @@ private struct ProcessInspector: View {
             sparkCard(L10n.Module.memory, value: Format.memory(p.memory), values: history.map(\.memory), color: Theme.color(for: .memory), fill: false).padding(.top, 12)
             group([
                 (L10n.Processes.cpuTime, p.cpuTime > 0 ? Format.hms(p.cpuTime) : nil),
-                (L10n.Processes.threads, d.threads.map { "\($0)" }),
+                // The whole group's, as on its row, once `top` has reported it.
+                (L10n.Processes.threads, (p.threads > 0 ? p.threads : d.threads).map { "\($0)" }),
                 (L10n.Processes.energy, p.energy >= 0.005 ? Format.appWatts(p.energy) : nil),
                 (L10n.Processes.diskReadWrite, pair(p.recentRead, p.recentWrite)),
                 (L10n.Processes.networkInOut, pair(p.recentDown, p.recentUp)),
@@ -388,7 +437,6 @@ private struct ProcessInspector: View {
                 HStack(spacing: 14) {
                     KeyValue(label: L10n.Processes.pidLabel, value: "\(p.pid)")
                     KeyValue(label: L10n.Processes.userLabel, value: d.user ?? "\(p.uid)")
-                    if p.isSystem { Text(L10n.Processes.systemProcess).ui(12).foregroundStyle(Theme.sub) }
                 }
                 .lineLimit(1)
             }

@@ -151,6 +151,11 @@ enum Format {
         w >= 1 ? watts(w) : String(format: "%.2f W", w)
     }
 
+    /// Energy an app has used, mostly a small part of a watt hour → "12.4 Wh", "1.71 Wh", "0.093 Wh".
+    static func wattHours(_ wh: Double) -> String {
+        String(format: wh >= 10 ? "%.1f Wh" : wh >= 0.1 ? "%.2f Wh" : "%.3f Wh", wh)
+    }
+
     /// Seconds → "25:12:08" (CPU time, the keep-awake clock).
     static func hms(_ seconds: Double) -> String {
         let total = Int(seconds)

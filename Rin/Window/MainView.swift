@@ -95,7 +95,7 @@ struct TitleBar: View {
                     .help(L10n.Alerts.view)
             }
         case .processes:
-            let s = monitor.snapshot.processes
+            let s = monitor.processes
             // The counts give way to the tabs and the search where the bar runs short.
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 14) {
@@ -267,7 +267,9 @@ struct Sidebar: View {
     var alerts = Alerts.shared
     var settings = SettingsStore.shared
 
-    static let width: CGFloat = 76
+    /// As wide as the window's buttons need, with their gap on the far side too: they aren't drawn
+    /// at the interface's scale, and the middle one sits right over the icons.
+    static let width: CGFloat = 92
     /// The bar across the top; the sidebar's icons start below it.
     static let titleBand: CGFloat = 52
     /// Under each page's last row.

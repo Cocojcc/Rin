@@ -15,6 +15,9 @@ final class Monitor {
     static let shared = Monitor()
 
     private(set) var snapshot = Snapshot()
+    /// The process lists alone: they are read less often than the sample ticks, and a page of them
+    /// has no reason to redraw in between.
+    private(set) var processes = ProcessSnapshot()
     private(set) var tick = 0
     private(set) var publicIP: String?
     private(set) var interfaces: [(name: String, kind: InterfaceKind)] = []
@@ -88,6 +91,7 @@ final class Monitor {
     func applyConfiguration() {
         let prefs = SettingsStore.shared.prefs
         var config = Sampler.Config()
+        config.enabled = Set(Module.allCases.filter(prefs.isEnabled))
         config.slowOnBattery = prefs.general.slowOnBattery
         config.interface = prefs.network.interface
         if isResting {
@@ -140,12 +144,11 @@ final class Monitor {
         // Per-app traffic is a difference between two nettop reads (a subprocess, about 15 ms of
         // CPU each). While the network is read a slow baseline is kept, so a list that opens has
         // rates from its first read; nettop runs every process read only while one is on screen.
-        // On the Processes page, that and the per-app GPU time follow the tab that shows them.
+        // On the Processes page, that follows the tab that shows it.
         let processTab = allProcesses ? Navigator.shared.processTab : nil
         config.processes.network = config.monitored.contains(.network) || allProcesses
         config.processes.networkLive = processTab == .network || consumers.contains(.popover(.network)) || consumers.contains(.window(.monitor(.network)))
-        config.processes.gpu = processTab == .energy || (config.monitored.contains(.gpu)
-            && (consumers.contains(.popover(.gpu)) || consumers.contains(.window(.monitor(.gpu)))))
+        config.processes.gpu = config.monitored.contains(.gpu) && (consumers.contains(.popover(.gpu)) || consumers.contains(.window(.monitor(.gpu))))
         config.processes.footprints = allProcesses || consumers.contains(.popover(.memory)) || consumers.contains(.window(.monitor(.memory)))
         config.processes.limit = max(8, prefs.cpu.processCount, prefs.memory.processCount, prefs.gpu.processCount)
         sampler.configure(config)
@@ -165,6 +168,7 @@ final class Monitor {
 
     private func apply(_ s: Snapshot) {
         snapshot = s
+        if s.processes.date != processes.date { processes = s.processes }
         history.record(s)
         recordProcesses(s.processes)
         tick &+= 1
@@ -192,7 +196,7 @@ final class Monitor {
 
     private func refreshPublicIPIfNeeded() {
         let route = snapshot.network.interface
-        guard SettingsStore.shared.prefs.network.showPublicIP, snapshot.network.connected,
+        guard SettingsStore.shared.prefs.network.showPublicIP, snapshot.monitored.contains(.network), snapshot.network.connected,
               Date().timeIntervalSince(lastPublicIP) > 600 || route != publicIPRoute,
               let url = URL(string: "https://api.ipify.org") else { return }
         if route != publicIPRoute { publicIP = nil }
@@ -215,6 +219,8 @@ final class Sampler {
     struct Config {
         /// Modules read: in the menu bar, watched by an alert, or on screen.
         var monitored: Set<Module> = Set(Module.allCases)
+        /// Modules switched on. The rest keep no numbers.
+        var enabled: Set<Module> = Set(Module.allCases)
         /// Seconds between reads per module; the timer ticks at the shortest of them.
         var intervals: [Module: Double] = [:]
         var processInterval: Double = 3
@@ -239,6 +245,9 @@ final class Sampler {
     private var lastProcessRead = Date.distantPast
     /// Read processes on the next sample whatever the interval.
     private var processesDue = false
+    /// The first read takes in every module that's on, so a view opening later has numbers to draw
+    /// and knows what this Mac has (a battery, fans) before its own first read comes back.
+    private var primed = false
     private var lastRead: [Module: Date] = [:]
     private var lastPower = PowerReport.Reading()
     private var current = Snapshot()
@@ -326,7 +335,7 @@ final class Sampler {
     /// Whether a module's interval has elapsed (with a little slack for timer jitter). Modules
     /// switched off are never due.
     private func due(_ m: Module, _ now: Date, force: Bool) -> Bool {
-        guard config.monitored.contains(m) else { lastRead[m] = nil; return false }
+        guard config.monitored.contains(m) || (!primed && config.enabled.contains(m)) else { lastRead[m] = nil; return false }
         guard !force, let last = lastRead[m] else { lastRead[m] = now; return true }
         guard now.timeIntervalSince(last) >= interval(m) - 0.25 else { return false }
         lastRead[m] = now
@@ -338,18 +347,19 @@ final class Sampler {
         var s = current
         s.date = now
         s.monitored = config.monitored
-        // A module switched off keeps no stale numbers around.
-        if !config.monitored.contains(.cpu) { s.cpu = CPUSample() }
-        if !config.monitored.contains(.memory) { s.memory = MemorySample() }
-        if !config.monitored.contains(.network) { s.network = NetworkSample() }
-        if !config.monitored.contains(.disk) { s.disk = DiskSample() }
-        if !config.monitored.contains(.battery) { s.battery = BatterySample() }
-        if !config.monitored.contains(.sensors) { s.sensors = SensorsSample() }
-        if !config.monitored.contains(.bluetooth) { s.bluetooth = BluetoothSample() }
-        if !config.monitored.contains(.gpu) { s.gpu = GPUSample() }
+        // A module switched off keeps no numbers around. One that just isn't being read keeps its
+        // last ones, so a view that opens draws whole until its own read comes back.
+        if !config.enabled.contains(.cpu) { s.cpu = CPUSample() }
+        if !config.enabled.contains(.memory) { s.memory = MemorySample() }
+        if !config.enabled.contains(.network) { s.network = NetworkSample() }
+        if !config.enabled.contains(.disk) { s.disk = DiskSample() }
+        if !config.enabled.contains(.battery) { s.battery = BatterySample() }
+        if !config.enabled.contains(.sensors) { s.sensors = SensorsSample() }
+        if !config.enabled.contains(.bluetooth) { s.bluetooth = BluetoothSample() }
+        if !config.enabled.contains(.gpu) { s.gpu = GPUSample() }
         if due(.cpu, now, force: force) { s.cpu = cpu.read() }
         if due(.memory, now, force: force) { s.memory = memory.read() }
-        if due(.network, now, force: force) { s.network = network.read(preferred: config.interface, probeLatency: config.latency) }
+        if due(.network, now, force: force) { s.network = network.read(preferred: config.interface, probeLatency: config.latency && config.monitored.contains(.network)) }
         if due(.disk, now, force: force) { s.disk = disk.read() }
         if due(.battery, now, force: force) { s.battery = battery.read() }
         if due(.bluetooth, now, force: force) { s.bluetooth = bluetooth.read(now: now) }
@@ -382,6 +392,7 @@ final class Sampler {
         s.selfCPU = processes.selfUsage.cpu
         s.selfMemory = processes.selfUsage.memory
         current = s
+        primed = true
 
 
         let wasOnBattery = onBattery

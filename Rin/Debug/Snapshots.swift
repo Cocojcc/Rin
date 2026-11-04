@@ -97,6 +97,9 @@ enum Snapshots {
                 Navigator.shared.processTab = tab
                 ProcessesPage.initialSelection = nil
                 save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-processes-\(tab)-\(tag).png"))
+                ProcessesPage.initialFilter = .system
+                save(MainView().frame(width: pageWidth, height: UIScale.of(700)).background(wall), appearance, dir.appendingPathComponent("page-processes-\(tab)-system-\(tag).png"))
+                ProcessesPage.initialFilter = .all
                 Navigator.shared.processTab = .cpu
             }
             if want("page") || want("page-menubar") {

@@ -73,7 +73,7 @@ final class MainWindowController: NSObject, NSWindowDelegate {
 
     /// Opens the Processes page on the tab of the list the "›" link sat on.
     func showProcesses(sortedBy sort: ProcessSort) {
-        Navigator.shared.processColumns[sort.tab] = sort.column
+        Navigator.shared.processColumns[sort.tab] = nil
         Navigator.shared.processTab = sort.tab
         show(.processes)
     }
@@ -143,8 +143,10 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         frame.origin.y = window.frame.height - band
         container.frame = frame
         let y = ((band - close.frame.height) / 2).rounded()
+        // Each macOS spaces them its own way; the middle one goes over the sidebar's icons.
+        let first = ((UIScale.of(Sidebar.width) - mini.frame.width) / 2).rounded() - pitch
         for (i, button) in [close, mini, zoom].enumerated() {
-            button.setFrameOrigin(NSPoint(x: UIScale.of(12) + CGFloat(i) * pitch, y: y))
+            button.setFrameOrigin(NSPoint(x: first + CGFloat(i) * pitch, y: y))
         }
     }
 

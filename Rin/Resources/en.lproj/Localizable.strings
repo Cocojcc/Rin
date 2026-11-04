@@ -758,7 +758,11 @@
 "processes.inspector" = "Process inspector";
 "processes.closeInspector" = "Close inspector";
 "processes.pidUser" = "PID %1$@ · %2$@";
-"processes.systemProcess" = "System process";
+"processes.downloaded" = "Downloaded";
+"processes.uploaded" = "Uploaded";
+"processes.totalRead" = "Total Read";
+"processes.totalWritten" = "Total Write";
+"processes.energyUsed" = "Energy Used";
 "processes.cpuTime" = "CPU time";
 "processes.threads" = "Threads";
 "processes.diskReadWrite" = "Disk read · write";

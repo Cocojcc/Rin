@@ -10,7 +10,8 @@ private func responsibility_get_pid_responsible_for_pid(_ pid: pid_t) -> pid_t
 ///
 /// CPU, disk and energy come from proc_pid_rusage deltas (no subprocess). Processes owned by other
 /// users can't be read that way, so while a window or panel is open `ps` fills them in, and `top`
-/// corrects their memory while a list of it is on screen.
+/// corrects their memory while a list of it is on screen, and adds threads and compressed memory
+/// to the full list.
 /// Network (nettop) is read every few seconds while a list of it is on screen and every 30 s
 /// otherwise; GPU (IORegistry) only while something shows it.
 final class ProcessReader {
@@ -92,6 +93,9 @@ final class ProcessReader {
             var row = usage(for: pid)
             row.memory = info.ri_phys_footprint
             row.cpuTime = Double(cpuTime) / 1e9
+            row.totalRead = info.ri_diskio_bytesread
+            row.totalWritten = info.ri_diskio_byteswritten
+            row.energyUsed = Double(info.ri_energy_nj) / 1e9 / 3600
             if let p = previous[pid], dt > 0 {
                 row.cpu = Double(counters.cpu &- p.cpu) / (dt * 1e9) * 100
                 row.diskRead = Double(counters.read >= p.read ? counters.read - p.read : 0) / dt
@@ -106,12 +110,21 @@ final class ProcessReader {
         identities = identities.filter { current[$0.key] != nil || unreadableSet.contains($0.key) }
 
         if request.footprints { footprints.tick() } else { footprints.reset() }
+        let held = request.footprints ? footprints.results() : [:]
         if request.includeOtherUsers, !unreadable.isEmpty {
-            let held = request.footprints ? footprints.results() : [:]
             for (pid, cpu, rss) in Self.psSample() where rows[pid] == nil {
                 var row = usage(for: pid)
                 row.cpu = cpu
-                row.memory = held[pid] ?? rss
+                row.memory = held[pid]?.memory ?? rss
+                rows[pid] = row
+            }
+        }
+        if request.full {
+            for (pid, h) in held {
+                guard var row = rows[pid] else { continue }
+                row.threads = h.threads
+                row.compressed = h.compressed
+                row.cpuTime = max(row.cpuTime, h.cpuTime)
                 rows[pid] = row
             }
         }
@@ -136,6 +149,12 @@ final class ProcessReader {
                         netMoved[id, default: (0, 0)].down += down * netSpan
                         netMoved[id, default: (0, 0)].up += up * netSpan
                     }
+                }
+            }
+            if request.full {
+                for (pid, total) in netPrevious {
+                    rows[pid]?.totalDown = total.0
+                    rows[pid]?.totalUp = total.1
                 }
             }
         } else {
@@ -285,6 +304,13 @@ final class ProcessReader {
                 g.gpu += row.gpu
                 g.energy += row.energy
                 g.cpuTime += row.cpuTime
+                g.totalRead += row.totalRead
+                g.totalWritten += row.totalWritten
+                g.totalDown += row.totalDown
+                g.totalUp += row.totalUp
+                g.energyUsed += row.energyUsed
+                g.threads += row.threads
+                g.compressed += row.compressed
                 g.pids.append(row.pid)
                 // Prefer the app's main executable as the representative pid.
                 if let bundle = row.bundlePath, let exe = row.executablePath,
@@ -424,16 +450,23 @@ final class ProcessReader {
     }
 }
 
-/// What other users' processes really hold, at most every 30 seconds. `ps` only has their resident
-/// size, which counts shared memory and leaves out what's compressed; `top` runs as root and reports
-/// the footprint, as Activity Monitor does. One read costs about 0.6 s of CPU, so it runs on its own
-/// queue and only while a list of memory is on screen.
+/// What `top` knows about every process, at most every 30 seconds. It runs as root, so it has the
+/// footprint of other users' processes, where `ps` only has their resident size, which counts shared
+/// memory and leaves out what's compressed; Activity Monitor reports the footprint too. One read
+/// costs about 0.4 s of CPU, so it runs on its own queue and only while a list that needs it is on screen.
 private final class FootprintProbe {
+    struct Held {
+        var memory: UInt64
+        var threads: Int
+        var compressed: UInt64
+        var cpuTime: Double
+    }
+
     private static let interval: TimeInterval = 30
     private let queue = DispatchQueue(label: "rin.footprints", qos: .utility)
     private let lock = NSLock()
     private var lastStart = Date.distantPast
-    private var latest: [pid_t: UInt64] = [:]
+    private var latest: [pid_t: Held] = [:]
 
     func tick() {
         lock.lock()
@@ -442,14 +475,14 @@ private final class FootprintProbe {
         guard now.timeIntervalSince(lastStart) >= Self.interval else { return }
         lastStart = now
         queue.async { [self] in
-            let read = Self.parse(ProcessReader.run("/usr/bin/top", ["-l", "1", "-F", "-R", "-stats", "pid,mem"]))
+            let read = Self.parse(ProcessReader.run("/usr/bin/top", ["-l", "1", "-F", "-R", "-stats", "pid,mem,th,cmprs,time"]))
             lock.lock()
             latest = read
             lock.unlock()
         }
     }
 
-    func results() -> [pid_t: UInt64] {
+    func results() -> [pid_t: Held] {
         lock.lock()
         defer { lock.unlock() }
         return latest
@@ -462,9 +495,9 @@ private final class FootprintProbe {
         latest = [:]
     }
 
-    /// The rows under top's "PID MEM" header.
-    private static func parse(_ output: String) -> [pid_t: UInt64] {
-        var result: [pid_t: UInt64] = [:]
+    /// The rows under top's "PID MEM #TH CMPRS TIME" header.
+    private static func parse(_ output: String) -> [pid_t: Held] {
+        var result: [pid_t: Held] = [:]
         var inRows = false
         for line in output.split(separator: "\n") {
             let columns = line.split(separator: " ")
@@ -472,15 +505,15 @@ private final class FootprintProbe {
                 inRows = columns.first == "PID"
                 continue
             }
-            guard columns.count == 2, let pid = pid_t(columns[0]), let bytes = bytes(columns[1]) else { continue }
-            result[pid] = bytes
+            guard columns.count == 5, let pid = pid_t(columns[0]), let memory = bytes(columns[1]) else { continue }
+            result[pid] = Held(memory: memory, threads: threads(columns[2]), compressed: bytes(columns[3]) ?? 0, cpuTime: seconds(columns[4]))
         }
         return result
     }
 
     /// "6304K", "942M", in powers of 1024; top may mark a figure as rising or falling with + or -.
     private static func bytes(_ text: Substring) -> UInt64? {
-        let figure = text.trimmingCharacters(in: CharacterSet(charactersIn: "+-"))
+        let figure = text.trimmingCharacters(in: marks)
         guard let unit = figure.last, let number = Double(figure.dropLast()) else { return nil }
         switch unit {
         case "B": return UInt64(number)
@@ -491,4 +524,16 @@ private final class FootprintProbe {
         default: return nil
         }
     }
+
+    /// "14", or "767/10" with how many of them are running.
+    private static func threads(_ text: Substring) -> Int {
+        Int(text.prefix { $0 != "/" }.trimmingCharacters(in: marks)) ?? 0
+    }
+
+    /// "05:47.56", "1:02:30".
+    private static func seconds(_ text: Substring) -> Double {
+        text.trimmingCharacters(in: marks).split(separator: ":").reduce(0) { $0 * 60 + (Double($1) ?? 0) }
+    }
+
+    private static let marks = CharacterSet(charactersIn: "+-")
 }

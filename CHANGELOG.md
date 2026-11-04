@@ -10,14 +10,18 @@ All notable changes to Rin are documented in this file. The format is based on [
 
 ### Changed
 
-- Processes: five tabs replace the table of columns: CPU, Memory, Network, Disk and Energy, each with the two columns that answer it. Upload and download, and read and write, are now shown apart.
-- Processes: Network and Disk show the last minute's average and list only the apps active lately. Energy lists only the apps drawing power or using the GPU.
-- Processes: the process type filter moved to a menu above the list.
+- Processes: five tabs replace the table of columns: CPU, Memory, Network, Disk and Energy, each with the columns that answer it. CPU adds threads and PID; Memory adds compressed memory; Network and Disk show the last minute's average next to what each app has moved since launch; Energy shows power and energy used.
+- Processes: a column with nothing to show for the current tab and filter is hidden.
+- Processes: with the inspector open, the list keeps its first two columns, or the first and the one being sorted by.
+- Processes: the process type filter moved to a menu above the list, and the rows are striped.
 - Sidebar: the selected page uses the same pale tile on every page, and module icons keep their color.
+- Sidebar: wider, so the window buttons sit fully on it, with the middle one over the icons.
 
 ### Fixed
 
+- Combined dropdown: rows for modules not being read appeared a moment after it opened, and the dropdown grew. They now show their last readings at once.
 - Narrow windows: rows with a reading, such as Frequency on the CPU page, hide their breakdown instead of truncating their label.
+- Memory page: in English, the Compressed label no longer runs into the one beside it.
 - Memory of other users' processes, such as WindowServer, now matches Activity Monitor on the Processes page, the Memory page and the Memory dropdown. It updates every 30 seconds while one of them is open.
 
 ## [0.6.2] - 2026-11-04

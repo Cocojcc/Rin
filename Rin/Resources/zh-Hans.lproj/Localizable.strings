@@ -758,7 +758,11 @@
 "processes.inspector" = "进程检查器";
 "processes.closeInspector" = "关闭检查器";
 "processes.pidUser" = "PID %1$@ · %2$@";
-"processes.systemProcess" = "系统进程";
+"processes.downloaded" = "已下载";
+"processes.uploaded" = "已上传";
+"processes.totalRead" = "已读取";
+"processes.totalWritten" = "已写入";
+"processes.energyUsed" = "已耗电";
 "processes.cpuTime" = "CPU 时间";
 "processes.threads" = "线程";
 "processes.diskReadWrite" = "磁盘 读 · 写";

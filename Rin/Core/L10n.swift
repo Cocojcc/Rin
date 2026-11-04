@@ -916,7 +916,11 @@ enum L10n {
         static var inspector: String { tr("processes.inspector") }
         static var closeInspector: String { tr("processes.closeInspector") }
         static func pidUser(_ a: String, _ b: String) -> String { tr("processes.pidUser", a, b) }
-        static var systemProcess: String { tr("processes.systemProcess") }
+        static var downloaded: String { tr("processes.downloaded") }
+        static var uploaded: String { tr("processes.uploaded") }
+        static var totalRead: String { tr("processes.totalRead") }
+        static var totalWritten: String { tr("processes.totalWritten") }
+        static var energyUsed: String { tr("processes.energyUsed") }
         static var cpuTime: String { tr("processes.cpuTime") }
         static var threads: String { tr("processes.threads") }
         static var diskReadWrite: String { tr("processes.diskReadWrite") }

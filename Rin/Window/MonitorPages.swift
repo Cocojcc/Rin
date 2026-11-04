@@ -337,7 +337,7 @@ struct MemoryPage: View {
                 .padding(.top, 10)
                 .accessibilityElement()
                 .accessibilityLabel(L10n.Monitor.compositionA11y(Format.memory(m.app), Format.memory(m.wired), Format.memory(m.compressed), Format.memory(m.cached), Format.memory(m.free)))
-            ShareRow(spacing: 2) {
+            ShareRow(spacing: 2, fitsContent: true) {
                 ForEach(Array(parts.enumerated()), id: \.offset) { _, p in
                     VStack(alignment: .leading, spacing: 3) {
                         Text(p.label).ui(12).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()

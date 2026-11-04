@@ -46,7 +46,8 @@ struct Status {
     static func strained(_ s: Snapshot, _ prefs: Preferences) -> [Module] {
         let active = Alerts.shared.active
         return Module.allCases.filter { m in
-            prefs.isEnabled(m) && (active[m] != nil || MenuBarText.load(m, s, prefs) != .normal)
+            // A module not being read holds its last numbers, which say nothing about now.
+            prefs.isEnabled(m) && (active[m] != nil || (s.monitored.contains(m) && MenuBarText.load(m, s, prefs) != .normal))
         }
     }
 

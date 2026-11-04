@@ -298,6 +298,15 @@ struct ProcessUsage: Identifiable, Hashable {
     var recentWrite: Double = 0
     var recentDown: Double = 0
     var recentUp: Double = 0
+    /// What it has moved and drawn since launch. Energy is its CPU work's only, in watt hours.
+    var totalRead: UInt64 = 0
+    var totalWritten: UInt64 = 0
+    var totalDown: UInt64 = 0
+    var totalUp: UInt64 = 0
+    var energyUsed: Double = 0
+    /// Read for the full list, from `top` (0 until its first read comes back).
+    var threads = 0
+    var compressed: UInt64 = 0
 
     var netTotal: Double { netDown + netUp }
     var diskTotal: Double { diskRead + diskWrite }

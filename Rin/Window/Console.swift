@@ -40,7 +40,7 @@ struct Reading: View {
     var weight: CGFloat = 500
     var color: Color = Theme.text
 
-    private static let units: Set<String> = ["%", "°", "°C", "°F", "B/s", "KB/s", "MB/s", "GB/s", "bps", "Kbps", "Mbps", "Gbps", "KB", "MB", "GB", "TB", "W", "rpm", "MHz", "GHz", "ms"]
+    private static let units: Set<String> = ["%", "°", "°C", "°F", "B/s", "KB/s", "MB/s", "GB/s", "bps", "Kbps", "Mbps", "Gbps", "B", "KB", "MB", "GB", "TB", "W", "Wh", "rpm", "MHz", "GHz", "ms"]
 
     /// (grey lead, figure, grey unit); nil when the text isn't a figure and a unit.
     static func split(_ text: String) -> (String, String, String)? {
@@ -523,6 +523,8 @@ extension View {
 /// Children side by side, the width left after the fixed ones split by their shares.
 struct ShareRow: Layout {
     var spacing: CGFloat = 16
+    /// A child whose share is too narrow for its content takes what it needs, and the others split the rest.
+    var fitsContent = false
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? 400
@@ -544,6 +546,13 @@ struct ShareRow: Layout {
         let weights = subviews.map { $0[ShareKey.self] }
         let room = max(0, total - fixed.reduce(0, +) - spacing * CGFloat(max(subviews.count - 1, 0)))
         let sum = max(weights.reduce(0, +), 0.0001)
-        return zip(fixed, weights).map { $1 > 0 ? room * $1 / sum : $0 }
+        let widths = zip(fixed, weights).map { $1 > 0 ? room * $1 / sum : $0 }
+        guard fitsContent else { return widths }
+        let needs = subviews.map { $0.sizeThatFits(.unspecified).width }
+        let short = subviews.indices.filter { weights[$0] > 0 && widths[$0] < needs[$0] }
+        guard !short.isEmpty else { return widths }
+        let left = max(0, room - short.reduce(0) { $0 + needs[$1] })
+        let rest = max(subviews.indices.filter { !short.contains($0) }.reduce(0) { $0 + weights[$1] }, 0.0001)
+        return subviews.indices.map { short.contains($0) ? needs[$0] : weights[$0] > 0 ? left * weights[$0] / rest : fixed[$0] }
     }
 }
