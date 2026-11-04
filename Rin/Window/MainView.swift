@@ -294,7 +294,7 @@ struct Sidebar: View {
 
     private func item(_ page: Page, _ d: String, _ title: String, badge: Int = 0, lineWidth: CGFloat = 1.5, hue: Color? = nil) -> some View {
         let on = navigator.page.sidebarPage == page || (page == .settings && navigator.page == .menuBar)
-        return RailButton(d: d, title: title, on: on, quiet: page == .overview, badge: badge, lineWidth: lineWidth, hue: hue) { navigator.page = page }
+        return RailButton(d: d, title: title, on: on, badge: badge, lineWidth: lineWidth, hue: hue) { navigator.page = page }
     }
 }
 
@@ -304,7 +304,6 @@ private struct RailButton: View {
     var d: String
     var title: String
     var on: Bool
-    var quiet: Bool
     var badge: Int
     var lineWidth: CGFloat
     var hue: Color?
@@ -314,11 +313,11 @@ private struct RailButton: View {
     var body: some View {
         Button(action: action) {
             LineIcon(d: d, size: 18, lineWidth: lineWidth)
-                .foregroundStyle(on ? (quiet ? Theme.text : Theme.onTile) : hue ?? Theme.sub)
+                .foregroundStyle(hue ?? (on ? Theme.text : Theme.sub))
                 .frame(width: 38, height: 38)
                 .background {
                     if on {
-                        RoundedRectangle(cornerRadius: 11, style: .continuous).fill(quiet ? Theme.raise : hue ?? Theme.text)
+                        RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Theme.raise)
                     } else if hovering {
                         RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Theme.lgHover)
                     }

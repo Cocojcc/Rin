@@ -61,8 +61,6 @@ enum Theme {
     static let rowSelected = Color.dyn(RGBA(255, 255, 255, 0.7), RGBA(255, 255, 255, 0.1))
     /// The sidebar, running the window's full height.
     static let rail = Color.dyn(RGBA(0, 0, 0, 0.035), RGBA(255, 255, 255, 0.035))
-    /// An icon on the picked sidebar tile.
-    static let onTile = Color.dyn(RGBA(0xFFFFFF), RGBA(0x111113))
     /// Behind a plain program's black icon, which would vanish on the dark window.
     static let iconLift = Color.dyn(RGBA(0, 0, 0, 0), RGBA(255, 255, 255, 0.28))
     /// Tags and chips that are on ("90%" in a rule, a module in the menu bar).
