@@ -26,6 +26,7 @@ enum Snapshots {
         Monitor.shared.start()
         for m in Module.allCases { Monitor.shared.setVisible(.popover(m), true) }
         Monitor.shared.setVisible(.window(.monitor(.battery)), true)
+        Monitor.shared.setVisible(.window(.monitor(.cpu)), true)
         Monitor.shared.setVisible(.window(.processes), true)
         // `RIN_SNAPSHOT_WAIT=120`: reads for longer first, so the curves have something to draw.
         let wait = Double(ProcessInfo.processInfo.environment["RIN_SNAPSHOT_WAIT"] ?? "") ?? 7

@@ -183,9 +183,17 @@ struct FactRow<Detail: View>: View {
     @ViewBuilder var detail: Detail
 
     var body: some View {
+        // Too narrow for everything, the breakdown gives way rather than the name.
+        ViewThatFits(in: .horizontal) {
+            row { detail }
+            if !value.isEmpty { row { EmptyView() } }
+        }
+    }
+
+    private func row<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         ValueRow(label: label, height: height) {
             HStack(alignment: .firstTextBaseline, spacing: 16) {
-                detail
+                content()
                 if !value.isEmpty { Reading(text: value, color: valueColor) }
             }
         }

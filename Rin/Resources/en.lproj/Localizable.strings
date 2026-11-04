@@ -956,7 +956,7 @@
 "monitor.today" = "Today";
 "monitor.dropped" = "Dropped %d times in the last 24 minutes";
 "monitor.connectedVia" = "Connected (%@)";
-"monitor.sinceBoot" = "Since startup";
+"monitor.sinceBoot" = "Since boot";
 "monitor.readShort" = "Read";
 "monitor.writeShort" = "Write";
 "monitor.purgeableLabel" = "Purgeable";
