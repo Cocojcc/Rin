@@ -142,8 +142,9 @@ final class Monitor {
         // rates from its first read; nettop runs every process read only while one is on screen.
         config.processes.network = config.monitored.contains(.network) || allProcesses
         config.processes.networkLive = allProcesses || consumers.contains(.popover(.network)) || consumers.contains(.window(.monitor(.network)))
-        config.processes.gpu = allProcesses || config.monitored.contains(.gpu)
+        config.processes.gpu = config.monitored.contains(.gpu)
             && (consumers.contains(.popover(.gpu)) || consumers.contains(.window(.monitor(.gpu))))
+        config.processes.footprints = allProcesses || consumers.contains(.popover(.memory)) || consumers.contains(.window(.monitor(.memory)))
         config.processes.limit = max(8, prefs.cpu.processCount, prefs.memory.processCount, prefs.gpu.processCount)
         sampler.configure(config)
 
@@ -263,7 +264,8 @@ final class Sampler {
             // the full process interval, so a list that just opened fills in at once.
             if (config.processes.network && !old.network) || (config.processes.gpu && !old.gpu)
                 || (config.processes.networkLive && !old.networkLive)
-                || (config.processes.full && !old.full) || (config.processesWanted && !oldWanted) {
+                || (config.processes.full && !old.full) || (config.processesWanted && !oldWanted)
+                || (config.processes.footprints && !old.footprints) {
                 self.queue.asyncAfter(deadline: .now() + 1) {
                     self.processesDue = true
                     self.sample()

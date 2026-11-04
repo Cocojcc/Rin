@@ -283,7 +283,7 @@ struct GPUPage: View {
                 .acrossPage()
                 .padding(.top, 11.5)
                 .accessibilityLabel(L10n.Monitor.gpuChartA11y(range.title))
-            ListHead(tip: L10n.Monitor.topGPU, link: .gpu).padding(.top, 22)
+            ListHead(tip: L10n.Monitor.topGPU).padding(.top, 22)
             ProcessTable(processes: Array(monitor.snapshot.processes.byGPU.prefix(3)), value: { Format.percentValue($0.gpu) }, rowHeight: 38, minRows: 3)
         }
     }

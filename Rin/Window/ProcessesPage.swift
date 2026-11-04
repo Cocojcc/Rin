@@ -2,12 +2,11 @@ import SwiftUI
 
 /// A column of the Processes page, also what a "全部" link sorts by on the way in.
 enum ProcessSort: CaseIterable {
-    case cpu, gpu, memory, energy, disk, network
+    case cpu, memory, energy, disk, network
 
     var title: String {
         switch self {
         case .cpu: return L10n.Module.cpu
-        case .gpu: return L10n.Module.gpu
         case .memory: return L10n.Module.memory
         case .energy: return L10n.Processes.energy
         case .disk: return L10n.Module.disk
@@ -18,7 +17,6 @@ enum ProcessSort: CaseIterable {
     var width: CGFloat {
         switch self {
         case .cpu: return 64
-        case .gpu: return 52
         case .memory: return 76
         case .energy: return 60
         case .disk, .network: return 72
@@ -28,7 +26,6 @@ enum ProcessSort: CaseIterable {
     func value(_ p: ProcessUsage) -> Double {
         switch self {
         case .cpu: return p.cpu
-        case .gpu: return p.gpu
         case .memory: return Double(p.memory)
         case .energy: return p.energy
         case .disk: return p.diskTotal
@@ -40,7 +37,6 @@ enum ProcessSort: CaseIterable {
     func text(_ p: ProcessUsage) -> String? {
         switch self {
         case .cpu: return Format.percentValue(p.cpu)
-        case .gpu: return p.gpu >= 0.05 ? Format.percentValue(p.gpu) : nil
         case .memory: return p.memory > 0 ? Format.memory(p.memory) : nil
         case .energy: return p.energy >= 0.005 ? Format.appWatts(p.energy) : nil
         case .disk: return p.diskTotal >= 1 ? Format.rate(p.diskTotal) : nil
@@ -159,7 +155,7 @@ private struct ProcessGrid: View {
             // Header padding, row inset and padding, icon and gap, the name, then each column.
             Self.minNameWidth + cols.reduce(0) { $0 + $1.width + 12 }
         }
-        for drop in [ProcessSort.network, .disk, .energy, .gpu] where needed() > width && drop != sort {
+        for drop in [ProcessSort.network, .disk, .energy] where needed() > width && drop != sort {
             cols.removeAll { $0 == drop }
         }
         return cols
