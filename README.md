@@ -1,10 +1,160 @@
-# Rin
+<p align="center">
+  <img src="docs/images/icon.png" width="128" height="128" alt="Rin app icon">
+</p>
 
-Mac 菜单栏资源监控工具。界面按 claude.ai 画布「Hum 视觉方向」实现：每个模块一个菜单栏小工具和下拉面板，主窗口分「监视器」和「设置」两组。
+<h1 align="center">Rin</h1>
 
-## 构建和运行
+<p align="center">A system monitor for the macOS menu bar.</p>
 
-需要 Xcode 27 和 XcodeGen（`brew install xcodegen`）。`Rin.xcodeproj` 由 `project.yml` 生成，新增或删除源文件后要重新生成。
+<p align="center">
+  <a href="https://github.com/Cocojcc/Rin/releases/latest"><img src="https://img.shields.io/github/v/release/Cocojcc/Rin?label=release" alt="Latest release"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B-lightgrey" alt="macOS 14 or later">
+  <img src="https://img.shields.io/badge/Apple%20silicon-only-lightgrey" alt="Apple silicon only">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Cocojcc/Rin" alt="MIT license"></a>
+</p>
+
+<p align="center"><b>English</b> · <a href="README.zh-CN.md">简体中文</a></p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/en/hero-dark.png">
+    <img src="docs/images/en/hero-light.png" alt="The Rin overview window beside its combined menu bar dropdown">
+  </picture>
+</p>
+
+Rin shows CPU, GPU, memory, network, disk, sensor, battery and accessory readings in the menu bar, with a dropdown for each module and a window for history and details. It reads a module only while something needs it, so it stays light on power.
+
+## Contents
+
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Installation](#installation)
+- [Requirements](#requirements)
+- [Permissions and privacy](#permissions-and-privacy)
+- [Known limitations](#known-limitations)
+- [Building from source](#building-from-source)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Features
+
+### Modules
+
+| Module | Readings |
+|---|---|
+| CPU | Total, user and system load; performance and efficiency core averages; frequency; temperature; load average |
+| Memory | Usage, pressure, swap, and a breakdown into app, wired, compressed, cached and free memory |
+| Network | Download and upload speed, session and daily totals, latency, local and router addresses, per-app traffic |
+| Disk | Free space per volume, read and write speed, per-app activity, S.M.A.R.T. health of the internal SSD |
+| GPU | Usage, memory, frequency, temperature and power |
+| Sensors | Temperatures by component, fan speed, thermal state, system power |
+| Battery | Level, charging state, time remaining, health, cycle count, power draw, UPS status |
+| Accessories | Battery level of Bluetooth devices and of devices on Logitech wireless receivers |
+
+### Menu bar
+
+- One item per module, or a single merged item
+- Widgets you combine per module: graphs, bars, rings, values and icons
+- A dropdown for each module, and a combined dropdown that lists them all
+- Optional animated characters, with support for importing your own
+
+### Main window
+
+- **Overview:** every module on one list
+- **Module pages:** history over 5 minutes, 1 hour, 24 hours and 7 days
+- **Processes:** a searchable table with details and quit actions
+- **Alerts:** rules for each module, with notifications and a log of recent alerts
+- **Sleep:** keep the Mac awake on a timer, and see what is preventing sleep
+- **About This Mac:** model, chip, memory and storage
+
+Rin follows the system's light or dark appearance, or can be set to either, and is available in English and Simplified Chinese.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="66%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/images/en/cpu-dark.png">
+        <img src="docs/images/en/cpu-light.png" alt="The CPU page with a five-minute load curve">
+      </picture>
+    </td>
+    <td width="34%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/images/en/sensors-dark.png">
+        <img src="docs/images/en/sensors-light.png" alt="The Sensors dropdown with temperatures and fan speed">
+      </picture>
+    </td>
+  </tr>
+</table>
+
+## Installation
+
+1. Download `Rin-<version>.dmg` from the [latest release](https://github.com/Cocojcc/Rin/releases/latest).
+2. Open the disk image and drag Rin to Applications.
+3. Open Rin. It runs from the menu bar; open the main window from any dropdown.
+
+Releases are signed with a Developer ID and notarized by Apple. Each release lists the SHA-256 checksum of its disk image, which you can compare with:
+
+```bash
+shasum -a 256 Rin-<version>.dmg
+```
+
+Rin does not update itself. To update, download the newer disk image and replace the app.
+
+### Uninstalling
+
+Quit Rin and move it to the Trash. To remove its settings and history as well:
+
+```bash
+defaults delete com.zoro.rin
+```
+
+```bash
+rm -r ~/Library/Application\ Support/Rin
+```
+
+## Requirements
+
+- macOS 14 Sonoma or later
+- A Mac with Apple silicon
+
+Rin is developed and tested on macOS 27. Earlier supported versions receive less testing.
+
+## Permissions and privacy
+
+Rin has no account, analytics or telemetry. Its settings and history stay on your Mac, in the app's preferences and `~/Library/Application Support/Rin`.
+
+Rin makes two kinds of network request, and you can turn off both:
+
+| Purpose | Destination | When | Setting |
+|---|---|---|---|
+| Latency | ICMP echo to `1.1.1.1` | Every 30 seconds while the Network module is running | On by default |
+| Public IP address | HTTPS to `api.ipify.org` | Every 10 minutes, and when the connection changes | Off by default |
+
+Rin is not sandboxed, which is why it is not on the Mac App Store. It reads hardware through IOKit, the SMC and IOReport, and runs the system tools `ps`, `top`, `nettop` and `system_profiler`.
+
+Other things you may notice:
+
+- Rin asks for notification permission so that alerts can reach you.
+- Quitting a process from the Processes page sends it a real quit or kill.
+- The optional menu bar icon spacing preset changes a system-wide setting and restarts Control Center and the system menu bar.
+
+## Known limitations
+
+- Intel Macs are not supported.
+- Some readings use undocumented macOS interfaces, which a macOS update may change.
+- iPhone and iPad battery levels are not available.
+- Video encoders and decoders report power only, not usage.
+- Per-app energy covers CPU energy only, and not other users' processes.
+
+## Building from source
+
+You need Xcode 27 and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
+
+```bash
+brew install xcodegen
+```
 
 ```bash
 xcodegen generate
@@ -18,52 +168,12 @@ xcodebuild -project Rin.xcodeproj -scheme Rin -configuration Release -derivedDat
 open build/DerivedData/Build/Products/Release/Rin.app
 ```
 
-也可以直接用 Xcode 打开 `Rin.xcodeproj` 运行。最低系统版本 macOS 14，只支持 Apple 芯片，不用沙盒（要读 SMC、IOKit 和进程信息），本地构建用临时签名。
+Local builds are signed ad hoc and are not notarized.
 
-## 发布
+## Contributing
 
-```bash
-scripts/release.sh
-```
+Bug reports and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout and conventions, and [CHANGELOG.md](CHANGELOG.md) for the release history.
 
-用 Developer ID 签名，app 和 DMG 都提交公证并钉上票据，结果在 `build/release/Rin-<版本>.dmg`。需要钥匙串里有「Developer ID Application」证书，以及用 `xcrun notarytool store-credentials rin-notary --apple-id … --team-id …` 保存的公证凭证。版本号在 `project.yml` 的 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`。不上 Mac App Store：上架要求沙盒，Rin 读硬件和进程的方式在沙盒里用不了。
+## License
 
-## 目录
-
-| 目录 | 内容 |
-|---|---|
-| `Rin/Readers` | 数据采集：CPU、内存、网络、磁盘、电池和蓝牙设备、SMC 温度风扇、IOReport 功耗和 GPU 频率、进程排行 |
-| `Rin/Core` | 采样调度（`Monitor`）、历史记录（5 分钟到 7 天，峰值回看）、设置、警报、结束进程、主题色、文案 |
-| `Rin/MenuBar` | 菜单栏小工具（每个模块 4 种样式 + 合并模式）和下拉面板窗口 |
-| `Rin/Popovers` | 各模块下拉面板和合并模式的总面板 |
-| `Rin/Window` | 主窗口：概览、7 个监视器页、通用 / 菜单栏 / 各模块 / 警报 / 关于 |
-| `Rin/Resources` | 中英文文案（`*.lproj/Localizable.strings`）、图标 |
-| `Rin/Debug` | 只在调试版里编译的截图工具 |
-
-## 约定
-
-- 界面文案都放在 `Rin/Core/L10n.swift`，译文在 `Localizable.strings`。改完运行 `python3 scripts/check-l10n.py` 检查两种语言的键是否齐全。
-- 菜单栏每次刷新渲染成一张图片交给系统：单色时用模板图，深浅菜单栏由系统着色；画面没变就不更新，多显示器时开销最小。
-- 进程的网络流量（`nettop`）、GPU 占用和其他用户的进程（`ps`）只在对应面板或页面打开时采集。
-
-## 调试截图
-
-调试版支持两个命令，输出 PNG 方便对照设计稿：
-
-```bash
-build/DerivedData/Build/Products/Debug/Rin.app/Contents/MacOS/Rin --snapshot /tmp/rin-snap
-```
-
-离屏渲染所有菜单栏样式、下拉面板和主窗口页面（浅色和深色各一套）。
-
-```bash
-build/DerivedData/Build/Products/Debug/Rin.app/Contents/MacOS/Rin --dump-live /tmp/rin-live
-```
-
-正常启动后导出真实的状态栏按钮、逐个点开的面板和主窗口页面。
-
-重新生成应用图标：
-
-```bash
-swift scripts/make-icon.swift Rin/Resources/Assets.xcassets/AppIcon.appiconset
-```
+Rin is released under the [MIT License](LICENSE).
