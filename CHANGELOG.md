@@ -8,6 +8,13 @@ All notable changes to Rin are documented in this file. The format is based on [
 
 - Rin updates itself: Check for Updates in Settings downloads the new version, verifies its signature, installs it and restarts. An automatic check only puts the new version on the button. Rin 0.6.3 and earlier need one last update from the disk image.
 
+### Changed
+
+- Processes: rows glide to their new place when the list re-sorts, and a new tab fades in. The CPU tab shows each app's last 30 seconds, and on the tabs whose figures move all the time a row only passes the one above it by a real margin, so few rows move at each read. The order holds while the pointer is on the list, and rows don't glide while the window is behind others.
+- Processes: quitting keeps saying so until the app has gone, then its row fades and the rows below close the gap. Force Quit asks first, in the inspector.
+- Module pages: switching the time range crossfades the chart.
+- Sidebar: larger buttons, as wide as the three window buttons, and the selected tile slides to the next page.
+
 ## [0.6.3] - 2026-11-05
 
 ### Added

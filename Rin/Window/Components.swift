@@ -98,12 +98,15 @@ struct GlassThumb: View {
 }
 
 enum Motion {
-    /// A selection moving to another item (glass thumbs, chips changing groups).
-    static let slide = Animation.spring(response: 0.3, dampingFraction: 0.82)
+    /// A selection moving to another item (glass thumbs, the sidebar's tile, chips changing groups),
+    /// or a row gliding to its new place in a list.
+    static let slide = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.3)
     /// Hover tints, as the design's 0.12 s background transition.
     static let hover = Animation.easeOut(duration: 0.12)
-    /// One page fading into the next in the main window.
+    /// One page fading into the next in the main window; a chart's range, a list's tab.
     static let page = Animation.easeOut(duration: 0.16)
+    /// How long something that has gone takes to leave.
+    static let leaveSeconds = 0.2
 }
 
 extension View {

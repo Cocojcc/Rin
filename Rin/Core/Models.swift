@@ -298,6 +298,9 @@ struct ProcessUsage: Identifiable, Hashable {
     var recentWrite: Double = 0
     var recentDown: Double = 0
     var recentUp: Double = 0
+    /// CPU over the last 30 seconds, while the full list is read: a process's CPU swings too hard
+    /// from one read to the next to sort a list by.
+    var recentCPU: Double = 0
     /// What it has moved and drawn since launch. Energy is its CPU work's only, in watt hours.
     var totalRead: UInt64 = 0
     var totalWritten: UInt64 = 0

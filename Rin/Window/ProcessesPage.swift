@@ -17,16 +17,19 @@ enum ProcessTab: CaseIterable, Hashable {
         }
     }
 
-    var columns: [(title: String, width: CGFloat)] {
+    var columns: [(title: String, width: CGFloat)] { Self.columnsByTab[self] ?? [] }
+
+    /// Read for every cell of every row, so the words are looked up once.
+    private static let columnsByTab: [ProcessTab: [(title: String, width: CGFloat)]] = {
         let threads = L10n.Processes.threads, pid = L10n.Processes.pidLabel
-        switch self {
-        case .cpu: return [(L10n.Processes.usage, 60), (L10n.Processes.cpuTime, 76), (threads, 48), (pid, 52)]
-        case .memory: return [(L10n.Processes.usage, 68), (L10n.Processes.share, 52), (L10n.Memory.compressed, 68), (threads, 48), (pid, 52)]
-        case .network: return [(L10n.Panel.download, 76), (L10n.Panel.upload, 76), (L10n.Processes.downloaded, 72), (L10n.Processes.uploaded, 72), (pid, 52)]
-        case .disk: return [(L10n.Disk.read, 76), (L10n.Disk.write, 76), (L10n.Processes.totalRead, 72), (L10n.Processes.totalWritten, 72), (pid, 52)]
-        case .energy: return [(L10n.Processes.power, 68), (L10n.Processes.energyUsed, 76), (pid, 52)]
-        }
-    }
+        return [
+            .cpu: [(L10n.Processes.usage, 60), (L10n.Processes.cpuTime, 76), (threads, 48), (pid, 52)],
+            .memory: [(L10n.Processes.usage, 68), (L10n.Processes.share, 52), (L10n.Memory.compressed, 68), (threads, 48), (pid, 52)],
+            .network: [(L10n.Panel.download, 76), (L10n.Panel.upload, 76), (L10n.Processes.downloaded, 72), (L10n.Processes.uploaded, 72), (pid, 52)],
+            .disk: [(L10n.Disk.read, 76), (L10n.Disk.write, 76), (L10n.Processes.totalRead, 72), (L10n.Processes.totalWritten, 72), (pid, 52)],
+            .energy: [(L10n.Processes.power, 68), (L10n.Processes.energyUsed, 76), (pid, 52)],
+        ]
+    }()
 
     /// The last column, which is quieter than the readings.
     var pidColumn: Int { columns.count - 1 }
@@ -49,7 +52,7 @@ enum ProcessTab: CaseIterable, Hashable {
         case (.cpu, 1): return p.cpuTime
         case (.cpu, 2), (.memory, 3): return Double(p.threads)
         case (.cpu, 3), (.memory, 4), (.network, 4), (.disk, 4), (.energy, 2): return Double(p.pid)
-        case (.cpu, _): return p.cpu
+        case (.cpu, _): return p.recentCPU
         case (.memory, 2): return Double(p.compressed)
         case (.memory, _): return Double(p.memory)
         case (.network, 0): return p.recentDown
@@ -76,10 +79,22 @@ enum ProcessTab: CaseIterable, Hashable {
         }
     }
 
+    /// How far a row has to pass the one above it to take its place, where the figures move all the
+    /// time: sorted strictly by them, nearly every row on screen would move at every read.
+    func overtakingMargin(_ above: Double, column: Int?) -> Double? {
+        switch (self, column) {
+        case (.cpu, 0): return max(1, above * 0.25)
+        case (.memory, 0), (.memory, 1): return above * 0.1
+        case (.network, nil), (.network, 0), (.network, 1), (.disk, nil), (.disk, 0), (.disk, 1): return max(Self.quietRate, above * 0.25)
+        case (.energy, 0): return max(0.005, above * 0.25)
+        default: return nil
+        }
+    }
+
     /// The cell text, or nil for nothing (drawn as a grey dash).
     func text(_ p: ProcessUsage, column: Int) -> String? {
         switch (self, column) {
-        case (.cpu, 0): return Format.percentValue(p.cpu)
+        case (.cpu, 0): return Format.percentValue(p.recentCPU)
         case (.cpu, 1): return p.cpuTime > 0 ? Format.hms(p.cpuTime) : nil
         case (.cpu, 2), (.memory, 3): return p.threads > 0 ? "\(p.threads)" : nil
         case (.memory, 0): return p.memory > 0 ? Format.memory(p.memory) : nil
@@ -165,13 +180,17 @@ struct ProcessesPage: View {
 
     var monitor = Monitor.shared
     var navigator = Navigator.shared
+    var quitCenter = QuitCenter.shared
     @State private var filter = ProcessesPage.initialFilter
     @State private var selected: String? = ProcessesPage.initialSelection
+    @State private var closingInspector = false
+    @State private var order = RowOrder()
+    @State private var pointerOnList = false
 
     var body: some View {
         let s = monitor.processes
         let tab = navigator.processTab
-        let listed = s.all.filter { tab.lists($0) && filter.includes($0) }
+        let listed = s.all.filter { tab.lists($0) && filter.includes($0) && quitCenter.gone[$0.id] != $0.pid }
         // A column with nothing to say for these rows isn't drawn. Searching doesn't count, or columns would come and go while typing.
         let present = tab.columns.indices.filter { i in listed.isEmpty || listed.contains { tab.text($0, column: i) != nil } }
         let wanted = navigator.processColumns[tab] ?? tab.defaultColumn
@@ -182,24 +201,53 @@ struct ProcessesPage: View {
         let at = column.flatMap(present.firstIndex(of:)) ?? 0
         let shown = selection == nil ? present : at > 1 ? [present[0], present[at]] : Array(present.prefix(2))
         HStack(alignment: .top, spacing: 24) {
-            ProcessGrid(rows: rows, tab: tab, column: column, shown: shown, filter: $filter, selected: $selected) { navigator.processColumns[tab] = $0 }
+            ProcessGrid(rows: rows, tab: tab, column: column, shown: shown, filter: $filter, selected: selected, pointerOnList: $pointerOnList, onPick: pick) { navigator.processColumns[tab] = $0 }
             if let selection {
-                ProcessInspector(process: selection) { selected = nil }
-                    .frame(width: 212)
-                    .padding(.leading, 24)
-                    .overlay(alignment: .leading) { Rectangle().fill(Theme.line).frame(width: 1) }
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                InspectorSlide(closing: closingInspector) {
+                    ProcessInspector(process: selection, close: closeInspector)
+                        .frame(width: 212)
+                        .padding(.leading, 24)
+                        .overlay(alignment: .leading) { Rectangle().fill(Theme.line).frame(width: 1) }
+                }
             }
         }
         .frame(maxHeight: .infinity, alignment: .top)
         // The list runs out under the window's edge, as a scrolling list does.
         .padding(.bottom, -Sidebar.bottomInset)
-        .animation(Motion.slide, value: selection?.id)
+        // A process that has gone takes its inspector with it; one being asked about brings it up.
+        .onChange(of: quitCenter.leaving) { _, leaving in
+            if let selected, leaving.contains(selected) { closeInspector() }
+        }
+        .onChange(of: quitCenter.states) { _, states in
+            if let asked = states.first(where: { $0.value == .unresponsive })?.key, monitor.processes.all.contains(where: { $0.id == asked }) {
+                selected = asked
+            }
+        }
+    }
+
+    private func pick(_ id: String) {
+        if selected == id {
+            closeInspector()
+        } else {
+            selected = id
+            closingInspector = false
+        }
+    }
+
+    /// The inspector slides off first; the list gets its columns back once the room is free.
+    private func closeInspector() {
+        guard selected != nil, !closingInspector else { return }
+        closingInspector = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + Motion.leaveSeconds) {
+            guard closingInspector else { return }
+            selected = nil
+            closingInspector = false
+        }
     }
 
     private func sorted(_ listed: [ProcessUsage], tab: ProcessTab, column: Int?) -> [ProcessUsage] {
         let query = navigator.processQuery.trimmingCharacters(in: .whitespaces)
-        return listed
+        var rows = listed
             .filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) || "\($0.pid)" == query }
             .map { (process: $0, value: tab.value($0, column: column), next: tab.next($0, column: column)) }
             .sorted {
@@ -207,7 +255,59 @@ struct ProcessesPage: View {
                 if $0.next != $1.next { return $0.next > $1.next }
                 return $0.process.name.localizedStandardCompare($1.process.name) == .orderedAscending
             }
-            .map(\.process)
+        // The same list a moment later: under the pointer the order holds, so a row doesn't run off
+        // just as it is clicked, and otherwise a row only passes the one above it by a real margin.
+        let scene = "\(tab)|\(column ?? -1)|\(filter)|\(query)"
+        let settles = tab.overtakingMargin(0, column: column) != nil
+        if scene == order.scene, pointerOnList || settles {
+            let rank = Dictionary(uniqueKeysWithValues: order.ids.enumerated().map { ($1, $0) })
+            rows.sort { (rank[$0.process.id] ?? rank.count) < (rank[$1.process.id] ?? rank.count) }
+            if !pointerOnList {
+                for k in rows.indices.dropFirst() {
+                    var j = k
+                    while j > 0, let margin = tab.overtakingMargin(rows[j - 1].value, column: column), rows[j].value > rows[j - 1].value + margin {
+                        rows.swapAt(j, j - 1)
+                        j -= 1
+                    }
+                }
+            }
+        }
+        order.scene = scene
+        order.ids = rows.map(\.process.id)
+        return rows.map(\.process)
+    }
+}
+
+/// Where the rows stood after the last read. Not state to observe: reading it never redraws anything.
+private final class RowOrder {
+    var scene = ""
+    var ids: [String] = []
+}
+
+/// The inspector coming in from the side as it opens, and going back the same way before it leaves.
+private struct InspectorSlide<Content: View>: View {
+    var closing: Bool
+    @ViewBuilder var content: Content
+    @State private var shown = RenderContext.offscreen
+
+    var body: some View {
+        content
+            .offset(x: shown && !closing ? 0 : 24)
+            .opacity(shown && !closing ? 1 : 0)
+            .animation(.easeIn(duration: Motion.leaveSeconds), value: closing)
+            .onAppear { withAnimation(Motion.slide) { shown = true } }
+    }
+}
+
+/// A new tab is a different question, so its list only fades in rather than rows sliding about.
+private struct FadesIn<Content: View>: View {
+    @ViewBuilder var content: Content
+    @State private var shown = RenderContext.offscreen
+
+    var body: some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .onAppear { withAnimation(Motion.page) { shown = true } }
     }
 }
 
@@ -219,8 +319,11 @@ private struct ProcessGrid: View {
     var column: Int?
     var shown: [Int]
     @Binding var filter: ProcessFilter
-    @Binding var selected: String?
+    var selected: String?
+    @Binding var pointerOnList: Bool
+    var onPick: (String) -> Void
     var onSort: (Int) -> Void
+    var quitCenter = QuitCenter.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -229,7 +332,9 @@ private struct ProcessGrid: View {
                 // Snapshots can't scroll; the first screenful stands in for the list.
                 list(Array(rows.prefix(21))).frame(minHeight: 0, maxHeight: .infinity, alignment: .top).clipped()
             } else {
-                ScrollView { list(rows) }.scrollIndicators(.automatic)
+                FadesIn { ScrollView { list(rows) }.scrollIndicators(.automatic) }
+                    .id(tab)
+                    .onHover { pointerOnList = $0 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -272,8 +377,8 @@ private struct ProcessGrid: View {
                     .frame(height: 30)
             }
             ForEach(Array(rows.enumerated()), id: \.element.id) { index, p in
-                ProcessGridRow(process: p, tab: tab, column: column, shown: shown, striped: index % 2 == 1, selected: selected == p.id) {
-                    selected = selected == p.id ? nil : p.id
+                ProcessGridRow(process: p, tab: tab, column: column, shown: shown, place: index, selected: selected == p.id, leaving: quitCenter.leaving.contains(p.id)) {
+                    onPick(p.id)
                 }
             }
         }
@@ -322,10 +427,18 @@ private struct ProcessGridRow: View {
     var tab: ProcessTab
     var column: Int?
     var shown: [Int]
-    var striped: Bool
+    /// Where it stands in the list. Rows are all one height, so where a row was follows from this.
+    var place: Int
     var selected: Bool
+    var leaving: Bool
     var action: () -> Void
     @State private var hovering = false
+    /// How far it still has to glide to its place.
+    @State private var travel: CGFloat = 0
+    @Environment(\.controlActiveState) private var windowState
+
+    private static let height: CGFloat = 30
+    private var striped: Bool { place % 2 == 1 }
 
     var body: some View {
         Button(action: action) {
@@ -350,15 +463,29 @@ private struct ProcessGridRow: View {
             .ui(14)
             .foregroundStyle(Theme.text)
             .padding(.horizontal, 8)
-            .frame(height: 30)
+            .frame(height: Self.height)
             .background {
                 if selected || hovering || striped {
                     RoundedRectangle(cornerRadius: 6, style: .continuous).fill(selected ? Theme.raise : hovering ? Theme.lgHover : Theme.well)
                 }
             }
-            .padding(.horizontal, -8)
             .hoverAnimation(hovering)
+            // An opaque ground, so rows crossing pass over each other instead of mixing their figures.
+            .background(Theme.windowGlass)
+            .padding(.horizontal, -8)
+            .opacity(leaving ? 0 : 1)
+            .animation(.easeOut(duration: Motion.leaveSeconds), value: leaving)
             .contentShape(Rectangle())
+        }
+        .offset(y: travel)
+        .zIndex(travel == 0 ? 0 : 1)
+        // A row glides to a new place, which is all a sort animates: the eye can follow an app up the
+        // list. Each row that moved does this alone, so the figures and the rows that stay never animate.
+        // It adds 2-4% of a core with the window in front, so behind other windows rows just change places.
+        .onChange(of: place) { old, new in
+            guard windowState == .key else { return }
+            travel = CGFloat(old - new) * Self.height
+            DispatchQueue.main.async { withAnimation(Motion.slide) { travel = 0 } }
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
@@ -397,12 +524,18 @@ private struct ProcessInspector: View {
             header(p, d)
             if !p.isSystem {
                 if quitCenter.states[p.id] == .unresponsive {
-                    ConfirmForceQuitRow(process: p, value: Format.memory(p.memory)).padding(.top, 12)
-                } else {
+                    Text(L10n.Panel.forceQuitWarning).ui(12).foregroundStyle(Theme.sub).padding(.top, 12)
                     HStack(spacing: 8) {
-                        actionButton(quitCenter.states[p.id] == .quitting ? L10n.Panel.quitting : L10n.Panel.quit, color: Theme.text) {
-                            quitCenter.quit(p)
-                        }
+                        actionButton(L10n.Common.cancel, color: Theme.text) { quitCenter.cancel(p) }
+                        actionButton(L10n.Panel.forceQuit, color: Theme.danger) { quitCenter.forceQuit(p) }
+                    }
+                    .padding(.top, 8)
+                } else {
+                    // The button says so for as long as the app takes; the row leaving is the answer.
+                    let quitting = quitCenter.states[p.id] == .quitting || quitCenter.leaving.contains(p.id)
+                    HStack(spacing: 8) {
+                        actionButton(quitting ? L10n.Panel.quitting : L10n.Panel.quit, color: quitting ? Theme.sub : Theme.text) { quitCenter.quit(p) }
+                            .disabled(quitting)
                         actionButton(L10n.Panel.forceQuit, color: Theme.danger) { quitCenter.askForceQuit(p) }
                     }
                     .padding(.top, 12)

@@ -58,6 +58,9 @@ final class ProcessReader {
     private var moved: [String: [Moved]] = [:]
     private var movedSince: Date?
     private static let movedWindow: TimeInterval = 60
+    /// What each app's CPU has been lately, while the full list is read.
+    private var cpuLately: [String: [(at: Date, cpu: Double)]] = [:]
+    private static let cpuWindow: TimeInterval = 30
     private let myUID = getuid()
     /// Seconds between background nettop reads that keep per-app traffic ready to show.
     private static let networkBaseline: TimeInterval = 30
@@ -188,6 +191,7 @@ final class ProcessReader {
         } else {
             moved = [:]
             movedSince = nil
+            cpuLately = [:]
         }
         var snapshot = ProcessSnapshot()
         snapshot.date = now
@@ -230,15 +234,24 @@ final class ProcessReader {
             return kept.isEmpty ? nil : kept
         }
         let span = max(min(now.timeIntervalSince(start), Self.movedWindow), 1)
-        return groups.map { group in
-            guard let entries = moved[group.id] else { return group }
+        let cpuCutoff = now.addingTimeInterval(-Self.cpuWindow)
+        var cpuNow: [String: [(at: Date, cpu: Double)]] = [:]
+        cpuNow.reserveCapacity(groups.count)
+        let result = groups.map { group in
             var g = group
+            var lately = cpuLately[group.id, default: []].filter { $0.at > cpuCutoff }
+            lately.append((now, group.cpu))
+            cpuNow[group.id] = lately
+            g.recentCPU = lately.reduce(0) { $0 + $1.cpu } / Double(lately.count)
+            guard let entries = moved[group.id] else { return g }
             g.recentRead = entries.reduce(0) { $0 + $1.read } / span
             g.recentWrite = entries.reduce(0) { $0 + $1.write } / span
             g.recentDown = entries.reduce(0) { $0 + $1.down } / span
             g.recentUp = entries.reduce(0) { $0 + $1.up } / span
             return g
         }
+        cpuLately = cpuNow
+        return result
     }
 
     // MARK: - Identity and grouping

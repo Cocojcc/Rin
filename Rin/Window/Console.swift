@@ -196,6 +196,9 @@ struct ConsoleChart: View {
     var pinnedTip: [String]? = nil
     /// Width of one bar's slot, the bar taking two thirds of it.
     var slot: CGFloat = 6
+    /// A page's time switch crossfades its ranges. They have different numbers of points, so a
+    /// morph would suggest a change over time that never happened.
+    private var crossfades = false
     @State private var hoverX: CGFloat?
 
     /// Leaves the room a line needs at the top and bottom of the plot.
@@ -215,6 +218,7 @@ struct ConsoleChart: View {
         self.height = height
         self.labels = labels
         inset = 32
+        crossfades = true
         self.rules = rules
         self.bands = bands
         self.markers = markers
@@ -250,7 +254,12 @@ struct ConsoleChart: View {
     }
 
     var body: some View {
-        plot
+        ZStack {
+            plot
+                .id(span)
+                .transition(.opacity)
+        }
+        .animation(crossfades ? Motion.page : nil, value: span)
             .frame(height: height)
             .frame(maxHeight: height == nil ? .infinity : nil)
     }

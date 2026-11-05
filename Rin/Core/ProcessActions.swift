@@ -75,6 +75,10 @@ final class QuitCenter {
 
     private(set) var states: [String: State] = [:]
     private(set) var toast: Toast?
+    /// An app that has gone leaves a list in two steps: its row fades, then the rows below close
+    /// the gap. `gone` holds it by pid until the next read, since the app can be opened again.
+    private(set) var leaving: Set<String> = []
+    private(set) var gone: [String: pid_t] = [:]
 
     func quit(_ p: ProcessUsage) {
         guard !p.isSystem else { return }
@@ -85,20 +89,30 @@ final class QuitCenter {
         if NSRunningApplication(processIdentifier: p.pid) == nil {
             for pid in pids where pid != p.pid { kill(pid, SIGTERM) }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+        watch(p, checksLeft: 12)
+    }
+
+    /// Most apps are gone within a second; one still here after three has something to say.
+    private func watch(_ p: ProcessUsage, checksLeft: Int) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             guard let self, self.states[p.id] == .quitting else { return }
-            if ProcessActions.isRunning(p.pid) {
-                self.states[p.id] = .unresponsive
+            if !ProcessActions.isRunning(p.pid) {
+                self.left(p)
+            } else if checksLeft > 0 {
+                self.watch(p, checksLeft: checksLeft - 1)
             } else {
-                self.states[p.id] = nil
-                self.show(Toast(name: p.name, freed: p.memory))
+                self.states[p.id] = .unresponsive
             }
         }
-        // Fast path: most apps are gone within a second.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-            guard let self, self.states[p.id] == .quitting, !ProcessActions.isRunning(p.pid) else { return }
-            self.states[p.id] = nil
-            self.show(Toast(name: p.name, freed: p.memory))
+    }
+
+    private func left(_ p: ProcessUsage) {
+        states[p.id] = nil
+        show(Toast(name: p.name, freed: p.memory))
+        leaving.insert(p.id)
+        DispatchQueue.main.asyncAfter(deadline: .now() + Motion.leaveSeconds) { [weak self] in
+            self?.leaving.remove(p.id)
+            self?.gone[p.id] = p.pid
         }
     }
 
@@ -109,8 +123,7 @@ final class QuitCenter {
 
     func forceQuit(_ p: ProcessUsage) {
         for pid in Set(p.pids + [p.pid]) { ProcessActions.forceQuit(pid: pid) }
-        states[p.id] = nil
-        show(Toast(name: p.name, freed: p.memory))
+        left(p)
     }
 
     func cancel(_ p: ProcessUsage) {

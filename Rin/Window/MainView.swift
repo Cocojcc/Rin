@@ -270,6 +270,10 @@ struct Sidebar: View {
     /// As wide as the window's buttons need, with their gap on the far side too: they aren't drawn
     /// at the interface's scale, and the middle one sits right over the icons.
     static let width: CGFloat = 92
+    /// A button is as wide as the three window buttons above it, so the column lines up from the
+    /// top of the window down, and as tall as fourteen of them can be in the shortest window.
+    static let itemWidth: CGFloat = width - 2 * 9 / 0.85
+    static let itemHeight: CGFloat = 40
     /// The bar across the top; the sidebar's icons start below it.
     static let titleBand: CGFloat = 52
     /// Under each page's last row.
@@ -296,6 +300,9 @@ struct Sidebar: View {
             Spacer(minLength: 10)
             item(.settings, Icons.gear, L10n.Sidebar.settings, lineWidth: 1.3)
         }
+        .slidingThumb(navigator.page.sidebarPage == .menuBar ? .settings : navigator.page.sidebarPage) {
+            RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Theme.raise)
+        }
         .padding(.top, Self.titleBand)
         .padding(.bottom, 14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -310,7 +317,7 @@ struct Sidebar: View {
     }
 }
 
-/// One sidebar item: 38 pt square, 11 pt corners, solid when current, grey under the pointer; new
+/// One sidebar item: grey under the pointer, under the group's sliding tile when current; new
 /// alerts as a red count at its corner.
 private struct RailButton: View {
     var d: String
@@ -324,13 +331,12 @@ private struct RailButton: View {
 
     var body: some View {
         Button(action: action) {
-            LineIcon(d: d, size: 18, lineWidth: lineWidth)
+            LineIcon(d: d, size: 20, lineWidth: lineWidth)
                 .foregroundStyle(hue ?? (on ? Theme.text : Theme.sub))
-                .frame(width: 38, height: 38)
+                .frame(width: Sidebar.itemWidth, height: Sidebar.itemHeight)
+                .thumbAnchor(on)
                 .background {
-                    if on {
-                        RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Theme.raise)
-                    } else if hovering {
+                    if hovering && !on {
                         RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Theme.lgHover)
                     }
                 }
