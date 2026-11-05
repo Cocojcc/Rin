@@ -100,7 +100,7 @@ Releases are signed with a Developer ID and notarized by Apple. Each release lis
 shasum -a 256 Rin-<version>.dmg
 ```
 
-Rin does not update itself. To update, download the newer disk image and replace the app.
+To update, open Settings and click **Check for Updates**: Rin downloads the new version, verifies its signature, installs it and restarts. Rin 0.6.3 and earlier can't do this, so update those from the disk image one last time.
 
 ### Uninstalling
 
@@ -125,12 +125,13 @@ Rin is developed and tested on macOS 27. Earlier supported versions receive less
 
 Rin has no account, analytics or telemetry. Its settings and history stay on your Mac, in the app's preferences and `~/Library/Application Support/Rin`.
 
-Rin makes two kinds of network request, and you can turn off both:
+Rin makes three kinds of network request, and you can turn off the automatic ones:
 
 | Purpose | Destination | When | Setting |
 |---|---|---|---|
 | Latency | ICMP echo to `1.1.1.1` | Every 30 seconds while the Network module is running | On by default |
 | Public IP address | HTTPS to `api.ipify.org` | Every 10 minutes, and when the connection changes | Off by default |
+| Updates | HTTPS to `github.com` | At launch and once a day, and when you click Check for Updates | Automatic checks on by default |
 
 Rin is not sandboxed, which is why it is not on the Mac App Store. It reads hardware through IOKit, the SMC and IOReport, and runs the system tools `ps`, `top`, `nettop` and `system_profiler`.
 
@@ -176,4 +177,4 @@ Bug reports and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md
 
 ## License
 
-Rin is released under the [MIT License](LICENSE).
+Rin is released under the [MIT License](LICENSE). It updates itself with [Sparkle](https://sparkle-project.org), whose license is in [Rin/Resources/Sparkle-LICENSE.txt](Rin/Resources/Sparkle-LICENSE.txt).

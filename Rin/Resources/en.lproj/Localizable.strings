@@ -395,7 +395,11 @@
 "settings.checkingUpdates" = "Checking…";
 "settings.upToDate" = "Up to date";
 "settings.checkFailed" = "Check failed, try again";
-"settings.downloadVersion" = "Download %@";
+"settings.updateFailed" = "Update failed, try again";
+"settings.updateToVersion" = "Update to %@";
+"settings.downloadStarting" = "Downloading…";
+"settings.downloadingUpdate" = "Downloading %d%%";
+"settings.installingUpdate" = "Installing…";
 "settings.breadcrumb" = "Menu Bar /";
 "settings.networkInterface" = "Network interface";
 "settings.autoWith" = "Automatic · %@";

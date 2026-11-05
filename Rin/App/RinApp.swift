@@ -31,7 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Monitor.shared.start()
         StatusBarController.shared.start()
         OnboardingController.shared.showIfNeeded()
-        UpdateChecker.shared.checkOnLaunch()
+        UpdateChecker.shared.start()
         #if DEBUG
         ToggleCheck.runIfRequested()
         LiveDump.scheduleIfRequested()

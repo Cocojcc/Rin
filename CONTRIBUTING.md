@@ -28,7 +28,7 @@ xcodebuild -project Rin.xcodeproj -scheme Rin -configuration Debug -derivedDataP
 open build/DerivedData/Build/Products/Debug/Rin.app
 ```
 
-You can also open `Rin.xcodeproj` in Xcode and run it from there.
+You can also open `Rin.xcodeproj` in Xcode and run it from there. The first build downloads [Sparkle](https://sparkle-project.org), the update framework. Only release builds name an update feed, so a build of your own never updates itself and its Check for Updates button stays disabled.
 
 ## Project layout
 
@@ -43,6 +43,7 @@ You can also open `Rin.xcodeproj` in Xcode and run it from there.
 | `Rin/Resources` | Assets and localized strings |
 | `Rin/Support` | `Info.plist`, entitlements and the bridging header |
 | `Rin/Debug` | Snapshot tools, compiled into debug builds only |
+| `Packages/Sparkle` | The pinned Sparkle binary and its checksum |
 
 ## Conventions
 
@@ -104,16 +105,16 @@ By contributing, you agree that your contributions are licensed under the [MIT L
 
 Maintainers publish releases as follows.
 
-1. Update `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `project.yml`, then run `xcodegen generate`.
+1. Update `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `project.yml`, then run `xcodegen generate`. Installed copies compare `CURRENT_PROJECT_VERSION` to decide whether there is an update, so it has to go up every time.
 2. Add the version to `CHANGELOG.md`.
-3. Build, sign and notarize the disk image, which ends up at `build/release/Rin-<version>.dmg`:
+3. Build, sign and notarize the disk image, which ends up at `build/release/Rin-<version>.dmg` with its appcast at `build/release/appcast.xml`:
 
    ```bash
    scripts/release.sh
    ```
 
 4. Commit, tag the commit as `v<version>`, and push both.
-5. Publish a GitHub release for the tag, attach the disk image, and use this format for its notes:
+5. Publish a GitHub release for the tag, attach the disk image and `appcast.xml`, and use this format for its notes. Installed copies read the appcast from the latest release, so a release without one breaks their update check:
 
    ```markdown
    ## What's Changed
@@ -144,4 +145,14 @@ Maintainers publish releases as follows.
 
 ```bash
 xcrun notarytool store-credentials rin-notary --apple-id <apple-id> --team-id <team-id>
+```
+
+It also needs the private update key in the keychain, under the account `com.zoro.rin`. Its public half is `SUPublicEDKey` in `Rin/Support/Info.plist`, and installed copies refuse an update signed with any other key, so keep a backup: without the key, they can't be updated. Sparkle's tools are in `build/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin` after a build. Export the key with the first command and restore it on another Mac with the second:
+
+```bash
+generate_keys --account com.zoro.rin -x <file>
+```
+
+```bash
+generate_keys --account com.zoro.rin -f <file>
 ```

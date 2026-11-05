@@ -100,7 +100,7 @@ Rin 可以跟随系统外观，也可以固定为浅色或深色，并提供简�
 shasum -a 256 Rin-<版本>.dmg
 ```
 
-Rin 不会自动更新。更新时请下载新版磁盘映像并替换应用。
+更新时，打开设置并点击**检查更新**：Rin 会下载新版本、验证签名、完成安装并重启。Rin 0.6.3 及更早的版本不支持这样更新，需要最后再用磁盘映像更新一次。
 
 ### 卸载
 
@@ -125,12 +125,13 @@ Rin 在 macOS 27 上开发和测试，对较早的受支持版本测试较少。
 
 Rin 不需要账户，也没有分析或遥测功能。设置和历史记录都保存在你的 Mac 上，位于应用偏好设置和 `~/Library/Application Support/Rin`。
 
-Rin 会发出两种网络请求，都可以关闭：
+Rin 会发出三种网络请求，其中自动发出的都可以关闭：
 
 | 用途 | 目标 | 时机 | 设置 |
 |---|---|---|---|
 | 延迟 | 向 `1.1.1.1` 发送 ICMP 回显 | 网络模块运行时每 30 秒一次 | 默认开启 |
 | 公网 IP 地址 | 通过 HTTPS 访问 `api.ipify.org` | 每 10 分钟一次，连接变化时也会请求 | 默认关闭 |
+| 更新 | 通过 HTTPS 访问 `github.com` | 启动时和之后每天一次，点击检查更新时也会请求 | 自动检查默认开启 |
 
 Rin 没有使用沙盒，因此不在 Mac App Store 上架。它通过 IOKit、SMC 和 IOReport 读取硬件信息，并会运行系统工具 `ps`、`top`、`nettop` 和 `system_profiler`。
 
@@ -176,4 +177,4 @@ open build/DerivedData/Build/Products/Release/Rin.app
 
 ## 许可证
 
-Rin 基于 [MIT 许可证](LICENSE)发布。
+Rin 基于 [MIT 许可证](LICENSE)发布。它用 [Sparkle](https://sparkle-project.org) 实现自动更新，Sparkle 的许可证见 [Rin/Resources/Sparkle-LICENSE.txt](Rin/Resources/Sparkle-LICENSE.txt)。

@@ -141,13 +141,14 @@ struct SettingsPage: View {
                 SettingsRow(title: L10n.App.name) {
                     HStack(spacing: 12) {
                         Text(SystemInfo.appVersion).ui(14).foregroundStyle(Theme.sub)
-                        WellButton(title: updater.buttonTitle) { updater.check() }
-                            .disabled(!updater.isConfigured || updater.state == .checking)
+                        WellButton(title: updater.buttonTitle) { updater.checkOrInstall() }
+                            .disabled(!updater.isConfigured || updater.isBusy)
                             .opacity(updater.isConfigured ? 1 : 0.5)
                     }
                 }
                 SettingsRow(title: L10n.Settings.autoCheckUpdates) {
                     RinSwitch(isOn: pref(\.general.autoCheckUpdates), label: L10n.Settings.autoCheckUpdates)
+                        .onChange(of: settings.prefs.general.autoCheckUpdates) { updater.applyAutomaticChecks() }
                 }
             }
         }

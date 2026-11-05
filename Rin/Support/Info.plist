@@ -35,5 +35,9 @@
 	<string></string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>SUFeedURL</key>
+	<string>$(RIN_UPDATE_FEED)</string>
+	<key>SUPublicEDKey</key>
+	<string>xC8EJP07v7EAs9f3wcMp2y0dF95YRBTpGvyBSMGWVZY=</string>
 </dict>
 </plist>

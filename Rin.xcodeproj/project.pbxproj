@@ -101,8 +101,10 @@
 		95155305FA1EEFBAA7325332 /* runner-cat-1x-11.png in Resources */ = {isa = PBXBuildFile; fileRef = BDF5E68FDD81355468ED5B01 /* runner-cat-1x-11.png */; };
 		959A0565A7BCFD34DDD9443D /* runner-cat-1x-2.png in Resources */ = {isa = PBXBuildFile; fileRef = FC7D4B507C2CC4B2513758B3 /* runner-cat-1x-2.png */; };
 		9663328ABDD0F7A96D57863C /* SMC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30E19185F1DE404EBECC7903 /* SMC.swift */; };
+		9745FCB707800BEA658B1B83 /* Sparkle-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = 6E45EFB837CADA0F494D7D51 /* Sparkle-LICENSE.txt */; };
 		980DAF167B7A07EFEE58F3E8 /* Runners.swift in Sources */ = {isa = PBXBuildFile; fileRef = 871AB22817B432A9710ADB65 /* Runners.swift */; };
 		99FF1C93412ABED8F9BDEC13 /* runner-girl-2x-0.png in Resources */ = {isa = PBXBuildFile; fileRef = 1F4BA15432063DBB0F598C74 /* runner-girl-2x-0.png */; };
+		A18B64CF16BF231BB6AEDBA6 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = C2E3C95E32AA72664A183CB3 /* Sparkle */; };
 		A230A90002C4E43C9D1D6E04 /* runner-cat-2x-3.png in Resources */ = {isa = PBXBuildFile; fileRef = 90E3D782DA86A645EA6021F8 /* runner-cat-2x-3.png */; };
 		A3A9864289617AAF005221B1 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D26DEC61995EED0054E89D22 /* Onboarding.swift */; };
 		A77B328514514F400EEE8C25 /* runner-girl-1x-13.png in Resources */ = {isa = PBXBuildFile; fileRef = 63DCEA3A7F4523D498908921 /* runner-girl-1x-13.png */; };
@@ -231,12 +233,14 @@
 		5B43A5722A566ED8ABC06254 /* runner-girl-2x-9.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-2x-9.png"; sourceTree = "<group>"; };
 		5D2A7215A6FDCDE4D8226638 /* Console.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Console.swift; sourceTree = "<group>"; };
 		5D914128807FFA4E20628523 /* runner-cat-1x-15.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-1x-15.png"; sourceTree = "<group>"; };
+		609C4EB25AE1D100EACAB714 /* Sparkle */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Sparkle; path = Packages/Sparkle; sourceTree = SOURCE_ROOT; };
 		633FB24112FDA4CEA8C45AFA /* runner-girl-2x-5.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-2x-5.png"; sourceTree = "<group>"; };
 		635D302F39A5B40A49C9A614 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		63DCEA3A7F4523D498908921 /* runner-girl-1x-13.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-1x-13.png"; sourceTree = "<group>"; };
 		683B616EF6FE582932090D2C /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 		697426A397ED8924D6063481 /* runner-cat-1x-12.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-1x-12.png"; sourceTree = "<group>"; };
 		6CA2DCBC7A4E704834A39511 /* runner-girl-2x-16.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-2x-16.png"; sourceTree = "<group>"; };
+		6E45EFB837CADA0F494D7D51 /* Sparkle-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Sparkle-LICENSE.txt"; sourceTree = "<group>"; };
 		6EE39C14F68EB6DF07F18CBA /* runner-cat-2x-13.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-2x-13.png"; sourceTree = "<group>"; };
 		6F414BC11853F0151C93FD48 /* runner-cat-1x-7.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-1x-7.png"; sourceTree = "<group>"; };
 		71A078870D3037E33325489B /* runner-cat-2x-19.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-2x-19.png"; sourceTree = "<group>"; };
@@ -330,6 +334,17 @@
 		FC7D4B507C2CC4B2513758B3 /* runner-cat-1x-2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-1x-2.png"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFrameworksBuildPhase section */
+		D83911AF9E12D7E3F32FF608 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A18B64CF16BF231BB6AEDBA6 /* Sparkle in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
 /* Begin PBXGroup section */
 		17DAFB04CA30B49C10A9115C /* Popovers */ = {
 			isa = PBXGroup;
@@ -362,6 +377,14 @@
 				0CC0E5B05AA94C286EF9B728 /* SystemInfo.swift */,
 			);
 			path = Readers;
+			sourceTree = "<group>";
+		};
+		3C5A30A60B1862F817AFEDCE /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				609C4EB25AE1D100EACAB714 /* Sparkle */,
+			);
+			path = Packages;
 			sourceTree = "<group>";
 		};
 		5BE7D68BDDF5E5EE46BDDED4 /* Window */ = {
@@ -553,6 +576,7 @@
 		CEFB5956D352637CA78C61B2 = {
 			isa = PBXGroup;
 			children = (
+				3C5A30A60B1862F817AFEDCE /* Packages */,
 				7B43B2072604C406BD48B0F5 /* Rin */,
 				BC8EACAC448106D47AC5F230 /* Products */,
 			);
@@ -562,6 +586,7 @@
 			isa = PBXGroup;
 			children = (
 				81626050D84264CA3842CEA9 /* Assets.xcassets */,
+				6E45EFB837CADA0F494D7D51 /* Sparkle-LICENSE.txt */,
 				4E945FC11D8B13CA17BD6103 /* Localizable.strings */,
 				A3DAEB568265FB8360944646 /* Runners */,
 			);
@@ -603,6 +628,7 @@
 			buildPhases = (
 				0C585799F7551B699A8A6906 /* Sources */,
 				AB28CB32CCA990BA19C1657D /* Resources */,
+				D83911AF9E12D7E3F32FF608 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -610,6 +636,7 @@
 			);
 			name = Rin;
 			packageProductDependencies = (
+				C2E3C95E32AA72664A183CB3 /* Sparkle */,
 			);
 			productName = Rin;
 			productReference = 3D4B961704C4912B4FF164CB /* Rin.app */;
@@ -639,6 +666,9 @@
 			);
 			mainGroup = CEFB5956D352637CA78C61B2;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BFB9EE6D78114E33DDC77B45 /* XCLocalSwiftPackageReference "Packages/Sparkle" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = BC8EACAC448106D47AC5F230 /* Products */;
 			projectDirPath = "";
@@ -656,6 +686,7 @@
 			files = (
 				B2CFAB5B6C0127C037292E3B /* Assets.xcassets in Resources */,
 				12C0DCF6F5499F91384B131F /* Localizable.strings in Resources */,
+				9745FCB707800BEA658B1B83 /* Sparkle-LICENSE.txt in Resources */,
 				E36CC22BD295BBF5F64CF1F5 /* runner-cat-1x-0.png in Resources */,
 				7495E3D34BE9B103462DF085 /* runner-cat-1x-1.png in Resources */,
 				13947C37E8649CFEB4A02948 /* runner-cat-1x-10.png in Resources */,
@@ -847,7 +878,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = Rin/Support/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -858,6 +889,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.zoro.rin;
 				PRODUCT_NAME = Rin;
+				RIN_UPDATE_FEED = "";
 				SDKROOT = macosx;
 				SWIFT_OBJC_BRIDGING_HEADER = "Rin/Support/Rin-Bridging-Header.h";
 			};
@@ -872,7 +904,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
 				INFOPLIST_FILE = Rin/Support/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -883,6 +915,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.zoro.rin;
 				PRODUCT_NAME = Rin;
+				RIN_UPDATE_FEED = "";
 				SDKROOT = macosx;
 				SWIFT_OBJC_BRIDGING_HEADER = "Rin/Support/Rin-Bridging-Header.h";
 			};
@@ -1035,6 +1068,20 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		BFB9EE6D78114E33DDC77B45 /* XCLocalSwiftPackageReference "Packages/Sparkle" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/Sparkle;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C2E3C95E32AA72664A183CB3 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 534763B42683CE26DFC36BA7 /* Project object */;
 }

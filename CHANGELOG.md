@@ -4,6 +4,10 @@ All notable changes to Rin are documented in this file. The format is based on [
 
 ## [Unreleased]
 
+### Added
+
+- Rin updates itself: Check for Updates in Settings downloads the new version, verifies its signature, installs it and restarts. An automatic check only puts the new version on the button. Rin 0.6.3 and earlier need one last update from the disk image.
+
 ## [0.6.3] - 2026-11-05
 
 ### Added

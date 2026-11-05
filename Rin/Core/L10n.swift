@@ -658,7 +658,11 @@ enum L10n {
         static var checkingUpdates: String { tr("settings.checkingUpdates") }
         static var upToDate: String { tr("settings.upToDate") }
         static var checkFailed: String { tr("settings.checkFailed") }
-        static func downloadVersion(_ v: String) -> String { tr("settings.downloadVersion", v) }
+        static var updateFailed: String { tr("settings.updateFailed") }
+        static func updateToVersion(_ v: String) -> String { tr("settings.updateToVersion", v) }
+        static var downloadStarting: String { tr("settings.downloadStarting") }
+        static func downloadingUpdate(_ percent: Int) -> String { tr("settings.downloadingUpdate", percent) }
+        static var installingUpdate: String { tr("settings.installingUpdate") }
         static var breadcrumb: String { tr("settings.breadcrumb") }
         static var networkInterface: String { tr("settings.networkInterface") }
         static func autoWith(_ v: String) -> String { tr("settings.autoWith", v) }

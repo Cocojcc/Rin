@@ -395,7 +395,11 @@
 "settings.checkingUpdates" = "正在检查…";
 "settings.upToDate" = "已是最新版本";
 "settings.checkFailed" = "检查失败，再试一次";
-"settings.downloadVersion" = "下载 %@";
+"settings.updateFailed" = "更新失败，再试一次";
+"settings.updateToVersion" = "更新到 %@";
+"settings.downloadStarting" = "正在下载…";
+"settings.downloadingUpdate" = "正在下载 %d%%";
+"settings.installingUpdate" = "正在安装…";
 "settings.breadcrumb" = "菜单栏 /";
 "settings.networkInterface" = "网络接口";
 "settings.autoWith" = "自动 · %@";
