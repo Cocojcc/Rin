@@ -4,6 +4,8 @@ All notable changes to Rin are documented in this file. The format is based on [
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-11-11
+
 ### Added
 
 - Accessories: each connected accessory shows its battery level over the last 7 or 30 days.
@@ -184,7 +186,8 @@ All notable changes to Rin are documented in this file. The format is based on [
 
 Initial release, with menu bar widgets and dropdowns for CPU, GPU, memory, network, disk, battery, Bluetooth devices and sensors, plus a process list, alerts, keep-awake and animated menu bar characters.
 
-[Unreleased]: https://github.com/Cocojcc/Rin/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/Cocojcc/Rin/compare/v0.6.5...HEAD
+[0.6.5]: https://github.com/Cocojcc/Rin/releases/tag/v0.6.5
 [0.6.4]: https://github.com/Cocojcc/Rin/releases/tag/v0.6.4
 [0.6.3]: https://github.com/Cocojcc/Rin/releases/tag/v0.6.3
 [0.6.2]: https://github.com/Cocojcc/Rin/releases/tag/v0.6.2
