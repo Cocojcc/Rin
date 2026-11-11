@@ -15,6 +15,7 @@
 "range.1h" = "1 hour";
 "range.24h" = "24 hours";
 "range.7d" = "7 days";
+"range.30d" = "30 days";
 "range.label" = "Time range";
 "range.last60s" = "60 s";
 "range.lastSeconds" = "%d s";
@@ -465,6 +466,7 @@
 "monitor.localIP" = "IP %@";
 "monitor.router" = "Router %@";
 "monitor.memoryPressure" = "Memory pressure";
+"monitor.noRecord" = "No record";
 "monitor.milliseconds" = "%d ms";
 "monitor.ofTotal" = "of %@";
 "monitor.other" = "Other";

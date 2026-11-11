@@ -9,7 +9,7 @@ enum Metric: Int, CaseIterable, Codable {
 }
 
 enum TimeRange: String, CaseIterable, Identifiable {
-    case m5, m30, h1, h24, d7
+    case m5, m30, h1, h24, d7, d30
 
     var id: String { rawValue }
 
@@ -20,6 +20,7 @@ enum TimeRange: String, CaseIterable, Identifiable {
         case .h1: return 3600
         case .h24: return 86_400
         case .d7: return 604_800
+        case .d30: return 2_592_000
         }
     }
 
@@ -30,6 +31,7 @@ enum TimeRange: String, CaseIterable, Identifiable {
         case .h1: return L10n.Range.h1
         case .h24: return L10n.Range.h24
         case .d7: return L10n.Range.d7
+        case .d30: return L10n.Range.d30
         }
     }
 }
@@ -127,7 +129,7 @@ final class History {
     func record(_ s: Snapshot) {
         var values = [Float](repeating: .nan, count: metricCount)
         // Modules switched off record nothing, so their charts show a gap rather than zeros.
-        let on = s.monitored.contains
+        let on = { s.monitored.contains($0) || s.recorded.contains($0) }
         if on(.cpu) {
             values[Metric.cpu.rawValue] = Float(s.cpu.total * 100)
             values[Metric.cpuUser.rawValue] = Float(s.cpu.user * 100)
@@ -229,7 +231,7 @@ final class History {
                 i = end
             }
             return result
-        case .h24, .d7:
+        case .h24, .d7, .d30:
             let list = range == .h24 ? minutes + [minuteAcc.bucket()].filter { _ in minuteAcc.count > 0 }
                                      : fives + [fiveAcc.bucket()].filter { _ in fiveAcc.count > 0 }
             return list.filter { $0.start >= from.timeIntervalSince1970 && !$0.avg[metric.rawValue].isNaN }.map {

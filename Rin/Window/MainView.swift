@@ -56,9 +56,6 @@ struct TitleBar: View {
             .padding(.leading, 14)
             HStack(spacing: 10) {
                 switch page {
-                case .monitor(.bluetooth):
-                    // The accessories page is a list of devices; nothing on it spans time.
-                    EmptyView()
                 case .monitor(let m):
                     if m != .battery || monitor.snapshot.battery.hasBattery {
                         RangeControl(range: Binding(get: { navigator.range(m) }, set: { navigator.ranges[m] = $0 }), options: Navigator.ranges(for: m))

@@ -31,6 +31,17 @@ enum BluetoothText {
 
     static func isLow(_ d: BluetoothDevice, _ prefs: Preferences) -> Bool { (d.level ?? 1) <= prefs.bluetooth.lowLevel }
 
+    /// The readings Rin kept inside the span, led in by the last one before it and carried to now at
+    /// today's level.
+    static func levels(_ device: BluetoothDevice, over seconds: TimeInterval) -> [ChartPoint] {
+        let all = BluetoothStore.shared.history(device.id)
+        let end = Date(), start = end.addingTimeInterval(-seconds)
+        var pts = all.filter { $0.date >= start }.map { ChartPoint(date: $0.date, value: $0.level * 100) }
+        if let before = all.last(where: { $0.date < start }) { pts.insert(ChartPoint(date: start, value: before.level * 100), at: 0) }
+        if let last = pts.last { pts.append(ChartPoint(date: end, value: device.level.map { $0 * 100 } ?? last.value)) }
+        return pts
+    }
+
     /// The device a module's reading follows, and how long it has left: "Magic Trackpad 约 3 周".
     static func lowestLine(_ d: BluetoothDevice) -> String {
         estimate(d).map { d.name + " " + $0 } ?? d.name
@@ -93,7 +104,7 @@ struct BluetoothPanel: View {
         .padding(.top, 8)
         if p.showHistory, let d = lowest {
             PanelSection(title: d.name, right: L10n.Range.last24h, top: 16) {
-                ConsoleChart(kind: .area, series: ChartSeries.line(levels(d), BluetoothText.isLow(d, prefs) ? Theme.danger : Theme.mid),
+                ConsoleChart(kind: .area, series: ChartSeries.line(BluetoothText.levels(d, over: 86_400), BluetoothText.isLow(d, prefs) ? Theme.danger : Theme.mid),
                              span: 86_400, maxGap: .infinity, maxValue: 100, height: 48,
                              rules: [ChartRule(fraction: p.lowLevel, color: Theme.danger)])
                     .padding(.top, 8)
@@ -120,14 +131,6 @@ struct BluetoothPanel: View {
         }
     }
 
-    private func levels(_ device: BluetoothDevice) -> [ChartPoint] {
-        let all = BluetoothStore.shared.history(device.id)
-        let end = Date(), start = end.addingTimeInterval(-86_400)
-        var pts = all.filter { $0.date >= start }.map { ChartPoint(date: $0.date, value: $0.level * 100) }
-        if let before = all.last(where: { $0.date < start }) { pts.insert(ChartPoint(date: start, value: before.level * 100), at: 0) }
-        if let last = pts.last { pts.append(ChartPoint(date: end, value: device.level.map { $0 * 100 } ?? last.value)) }
-        return pts
-    }
 }
 
 /// A small filled glyph (the charging bolt).
@@ -143,15 +146,19 @@ struct FilledIcon: View {
 
 // MARK: - Monitor page
 
-/// The lowest device's level, then one row per device: connected ones with their level, then the
-/// paired ones that aren't connected, greyed, with when Rin last saw them.
-/// The list is the whole page, so its rows take the height there is.
+/// The lowest device's level, then each connected device with its level over the range under it,
+/// then the paired ones that aren't connected, greyed, with when Rin last saw them. The list takes
+/// the window: the charts share what the rows leave, and with too many devices for a chart worth
+/// reading, the rows alone share it.
 struct BluetoothPage: View {
     var monitor = Monitor.shared
     var settings = SettingsStore.shared
+    var navigator = Navigator.shared
     @Environment(\.pageExtra) private var extra
 
-    private static let room: CGFloat = 509
+    /// What the lead reading leaves of the window for the list.
+    private static let room: CGFloat = 538
+    private static let line: CGFloat = 44, awayLine: CGFloat = 40, awayHead: CGFloat = 52
 
     var body: some View {
         let bt = monitor.snapshot.bluetooth
@@ -159,8 +166,8 @@ struct BluetoothPage: View {
         let _ = monitor.tick
         let lowest = MenuBarText.lowestDevice(monitor.snapshot)
         let low = lowest.map { BluetoothText.isLow($0, prefs) } ?? false
-        let shown = bt.withBattery.count + bt.disconnected.count
-        let height = min(114, max(52, (Self.room + extra - (bt.disconnected.isEmpty ? 0 : 48)) / CGFloat(max(shown, 1))))
+        let away = bt.disconnected.isEmpty ? 0 : Self.awayHead + Self.awayLine * CGFloat(bt.disconnected.count)
+        let share = (Self.room + extra - away) / CGFloat(max(bt.withBattery.count, 1))
         VStack(alignment: .leading, spacing: 0) {
             if let lowest {
                 Stand {
@@ -173,12 +180,50 @@ struct BluetoothPage: View {
             if bt.withBattery.isEmpty {
                 Text(L10n.Bluetooth.noDevices).ui(14).foregroundStyle(Theme.sub).padding(.top, 28)
             } else {
-                ForEach(bt.withBattery) { DeviceRow(device: $0, low: BluetoothText.isLow($0, prefs), height: height) }
+                ForEach(Array(bt.withBattery.enumerated()), id: \.element.id) { i, d in
+                    DeviceBlock(device: d, low: BluetoothText.isLow(d, prefs), lowLevel: prefs.bluetooth.lowLevel, share: share,
+                                line: Self.line, range: navigator.range(.bluetooth), marksLow: i == 0)
+                }
             }
             if !bt.disconnected.isEmpty {
                 HeadRow(title: L10n.Bluetooth.disconnected).padding(.top, 26)
-                ForEach(bt.disconnected) { DeviceRow(device: $0, low: false, away: true, height: height) }
+                ForEach(bt.disconnected) { DeviceRow(device: $0, low: false, away: true, height: Self.awayLine) }
             }
+        }
+    }
+}
+
+/// A connected device's row and, when its share of the page leaves room, its level over the range
+/// drawn as the dropdown draws a day of it: straight lines on a scale that is always 0 to 100,
+/// neutral until the device is low, the low level as a red rule.
+private struct DeviceBlock: View {
+    var device: BluetoothDevice
+    var low: Bool
+    var lowLevel: Double
+    var share: CGFloat
+    var line: CGFloat
+    var range: TimeRange
+    /// The first chart names the low level; the others only draw it.
+    var marksLow: Bool
+
+    private static let gap: CGFloat = 18, minimum: CGFloat = 28
+
+    var body: some View {
+        let detail = device.hasBuds || device.connection == .receiver
+        let height = (share - line - (detail ? 10 : 0) - Self.gap).rounded(.down)
+        if height < Self.minimum {
+            DeviceRow(device: device, low: low, height: share - (detail ? 10 : 0))
+        } else {
+            DeviceRow(device: device, low: low, height: line)
+            ConsoleChart(kind: .area, series: ChartSeries.line(BluetoothText.levels(device, over: range.seconds), low ? Theme.danger : Theme.mid),
+                         span: range.seconds, maxGap: .infinity, maxValue: 100, height: height, midline: false,
+                         rules: [ChartRule(fraction: lowLevel, color: Theme.danger, label: marksLow ? Format.percent(lowLevel) : nil, bell: marksLow,
+                                           help: L10n.Alerts.edit, action: { MainWindowController.shared.showAlerts(focus: .bluetoothLow) })],
+                         inset: PageView.margin, straight: true, crossfades: true, notesGaps: true)
+                .acrossPage()
+                .padding(.bottom, Self.gap)
+                .accessibilityElement()
+                .accessibilityLabel(L10n.Bluetooth.chartA11y(device.name, range.title, Format.percent(lowLevel)))
         }
     }
 }

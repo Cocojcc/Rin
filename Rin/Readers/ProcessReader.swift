@@ -47,10 +47,6 @@ final class ProcessReader {
     private var identities: [pid_t: Identity] = [:]
     private var netPrevious: [pid_t: (UInt64, UInt64)] = [:]
     private var netDate: Date?
-    /// When each app last moved data, so a list keeps apps that just paused instead of
-    /// shrinking every time one goes quiet for a few seconds.
-    private var netLastActive: [String: Date] = [:]
-    private static let netRecent: TimeInterval = 60
     private var gpuPrevious: [pid_t: UInt64] = [:]
     private var gpuDate: Date?
     private let footprints = FootprintProbe()
@@ -146,7 +142,7 @@ final class ProcessReader {
                         rows[pid]?.netUp = up
                     }
                 }
-                if request.full {
+                do {
                     for (pid, down, up) in rates {
                         let id = identity(for: pid).groupID
                         netMoved[id, default: (0, 0)].down += down * netSpan
@@ -163,7 +159,6 @@ final class ProcessReader {
         } else {
             netPrevious = [:]
             netDate = nil
-            netLastActive = [:]
         }
 
         if request.gpu {
@@ -185,28 +180,19 @@ final class ProcessReader {
             peaks.append(PeakProcess(name: identities[row.pid]?.name ?? row.name, cpu: row.cpu))
         }
 
-        var grouped = group(Array(rows.values))
-        if request.full {
-            grouped = withRecent(grouped, network: netMoved, since: now.addingTimeInterval(-max(dt, netSpan, 1)), dt: dt, now: now)
-        } else {
-            moved = [:]
-            movedSince = nil
-            cpuLately = [:]
-        }
+        // Every list shows the same figures as the Processes page: CPU over the last 30 seconds,
+        // disk and network over the last minute.
+        let grouped = withRecent(group(Array(rows.values)), network: netMoved, since: now.addingTimeInterval(-max(dt, netSpan, 1)), dt: dt, now: now)
         var snapshot = ProcessSnapshot()
         snapshot.date = now
         let n = request.limit
-        snapshot.byCPU = Array(grouped.sorted { $0.cpu > $1.cpu }.prefix(n))
+        snapshot.byCPU = Array(grouped.sorted { $0.recentCPU > $1.recentCPU }.prefix(n))
         snapshot.byMemory = Array(grouped.sorted { $0.memory > $1.memory }.prefix(n))
-        snapshot.byDisk = Array(grouped.filter { $0.diskTotal > 0 }.sorted { $0.diskTotal > $1.diskTotal }.prefix(n))
+        snapshot.byDisk = Array(grouped.filter { $0.recentRead + $0.recentWrite >= ProcessUsage.quietRate }
+            .sorted { $0.recentRead + $0.recentWrite > $1.recentRead + $1.recentWrite }.prefix(n))
         if request.networkLive {
-            for g in grouped where g.netTotal > 0 { netLastActive[g.id] = now }
-            netLastActive = netLastActive.filter { now.timeIntervalSince($0.value) < Self.netRecent }
-            // Busiest first; apps that moved data within the last minute follow, most recent first.
-            snapshot.byNetwork = Array(grouped.filter { netLastActive[$0.id] != nil }.sorted {
-                if $0.netTotal != $1.netTotal { return $0.netTotal > $1.netTotal }
-                return (netLastActive[$0.id] ?? .distantPast) > (netLastActive[$1.id] ?? .distantPast)
-            }.prefix(n))
+            snapshot.byNetwork = Array(grouped.filter { $0.recentDown + $0.recentUp >= ProcessUsage.quietRate }
+                .sorted { $0.recentDown + $0.recentUp > $1.recentDown + $1.recentUp }.prefix(n))
         }
         if request.gpu {
             snapshot.byGPU = Array(grouped.filter { $0.gpu > 0.05 }.sorted { $0.gpu > $1.gpu }.prefix(n))

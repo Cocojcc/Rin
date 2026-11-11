@@ -60,6 +60,11 @@ enum Format {
         return String(format: "%.1f %@", value, units[i])
     }
 
+    /// An app's throughput in a list: "120 KB/s", or a dash for one moving next to nothing.
+    static func appRate(_ bytesPerSecond: Double, unit: SpeedUnit = .auto) -> String {
+        bytesPerSecond >= ProcessUsage.quietRate ? rate(bytesPerSecond, unit: unit) : L10n.Common.dash
+    }
+
     /// Network / disk throughput → "2.4 MB/s", "120 KB/s", or "19 Mbps" in bits.
     static func rate(_ bytesPerSecond: Double, unit: SpeedUnit = .auto, showUnit: Bool = true) -> String {
         let (value, suffix) = scaledRate(bytesPerSecond, unit: unit)

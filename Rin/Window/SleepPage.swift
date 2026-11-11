@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// Keep-awake on top (its clock in the accent while on), how long and its two options on rows,
-/// then everything currently holding the Mac awake.
+/// Keep-awake on top (its clock the page's lead reading, as every page has), how long and its two
+/// options on rows, then everything currently holding the Mac awake.
 struct SleepPage: View {
     var keepAwake = KeepAwake.shared
     var settings = SettingsStore.shared
@@ -10,7 +10,7 @@ struct SleepPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ticking { status($0) }.padding(.top, 22)
+            ticking { now in Stand { status(now) } }
             Well {
                 DividedRows {
                     SettingsRow(title: L10n.Sleep.duration) { DurationControl(keepAwake: keepAwake) }
@@ -24,7 +24,7 @@ struct SleepPage: View {
                     }
                 }
             }
-            .padding(.top, 34)
+            .padding(.top, 26)
             ticking { now in
                 VStack(alignment: .leading, spacing: 0) {
                     HeadRow(title: L10n.Sleep.blockers)
@@ -63,13 +63,13 @@ struct SleepPage: View {
 
     private func status(_ now: Date) -> some View {
         HStack(alignment: .bottom, spacing: 16) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
                 if keepAwake.isOn {
-                    BigValue(value: Format.hms(clockSeconds(now)), size: 96, color: Theme.green, proportional: false)
-                    Text(endLine).ui(12).foregroundStyle(Theme.sub)
+                    BigValue(value: Format.hms(clockSeconds(now)), size: BigValue.lead, proportional: false)
+                    Text(endLine).ui(13).lineLimit(1)
                 } else {
-                    BigValue(value: L10n.Sleep.offShort, size: 96)
-                    Text(L10n.Sleep.offSub).ui(12).foregroundStyle(Theme.sub)
+                    BigValue(value: L10n.Sleep.offShort, size: BigValue.lead)
+                    Text(L10n.Sleep.offSub).ui(13).lineLimit(1)
                 }
             }
             .accessibilityElement(children: .combine)
@@ -141,7 +141,7 @@ private struct BlockerRow: View {
             }
             .frame(width: 28, height: 28)
         }
-        .frame(height: 48)
+        .frame(height: 52)
         .accessibilityElement(children: .combine)
     }
 }
@@ -187,19 +187,52 @@ private struct DurationControl: View {
 
     var body: some View {
         let chosen = choice(keepAwake.mode)
+        // Where the words run long (English, a narrow window) the choices fold into a menu rather
+        // than pushing the page wider than the window.
+        ViewThatFits(in: .horizontal) {
+            segments(chosen)
+            menu(chosen)
+        }
+        .popover(isPresented: $customOpen, arrowEdge: .bottom) { customPicker }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L10n.Sleep.modesLabel)
+    }
+
+    private func segments(_ chosen: Choice) -> some View {
         HStack(spacing: 2) {
             ForEach(KeepAwake.Mode.presets, id: \.self) { mode in
                 segment(title(mode), on: chosen == .preset(mode)) { keepAwake.select(mode); start() }
             }
             segment(L10n.Sleep.modeCustomEllipsis, on: chosen == .custom) { customOpen = true }
-                .popover(isPresented: $customOpen, arrowEdge: .bottom) { customPicker }
         }
         .slidingThumb(chosen) { GlassThumb() }
         .padding(3)
         .background(GlassTrack())
         .fixedSize()
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(L10n.Sleep.modesLabel)
+    }
+
+    private func menu(_ chosen: Choice) -> some View {
+        Menu {
+            ForEach(KeepAwake.Mode.presets, id: \.self) { mode in
+                Button { keepAwake.select(mode); start() } label: {
+                    if chosen == .preset(mode) { Label(title(mode), systemImage: "checkmark") } else { Text(title(mode)) }
+                }
+            }
+            Button(L10n.Sleep.modeCustomEllipsis) { customOpen = true }
+        } label: {
+            HStack(spacing: 6) {
+                Text(title(keepAwake.mode)).ui(13).lineLimit(1)
+                LineIcon(d: Icons.sortChevron, size: 8, viewBox: 8, lineWidth: 1.4).foregroundStyle(Theme.sub)
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 26)
+            .padding(3)
+            .background(GlassTrack())
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
+        .fixedSize()
     }
 
     /// Picking a duration starts keeping awake right away.

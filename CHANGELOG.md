@@ -4,6 +4,21 @@ All notable changes to Rin are documented in this file. The format is based on [
 
 ## [Unreleased]
 
+### Added
+
+- Accessories: each connected accessory shows its battery level over the last 7 or 30 days.
+- Charts: where the widest stretch with no readings takes a quarter of a chart or more, it says "No record".
+
+### Changed
+
+- History: modules that nothing shows are read once a minute, so their day and week charts no longer have holes.
+- Lists on module pages and in dropdowns show the same figures as the Processes page: CPU over the last 30 seconds, disk and network over the last minute. A rate under 50 B/s shows as a dash. The inspector's CPU is the same average as its row.
+- Sleep: the keep-awake clock is the page's lead reading, the same size and color as on the other pages.
+
+### Fixed
+
+- Sleep: in English or a narrow window, the duration choices fold into a menu instead of pushing the page wider than the window.
+
 ## [0.6.4] - 2026-11-05
 
 ### Added

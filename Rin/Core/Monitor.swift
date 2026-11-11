@@ -98,6 +98,7 @@ final class Monitor {
             // Only the modules alert rules watch, every 15 s or slower; processes every 30 s for
             // the culprit names; no per-app traffic, frequencies or latency pings.
             config.monitored = prefs.alertedModules
+            config.recorded = Self.recorded(config)
             for m in Module.allCases { config.intervals[m] = max(prefs.refresh(m), Self.restInterval) }
             config.processInterval = Self.restProcessInterval
             config.processes.limit = 8
@@ -126,6 +127,7 @@ final class Monitor {
         let wantsSensors = batteryPage || consumers.contains(.window(.monitor(.cpu))) || consumers.contains(.window(.monitor(.gpu))) || consumers.contains(.popover(.gpu))
         if wantsSensors && prefs.isEnabled(.sensors) { read.insert(.sensors) }
         config.monitored = read
+        config.recorded = Self.recorded(config)
         config.processesWanted = allProcesses || batteryPage
         config.processes.full = allProcesses
         // A module read only for an alert rule needs no more than a reading every few seconds;
@@ -156,6 +158,13 @@ final class Monitor {
         if consumers.contains(.window(.monitor(.network))) || consumers.contains(.popover(.network)) {
             interfaces = sampler.interfaces()
         }
+    }
+
+    /// Every module that's on keeps a history, so a page that opens later has its day and week to
+    /// draw. One that nothing shows is read once a minute for it, which costs next to nothing.
+    /// Accessories keep their own history and aren't woken for it.
+    private static func recorded(_ config: Sampler.Config) -> Set<Module> {
+        config.enabled.subtracting(config.monitored).subtracting([.bluetooth])
     }
 
     /// Seconds between reads of a module that only an alert rule needs.
@@ -221,6 +230,8 @@ final class Sampler {
         var monitored: Set<Module> = Set(Module.allCases)
         /// Modules switched on. The rest keep no numbers.
         var enabled: Set<Module> = Set(Module.allCases)
+        /// Modules nothing shows, read every `recordInterval` for their history.
+        var recorded: Set<Module> = []
         /// Seconds between reads per module; the timer ticks at the shortest of them.
         var intervals: [Module: Double] = [:]
         var processInterval: Double = 3
@@ -317,7 +328,11 @@ final class Sampler {
 
     private var slowFactor: Double { config.slowOnBattery && onBattery ? 2 : 1 }
 
-    private func interval(_ m: Module) -> Double { (config.intervals[m] ?? 2) * slowFactor }
+    private func interval(_ m: Module) -> Double {
+        config.monitored.contains(m) ? (config.intervals[m] ?? 2) * slowFactor : Self.recordInterval
+    }
+
+    private static let recordInterval: Double = 60
 
     private func reschedule() {
         let active = Module.allCases.filter(config.monitored.contains)
@@ -335,7 +350,7 @@ final class Sampler {
     /// Whether a module's interval has elapsed (with a little slack for timer jitter). Modules
     /// switched off are never due.
     private func due(_ m: Module, _ now: Date, force: Bool) -> Bool {
-        guard config.monitored.contains(m) || (!primed && config.enabled.contains(m)) else { lastRead[m] = nil; return false }
+        guard config.monitored.contains(m) || config.recorded.contains(m) || (!primed && config.enabled.contains(m)) else { lastRead[m] = nil; return false }
         guard !force, let last = lastRead[m] else { lastRead[m] = now; return true }
         guard now.timeIntervalSince(last) >= interval(m) - 0.25 else { return false }
         lastRead[m] = now
@@ -347,6 +362,7 @@ final class Sampler {
         var s = current
         s.date = now
         s.monitored = config.monitored
+        s.recorded = config.recorded
         // A module switched off keeps no numbers around. One that just isn't being read keeps its
         // last ones, so a view that opens draws whole until its own read comes back.
         if !config.enabled.contains(.cpu) { s.cpu = CPUSample() }

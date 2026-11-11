@@ -311,6 +311,9 @@ struct ProcessUsage: Identifiable, Hashable {
     var threads = 0
     var compressed: UInt64 = 0
 
+    /// Bytes a second below which an app counts as not moving data: the figure would read 0.0 KB/s.
+    static let quietRate = 50.0
+
     var netTotal: Double { netDown + netUp }
     var diskTotal: Double { diskRead + diskWrite }
 }
@@ -347,6 +350,8 @@ struct Snapshot {
     var selfMemory: UInt64 = 0
     /// Modules read for this snapshot; the others are switched off and left empty.
     var monitored: Set<Module> = Set(Module.allCases)
+    /// Modules read only now and then, so their history has no holes.
+    var recorded: Set<Module> = []
 }
 
 /// One process read for the inspector's sparklines.

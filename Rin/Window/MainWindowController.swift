@@ -49,10 +49,11 @@ final class Navigator {
     /// Each monitor page's time range; the title bar switches it.
     var ranges: [Module: TimeRange] = [:]
 
-    func range(_ m: Module) -> TimeRange { ranges[m] ?? (m == .battery ? .h24 : .m5) }
+    /// Accessories run down over weeks, so their page opens on the longest range.
+    func range(_ m: Module) -> TimeRange { ranges[m] ?? (m == .battery ? .h24 : m == .bluetooth ? .d30 : .m5) }
 
     /// The ranges a page offers in the title bar.
-    static func ranges(for m: Module) -> [TimeRange] { m == .battery ? [.h24, .d7] : [.m5, .h1, .h24, .d7] }
+    static func ranges(for m: Module) -> [TimeRange] { m == .battery ? [.h24, .d7] : m == .bluetooth ? [.d7, .d30] : [.m5, .h1, .h24, .d7] }
     /// A rule the Alerts page should point out when it opens (from a chart or module settings).
     var alertFocus: Alerts.Rule?
     var page: Page = .overview {

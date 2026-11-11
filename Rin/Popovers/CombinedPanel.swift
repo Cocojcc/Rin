@@ -461,7 +461,7 @@ private struct TopUsageDetail: View {
             MainWindowController.shared.showProcesses(sortedBy: settings.prefs.menubar.combinedTopByMemory ? .memory : .cpu)
         }
         HeadRow(title: L10n.Module.cpu).padding(.top, 14)
-        ProcessTable(processes: Array(p.byCPU.prefix(5)), value: { Format.percentValue($0.cpu) }, minRows: 5)
+        ProcessTable(processes: Array(p.byCPU.prefix(5)), value: { Format.percentValue($0.recentCPU) }, minRows: 5)
         HeadRow(title: L10n.Module.memory).padding(.top, 16)
         ProcessTable(processes: Array(p.byMemory.prefix(5)), value: { Format.memory($0.memory) }, minRows: 5)
         if let toast = quitCenter.toast { QuitToast(toast: toast).padding(.top, 12) }

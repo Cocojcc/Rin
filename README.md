@@ -22,7 +22,7 @@
   </picture>
 </p>
 
-Rin shows CPU, GPU, memory, network, disk, sensor, battery and accessory readings in the menu bar, with a dropdown for each module and a window for history and details. It reads a module only while something needs it, so it stays light on power.
+Rin shows CPU, GPU, memory, network, disk, sensor, battery and accessory readings in the menu bar, with a dropdown for each module and a window for history and details. It reads a module at full pace only while something shows it, and otherwise once a minute for its history, so it stays light on power.
 
 ## Contents
 
@@ -49,7 +49,7 @@ Rin shows CPU, GPU, memory, network, disk, sensor, battery and accessory reading
 | GPU | Usage, memory, frequency, temperature and power |
 | Sensors | Temperatures by component, fan speed, thermal state, system power |
 | Battery | Level, charging state, time remaining, health, cycle count, power draw, UPS status |
-| Accessories | Battery level of Bluetooth devices and of devices on Logitech wireless receivers |
+| Accessories | Battery level of Bluetooth devices and of devices on Logitech wireless receivers, with each one's last 30 days |
 
 ### Menu bar
 

@@ -152,7 +152,7 @@ struct CPUPage: View {
                         PeakList(peaks: peaks, selected: selected?.date) { selectedPeak = $0 }
                     } else {
                         ListHead(tip: L10n.Monitor.topCPU, link: .cpu)
-                        ProcessTable(processes: Array(s.processes.byCPU.prefix(4)), value: { Format.percentValue($0.cpu) }, rowHeight: 34, minRows: 4)
+                        ProcessTable(processes: Array(s.processes.byCPU.prefix(4)), value: { Format.percentValue($0.recentCPU) }, rowHeight: 34, minRows: 4)
                     }
                 }
             } b: {
@@ -437,8 +437,8 @@ struct NetworkPage: View {
                 VStack(alignment: .leading, spacing: 0) {
                     ListHead(tip: L10n.Monitor.topNetwork, link: .network)
                     ProcessTable(processes: Array(s.processes.byNetwork.prefix(4)),
-                                 value: { MenuBarText.downArrow + " " + Format.rate($0.netDown, unit: unit) }, valueWidth: 88,
-                                 secondary: { MenuBarText.upArrow + " " + Format.rate($0.netUp, unit: unit) }, secondaryWidth: 80, rowHeight: 36, minRows: 4)
+                                 value: { MenuBarText.downArrow + " " + Format.appRate($0.recentDown, unit: unit) }, valueWidth: 88,
+                                 secondary: { MenuBarText.upArrow + " " + Format.appRate($0.recentUp, unit: unit) }, secondaryWidth: 80, rowHeight: 36, minRows: 4)
                 }
             }
             .padding(.top, 18)
@@ -520,8 +520,8 @@ struct DiskPage: View {
                 VStack(alignment: .leading, spacing: 0) {
                     ListHead(tip: L10n.Monitor.topReadWrite, link: .disk)
                     ProcessTable(processes: Array(s.processes.byDisk.prefix(4)),
-                                 value: { L10n.Monitor.readRate(Format.rate($0.diskRead)) }, valueWidth: 84,
-                                 secondary: { L10n.Monitor.writeRate(Format.rate($0.diskWrite)) }, secondaryWidth: 84, rowHeight: 34, minRows: 4)
+                                 value: { L10n.Monitor.readRate(Format.appRate($0.recentRead)) }, valueWidth: 84,
+                                 secondary: { L10n.Monitor.writeRate(Format.appRate($0.recentWrite)) }, secondaryWidth: 84, rowHeight: 34, minRows: 4)
                 }
             }
             .padding(.top, 21)

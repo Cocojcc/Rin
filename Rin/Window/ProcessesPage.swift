@@ -115,8 +115,7 @@ enum ProcessTab: CaseIterable, Hashable {
         }
     }
 
-    /// Bytes a second below which an app counts as not moving data: the figure would read 0.0 KB/s.
-    fileprivate static let quietRate = 50.0
+    private static let quietRate = ProcessUsage.quietRate
 
     private static func rate(_ v: Double) -> String? { v >= quietRate ? Format.rate(v) : nil }
     private static func speed(_ v: Double) -> String? { v >= quietRate ? Format.rate(v, unit: SettingsStore.shared.prefs.network.speedUnit) : nil }
@@ -541,7 +540,8 @@ private struct ProcessInspector: View {
                     .padding(.top, 12)
                 }
             }
-            sparkCard(L10n.Module.cpu, value: Format.percentValue(p.cpu), values: history.map(\.cpu), color: Theme.color(for: .cpu)).padding(.top, 16)
+            // Its row's figure, the same 30-second average, so the two never disagree side by side.
+            sparkCard(L10n.Module.cpu, value: Format.percentValue(p.recentCPU), values: history.map(\.cpu), color: Theme.color(for: .cpu)).padding(.top, 16)
             sparkCard(L10n.Module.memory, value: Format.memory(p.memory), values: history.map(\.memory), color: Theme.color(for: .memory), fill: false).padding(.top, 12)
             group([
                 (L10n.Processes.cpuTime, p.cpuTime > 0 ? Format.hms(p.cpuTime) : nil),
@@ -625,7 +625,7 @@ private struct ProcessInspector: View {
     }
 
     private func pair(_ a: Double, _ b: Double) -> String? {
-        max(a, b) < ProcessTab.quietRate ? nil : Format.rate(a) + " · " + Format.rate(b)
+        max(a, b) < ProcessUsage.quietRate ? nil : Format.rate(a) + " · " + Format.rate(b)
     }
 
     /// "Safari 网页内容 ×6", or the most common name and how many there are in all.

@@ -53,6 +53,7 @@ enum L10n {
         static var h1: String { tr("range.1h") }
         static var h24: String { tr("range.24h") }
         static var d7: String { tr("range.7d") }
+        static var d30: String { tr("range.30d") }
         static var label: String { tr("range.label") }
         static var last60s: String { tr("range.last60s") }
         static func lastSeconds(_ n: Int) -> String { tr("range.lastSeconds", n) }
@@ -478,6 +479,7 @@ enum L10n {
         static func localIP(_ a: String) -> String { tr("monitor.localIP", a) }
         static func router(_ a: String) -> String { tr("monitor.router", a) }
         static var memoryPressure: String { tr("monitor.memoryPressure") }
+        static var noRecord: String { tr("monitor.noRecord") }
         static func milliseconds(_ a: Int) -> String { tr("monitor.milliseconds", a) }
         static func ofTotal(_ a: String) -> String { tr("monitor.ofTotal", a) }
         static var other: String { tr("monitor.other") }

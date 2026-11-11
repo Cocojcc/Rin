@@ -66,6 +66,9 @@ struct Reading: View {
             .lineLimit(1)
             .fixedSize()
             .accessibilityElement(children: .combine)
+        } else if text.hasSuffix(L10n.Common.dash) {
+            // Nothing to show ("↓ —") stays quiet.
+            Text(text).ui(size).foregroundStyle(Theme.sub).lineLimit(1)
         } else {
             Text(text).ui(size, weight).foregroundStyle(color).lineLimit(1)
         }
@@ -148,6 +151,7 @@ extension TimeRange {
         case .h1: return 120
         case .h24: return 180
         case .d7: return 900
+        case .d30: return 3600
         }
     }
 }
@@ -199,6 +203,11 @@ struct ConsoleChart: View {
     /// A page's time switch crossfades its ranges. They have different numbers of points, so a
     /// morph would suggest a change over time that never happened.
     private var crossfades = false
+    /// Straight lines between the readings, for a level that steps rather than swings.
+    private var straight = false
+    /// Says once that there's no record where the widest stretch without readings takes a quarter
+    /// of the chart or more; narrower ones speak for themselves.
+    private var notesGaps = false
     @State private var hoverX: CGFloat?
 
     /// Leaves the room a line needs at the top and bottom of the plot.
@@ -219,6 +228,7 @@ struct ConsoleChart: View {
         self.labels = labels
         inset = 32
         crossfades = true
+        notesGaps = range != .m5
         self.rules = rules
         self.bands = bands
         self.markers = markers
@@ -231,7 +241,8 @@ struct ConsoleChart: View {
 
     /// A short window (the dropdowns' last minute).
     init(kind: Kind, series: [ChartSeries], span: TimeInterval, maxGap: TimeInterval? = nil, maxValue: Double, bottomMax: Double = 1, height: CGFloat,
-         midline: Bool = true, rules: [ChartRule] = [], bands: [ClosedRange<Date>] = [], slot: CGFloat = 5) {
+         midline: Bool = true, rules: [ChartRule] = [], bands: [ClosedRange<Date>] = [], slot: CGFloat = 5,
+         inset: CGFloat = 0, straight: Bool = false, crossfades: Bool = false, notesGaps: Bool = false) {
         self.kind = kind
         self.series = series
         self.span = span
@@ -243,6 +254,10 @@ struct ConsoleChart: View {
         self.rules = rules
         self.bands = bands
         self.slot = slot
+        self.inset = inset
+        self.straight = straight
+        self.crossfades = crossfades
+        self.notesGaps = notesGaps
     }
 
     /// A round top for a scale: 1, 2, 4 or 5 times a power of ten, at least `value`.
@@ -288,6 +303,16 @@ struct ConsoleChart: View {
                 }
                 ForEach(Array(rules.enumerated()), id: \.offset) { _, rule in
                     ruleView(rule, size: size)
+                }
+                if notesGaps, let x = noRecordX(width: size.width, start: start) {
+                    let mirrored = kind == .mirrored || kind == .mirroredArea
+                    Text(L10n.Monitor.noRecord).ui(12).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
+                        // Over a middle line it clears its own ground.
+                        .padding(.horizontal, mirrored ? 8 : 0)
+                        .background { if mirrored { Theme.windowGlass } }
+                        .position(x: x, y: size.height / 2)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
                 }
                 ForEach(Array(labels.enumerated()), id: \.offset) { _, label in
                     Text(label.1).ui(12).foregroundStyle(Theme.sub).lineLimit(1).fixedSize()
@@ -362,6 +387,20 @@ struct ConsoleChart: View {
             let r = CGRect(x: max(0, x0), y: 0, width: max(0, min(size.width, x1) - max(0, x0)), height: size.height)
             ctx.fill(Path(r), with: .color(bandColor))
         }
+    }
+
+    /// The middle of the widest stretch with no readings, when it takes a quarter of the chart or
+    /// more: before the first reading, after the last, or between two further apart than a line spans.
+    private func noRecordX(width: CGFloat, start: Date) -> CGFloat? {
+        let end = start.addingTimeInterval(span)
+        let dates = series.flatMap { s in s.points.compactMap { $0.value.isNaN || $0.date < start ? nil : $0.date } }.sorted()
+        var widest: (from: Date, length: TimeInterval) = (start, (dates.first ?? end).timeIntervalSince(start))
+        for (a, b) in zip(dates, dates.dropFirst()) where b.timeIntervalSince(a) > maxGap && b.timeIntervalSince(a) > widest.length {
+            widest = (a, b.timeIntervalSince(a))
+        }
+        if let last = dates.last, end.timeIntervalSince(last) > widest.length { widest = (last, end.timeIntervalSince(last)) }
+        guard widest.length >= span * 0.25 else { return nil }
+        return CGFloat(widest.from.addingTimeInterval(widest.length / 2).timeIntervalSince(start) / span) * width
     }
 
     /// Each series averaged into the chart's time slots; nil where nothing was read.
@@ -441,7 +480,7 @@ struct ConsoleChart: View {
             }
             last = p.date
         }
-        return out.map { downsample($0, width: width) }
+        return straight ? out : out.map { downsample($0, width: width) }
     }
 
     /// Readings averaged into about `points` steps across the plot, so a second-by-second series
@@ -475,7 +514,7 @@ struct ConsoleChart: View {
     private func drawRuns(_ ctx: inout GraphicsContext, _ s: ChartSeries, _ runs: [[(x: CGFloat, level: CGFloat)]], base: CGFloat, extent: CGFloat, floor: CGFloat) {
         for run in runs where run.count > 1 {
             let points = run.map { CGPoint(x: $0.x, y: base - $0.level * extent) }
-            let line = Self.smooth(points)
+            let line = straight ? Path { $0.addLines(points) } : Self.smooth(points)
             if s.fill > 0 {
                 var fill = line
                 fill.addLine(to: CGPoint(x: points[points.count - 1].x, y: floor))

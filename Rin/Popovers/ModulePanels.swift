@@ -201,7 +201,7 @@ struct CPUPanel: View {
             .accessibilityElement(children: .combine)
         }
         if p.showProcesses {
-            PanelProcessList(title: L10n.Monitor.topCPU, processes: Array(s.processes.byCPU.prefix(p.processCount)), value: { Format.percentValue($0.cpu) }, link: .cpu)
+            PanelProcessList(title: L10n.Monitor.topCPU, processes: Array(s.processes.byCPU.prefix(p.processCount)), value: { Format.percentValue($0.recentCPU) }, link: .cpu)
         }
     }
 
@@ -369,7 +369,7 @@ struct NetworkPanel: View {
         .padding(.top, 12)
         if p.showProcesses && n.connected {
             PanelProcessList(title: L10n.Monitor.topNetwork, processes: Array(monitor.snapshot.processes.byNetwork.prefix(4)),
-                             value: { MenuBarText.downArrow + " " + Format.rate($0.netDown, unit: p.speedUnit) }, secondary: { MenuBarText.upArrow + " " + Format.rate($0.netUp, unit: p.speedUnit) },
+                             value: { MenuBarText.downArrow + " " + Format.appRate($0.recentDown, unit: p.speedUnit) }, secondary: { MenuBarText.upArrow + " " + Format.appRate($0.recentUp, unit: p.speedUnit) },
                              valueWidth: 78, secondaryWidth: 68, rowHeight: 30, valueSize: 13, link: .network)
         }
     }
@@ -440,7 +440,7 @@ struct DiskPanel: View {
         }
         .padding(.top, 10)
         if p.showProcesses {
-            PanelProcessList(title: L10n.Monitor.topReadWrite, processes: Array(monitor.snapshot.processes.byDisk.prefix(5)), value: { Format.rate($0.diskTotal) }, link: .disk)
+            PanelProcessList(title: L10n.Monitor.topReadWrite, processes: Array(monitor.snapshot.processes.byDisk.prefix(5)), value: { Format.appRate($0.recentRead + $0.recentWrite) }, link: .disk)
         }
     }
 }
