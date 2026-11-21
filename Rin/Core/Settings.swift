@@ -177,11 +177,16 @@ struct AlertPrefs: Codable, Equatable {
     var tempOn = false
     var tempThreshold: Double = 95
     var networkOn = true
+    var publicIPOn = false
+    /// Seconds between public IP checks while the IP-change alert is on.
+    var publicIPInterval: Double = 10
     var bluetoothLowOn = true
     var bluetoothDisconnectOn = false
     var style: NotificationStyle = .banner
     var sound = false
     var colorMenubar = true
+
+    static let publicIPIntervalRange: ClosedRange<Double> = 1...3600
 }
 
 struct Preferences: Codable, Equatable {

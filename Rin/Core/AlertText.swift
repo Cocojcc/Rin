@@ -15,6 +15,14 @@ enum AlertText {
         return L10n.Sleep.hoursMinutes(s / 3600, (s % 3600) / 60)
     }
 
+    /// Exact check interval for the public IP rule ("5 秒", "1 分钟", "90 秒").
+    static func interval(_ seconds: Double) -> String {
+        let s = max(1, Int(seconds.rounded()))
+        if s < 60 { return L10n.Alerts.seconds(s) }
+        if s % 60 == 0 { return L10n.Alerts.minutes(s / 60) }
+        return L10n.Alerts.seconds(s)
+    }
+
     /// Free space in whole gigabytes, as the rule's limit reads ("18 GB", "20 GB").
     private static func gigabytes(_ bytes: Double) -> String {
         bytes < 1e12 ? L10n.Settings.gigabytes(Int((bytes / 1e9).rounded())) : Format.storage(bytes)
@@ -43,6 +51,8 @@ enum AlertText {
         case .network:
             guard let ended = e.ended else { return L10n.Alerts.networkDown }
             return L10n.Alerts.networkDownFor(duration(ended.timeIntervalSince(e.date) + e.held))
+        case .publicIP:
+            return L10n.Alerts.publicIPHeadline(e.subject ?? L10n.Common.dash)
         case .bluetoothLow: return L10n.Alerts.bluetoothLowHeadline(e.subject ?? "", Format.percent(e.value), Format.percent(e.limit))
         case .bluetoothDisconnect: return L10n.Alerts.bluetoothDisconnectTitle(e.subject ?? "")
         }
@@ -67,6 +77,8 @@ enum AlertText {
             case 3: return L10n.Alerts.reconnected(L10n.Alerts.vpn)
             default: return L10n.Alerts.reconnectedPlain
             }
+        case .publicIP:
+            return e.previousSubject.map(L10n.Alerts.publicIPDetail)
         case .bluetoothDisconnect:
             return e.ended != nil ? L10n.Alerts.reconnectedPlain : nil
         }
@@ -84,6 +96,7 @@ enum AlertText {
         case .battery: return L10n.Alerts.batteryBanner(percent(e.value))
         case .temperature: return L10n.Alerts.tempBanner(Format.temperature(e.value, unit: unit, showUnit: true))
         case .network: return L10n.Alerts.networkBanner
+        case .publicIP: return L10n.Alerts.publicIPBanner
         case .bluetoothLow: return L10n.Alerts.bluetoothLowBanner(e.subject ?? "", Format.percent(e.value))
         case .bluetoothDisconnect: return L10n.Alerts.bluetoothDisconnectBanner(e.subject ?? "")
         }
@@ -102,6 +115,12 @@ enum AlertText {
         case .battery: sentences.append(L10n.Alerts.batteryBody)
         case .temperature: sentences.append(L10n.Alerts.tempBody)
         case .network: sentences.append(L10n.Alerts.networkBody)
+        case .publicIP:
+            if let old = e.previousSubject, let new = e.subject {
+                sentences.append(L10n.Alerts.publicIPBody(old, new))
+            } else if let new = e.subject {
+                sentences.append(L10n.Alerts.publicIPBodyOnlyNew(new))
+            }
         case .bluetoothLow: sentences.append(L10n.Alerts.bluetoothLowBody)
         case .bluetoothDisconnect: break
         }
@@ -130,6 +149,7 @@ enum AlertText {
         case .battery: return L10n.Alerts.pillBelow(percent(a.batteryPercent))
         case .temperature: return Format.temperature(a.tempThreshold, unit: unit, showUnit: true)
         case .network, .bluetoothDisconnect: return L10n.Alerts.pillDisconnect
+        case .publicIP: return L10n.Alerts.pillEvery(interval(a.publicIPInterval))
         case .bluetoothLow: return Format.percent(p.bluetooth.lowLevel)
         }
     }
@@ -141,6 +161,7 @@ enum AlertText {
         case .gpu: return L10n.Settings.ruleGPUSwitch
         case .memory: return L10n.Settings.ruleMemorySwitch
         case .network: return L10n.Settings.ruleNetworkSwitch
+        case .publicIP: return L10n.Settings.rulePublicIPSwitch
         case .disk: return L10n.Settings.ruleDiskSwitch
         case .battery: return L10n.Settings.ruleBatterySwitch
         case .bluetoothLow: return L10n.Settings.bluetoothLowAlertA11y

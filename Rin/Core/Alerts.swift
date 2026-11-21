@@ -16,8 +16,10 @@ struct AlertEvent: Codable, Identifiable, Equatable {
     var limit: Double
     /// Seconds the condition had held.
     var held: Double = 0
-    /// The device or volume it is about.
+    /// The device or volume it is about, or the new value for change events (e.g. public IP).
     var subject: String?
+    /// The previous value for change events (e.g. the old public IP).
+    var previousSubject: String?
     /// The busiest process at the time and its share ("71%", "3.2 GB").
     var culprit: String?
     var culpritValue: String?
@@ -37,7 +39,7 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
     static let shared = Alerts()
 
     enum Rule: String, CaseIterable, Codable {
-        case cpu, gpu, memory, network, disk, battery, bluetoothLow, bluetoothDisconnect, temperature
+        case cpu, gpu, memory, network, publicIP, disk, battery, bluetoothLow, bluetoothDisconnect, temperature
 
         var module: Module {
             switch self {
@@ -47,7 +49,7 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
             case .disk: return .disk
             case .battery: return .battery
             case .temperature: return .sensors
-            case .network: return .network
+            case .network, .publicIP: return .network
             case .bluetoothLow, .bluetoothDisconnect: return .bluetooth
             }
         }
@@ -58,6 +60,7 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
             case .gpu: return \.alerts.gpuOn
             case .memory: return \.alerts.memoryOn
             case .network: return \.alerts.networkOn
+            case .publicIP: return \.alerts.publicIPOn
             case .disk: return \.alerts.diskOn
             case .battery: return \.alerts.batteryOn
             case .bluetoothLow: return \.alerts.bluetoothLowOn
@@ -97,6 +100,9 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
     @ObservationIgnored private var authorized = false
     @ObservationIgnored private var askedAuthorization = false
     @ObservationIgnored private var everConnected = false
+    /// Last known public IP while the IP-change alert is enabled; preserved across brief
+    /// disconnects and route switches so reconnecting on a new IP fires right away.
+    @ObservationIgnored private var lastPublicIP: String?
     /// Bluetooth devices already reported low (until they charge back up), and the ones
     /// connected at the last reading.
     @ObservationIgnored private var lowReported: [String: UUID] = [:]
@@ -196,6 +202,7 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
             if !active.isEmpty { active = [:] }
             for rule in Rule.allCases { close(rule, at: s.date, value: nil) }
             since = [:]
+            lastPublicIP = nil
             return
         }
         requestAuthorizationIfNeeded()
@@ -283,10 +290,32 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
         }
 
         checkBluetooth(s, a, prefs)
+        if !Rule.publicIP.isOn(prefs) { lastPublicIP = nil }
 
         if next != active { active = next }
         // Rule state lands on disk now and then; firing and clearing save at once.
         if dirty, now.timeIntervalSince(lastSave) > 60 { save() }
+    }
+
+    func resetPublicIP() {
+        lastPublicIP = nil
+    }
+
+    /// Fires immediately on the main thread when a fresh check observes a different public IP.
+    func publicIPUpdated(_ ip: String) {
+        let prefs = SettingsStore.shared.prefs
+        guard Rule.publicIP.isOn(prefs) else {
+            lastPublicIP = nil
+            return
+        }
+        requestAuthorizationIfNeeded()
+        defer { lastPublicIP = ip }
+        guard let previous = lastPublicIP, previous != ip else { return }
+        let now = Date()
+        let event = AlertEvent(rule: .publicIP, date: now, value: 0, limit: 0,
+                               subject: ip, previousSubject: previous, ended: now)
+        record(event, open: nil)
+        notify(event, sound: prefs.alerts.sound)
     }
 
     /// Per device, so these keep their own memory instead of the module-wide rule state.

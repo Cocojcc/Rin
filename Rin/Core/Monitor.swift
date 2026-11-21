@@ -30,10 +30,11 @@ final class Monitor {
     @ObservationIgnored private(set) var processHistory: [String: [ProcessPoint]] = [:]
     @ObservationIgnored private var processHistoryDate = Date.distantPast
     @ObservationIgnored private let sampler = Sampler()
+    @ObservationIgnored private let publicIPWatcher = PublicIPWatcher()
     @ObservationIgnored private var consumers: Set<Consumer> = []
-    @ObservationIgnored private var lastPublicIP = Date.distantPast
     /// The interface the public address was looked up over; a VPN going on or off changes both.
     @ObservationIgnored private var publicIPRoute = ""
+    @ObservationIgnored private var publicIPAlertOn = false
     @ObservationIgnored var onSample: ((Snapshot) -> Void)?
 
     enum RestReason { case displaysAsleep, locked, sessionInactive }
@@ -60,11 +61,16 @@ final class Monitor {
         sampler.onSnapshot = { [weak self] snapshot in
             DispatchQueue.main.async { self?.apply(snapshot) }
         }
+        publicIPWatcher.onUpdate = { [weak self] ip in
+            self?.publicIP = ip
+            Alerts.shared.publicIPUpdated(ip)
+        }
         applyConfiguration()
         sampler.start()
     }
 
     func stop() {
+        publicIPWatcher.stop()
         sampler.stop()
         history.save()
     }
@@ -74,7 +80,7 @@ final class Monitor {
         let resting = !restReasons.isEmpty
         guard resting != isResting else { return }
         isResting = resting
-        applyConfiguration()
+        applyConfiguration(wake: !resting)
         // Back in front: read everything at once rather than waiting for the next tick.
         if !resting { sampler.sampleNow() }
     }
@@ -88,8 +94,9 @@ final class Monitor {
     }
 
     /// Re-read settings and visibility into the sampler (interval, extra sources).
-    func applyConfiguration() {
+    func applyConfiguration(wake: Bool = false) {
         let prefs = SettingsStore.shared.prefs
+        configurePublicIP(prefs, wake: wake)
         var config = Sampler.Config()
         config.enabled = Set(Module.allCases.filter(prefs.isEnabled))
         config.slowOnBattery = prefs.general.slowOnBattery
@@ -182,7 +189,31 @@ final class Monitor {
         recordProcesses(s.processes)
         tick &+= 1
         onSample?(s)
-        refreshPublicIPIfNeeded()
+        updatePublicIPNetwork(s)
+    }
+
+    private func configurePublicIP(_ prefs: Preferences, wake: Bool) {
+        let alertOn = Alerts.Rule.publicIP.isOn(prefs)
+        let active = prefs.isEnabled(.network) && (prefs.network.showPublicIP || alertOn)
+        let alertTurnedOn = alertOn && !publicIPAlertOn
+        publicIPAlertOn = alertOn
+        if !alertOn { Alerts.shared.resetPublicIP() }
+        if !active {
+            publicIP = nil
+            publicIPRoute = ""
+        }
+        let baseInterval: TimeInterval = alertOn ? prefs.alerts.publicIPInterval : 600
+        let interval = isResting ? max(baseInterval, Self.restInterval) : baseInterval
+        publicIPWatcher.configure(active: active, interval: interval, immediate: wake || alertTurnedOn)
+    }
+
+    private func updatePublicIPNetwork(_ s: Snapshot) {
+        let route = s.network.routeKey
+        if !route.isEmpty, route != publicIPRoute {
+            if !publicIPRoute.isEmpty { publicIP = nil }
+            publicIPRoute = route
+        }
+        publicIPWatcher.networkChanged(connected: s.network.connected, route: route)
     }
 
     private func recordProcesses(_ p: ProcessSnapshot) {
@@ -201,25 +232,6 @@ final class Monitor {
             next[row.id] = points
         }
         processHistory = next
-    }
-
-    private func refreshPublicIPIfNeeded() {
-        let route = snapshot.network.interface
-        guard SettingsStore.shared.prefs.network.showPublicIP, snapshot.monitored.contains(.network), snapshot.network.connected,
-              Date().timeIntervalSince(lastPublicIP) > 600 || route != publicIPRoute,
-              let url = URL(string: "https://api.ipify.org") else { return }
-        if route != publicIPRoute { publicIP = nil }
-        lastPublicIP = Date()
-        publicIPRoute = route
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
-            guard let data, let ip = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  !ip.isEmpty, ip.count < 64 else {
-                // Try again in a minute rather than ten.
-                DispatchQueue.main.async { self?.lastPublicIP = Date().addingTimeInterval(-540) }
-                return
-            }
-            DispatchQueue.main.async { self?.publicIP = ip }
-        }.resume()
     }
 }
 

@@ -94,6 +94,8 @@ struct NetworkSample {
     var up: Double = 0
     var connected = false
     var interface: String = ""
+    /// Changes whenever the active interface, local IP, router or system proxy changes.
+    var routeKey: String = ""
     var kind: InterfaceKind = .other
     var localIP: String = ""
     var router: String = ""

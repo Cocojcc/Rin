@@ -61,6 +61,12 @@ struct AlertRuleSentence: View {
                              selection: pref(\.alerts.memoryLevel))
             case .network:
                 Text(L10n.Settings.ruleNetwork)
+            case .publicIP:
+                Text(L10n.Settings.rulePublicIP)
+                PublicIPIntervalChoice(selection: pref(\.alerts.publicIPInterval))
+                if !L10n.Settings.rulePublicIPSuffix.isEmpty {
+                    Text(L10n.Settings.rulePublicIPSuffix)
+                }
             case .disk:
                 Text(L10n.Settings.ruleDisk)
                 InlineChoice(label: L10n.Settings.ruleDisk, options: [5, 10, 20, 50].map { (Double($0), L10n.Settings.gigabytes($0)) },
@@ -133,3 +139,113 @@ struct AlertRuleRow: View {
 }
 
 // MARK: - Chart label
+
+/// Raised interval chip for the public IP rule: quick presets plus a custom seconds/minutes popover.
+private struct PublicIPIntervalChoice: View {
+    @Binding var selection: Double
+    @State private var customOpen = false
+    @State private var draft = ""
+    @State private var unit: Unit = .seconds
+    @FocusState private var focused: Bool
+
+    private enum Unit: Hashable { case seconds, minutes }
+
+    private static let presets: [Double] = [3, 5, 10, 30, 60, 300, 600]
+
+    private var currentSeconds: Int { max(1, Int(selection.rounded())) }
+    private var isCustom: Bool { !Self.presets.contains(where: { Int($0) == currentSeconds }) }
+
+    private var parsedSeconds: Double? {
+        guard let n = Int(draft), n >= 1 else { return nil }
+        let limit = unit == .minutes ? 60 : 3600
+        guard n <= limit else { return nil }
+        return Double(unit == .minutes ? n * 60 : n)
+    }
+
+    var body: some View {
+        Menu {
+            ForEach(Self.presets, id: \.self) { seconds in
+                let title = AlertText.interval(seconds)
+                Button {
+                    selection = seconds
+                } label: {
+                    if Int(seconds) == currentSeconds { Label(title, systemImage: "checkmark") } else { Text(title) }
+                }
+            }
+            Divider()
+            Button {
+                openCustom()
+            } label: {
+                if isCustom { Label(L10n.Settings.customEllipsis, systemImage: "checkmark") } else { Text(L10n.Settings.customEllipsis) }
+            }
+        } label: {
+            Text(AlertText.interval(selection))
+                .ui(14, 500)
+                .padding(.horizontal, 6)
+                .frame(height: 22)
+                .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(Theme.chip))
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .accessibilityLabel(L10n.Settings.publicIPIntervalA11y)
+        .popover(isPresented: $customOpen, arrowEdge: .bottom) { customPopover }
+    }
+
+    private func openCustom() {
+        let s = currentSeconds
+        if s >= 60 && s % 60 == 0 {
+            unit = .minutes
+            draft = "\(s / 60)"
+        } else {
+            unit = .seconds
+            draft = "\(s)"
+        }
+        DispatchQueue.main.async { customOpen = true }
+    }
+
+    private func applyCustom() {
+        guard let seconds = parsedSeconds else { return }
+        selection = seconds
+        customOpen = false
+    }
+
+    private var customPopover: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L10n.Settings.publicIPCustomTitle).ui(12, 500).foregroundStyle(Theme.sub)
+            HStack(spacing: 8) {
+                TextField("", text: $draft)
+                    .textFieldStyle(.plain)
+                    .multilineTextAlignment(.center)
+                    .ui(14)
+                    .monospacedDigit()
+                    .frame(width: 68)
+                    .padding(.horizontal, 8)
+                    .frame(height: 28)
+                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.well))
+                    .focused($focused)
+                    .onSubmit { applyCustom() }
+                    .onChange(of: draft) { _, v in
+                        let digits = v.filter { $0.isASCII && $0.isNumber }
+                        if digits != v { draft = digits }
+                    }
+                    .accessibilityLabel(L10n.Settings.publicIPIntervalA11y)
+                Segmented(label: L10n.Settings.publicIPCustomTitle,
+                          options: [(Unit.seconds, L10n.Settings.unitSeconds), (.minutes, L10n.Settings.unitMinutes)],
+                          selection: $unit)
+                    .fixedSize()
+            }
+            Text(unit == .seconds ? L10n.Settings.publicIPRangeSeconds : L10n.Settings.publicIPRangeMinutes)
+                .ui(12)
+                .foregroundStyle(Theme.sub)
+            PrimaryButton(title: L10n.Settings.apply, height: 28, radius: 7, fontSize: 12) { applyCustom() }
+                .disabled(parsedSeconds == nil)
+                .opacity(parsedSeconds == nil ? 0.45 : 1)
+        }
+        .foregroundStyle(Theme.text)
+        .padding(14)
+        .frame(width: 224)
+        .onAppear { focused = true }
+    }
+}

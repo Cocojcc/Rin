@@ -332,7 +332,7 @@ extension Preferences {
         if a.diskOn { out.insert(.disk) }
         if a.batteryOn { out.insert(.battery) }
         if a.tempOn { out.insert(.sensors) }
-        if a.networkOn { out.insert(.network) }
+        if a.networkOn || a.publicIPOn { out.insert(.network) }
         if a.bluetoothLowOn || a.bluetoothDisconnectOn { out.insert(.bluetooth) }
         return out.filter(isEnabled)
     }

@@ -246,6 +246,12 @@ enum L10n {
         static func tempHeadline(_ a: String, _ b: String) -> String { tr("alerts.tempHeadline", a, b) }
         static var networkDown: String { tr("alerts.networkDown") }
         static func networkDownFor(_ a: String) -> String { tr("alerts.networkDownFor", a) }
+        static func publicIPHeadline(_ a: String) -> String { tr("alerts.publicIPHeadline", a) }
+        static func publicIPDetail(_ a: String) -> String { tr("alerts.publicIPDetail", a) }
+        static var publicIPBanner: String { tr("alerts.publicIPBanner") }
+        static func publicIPBody(_ a: String, _ b: String) -> String { tr("alerts.publicIPBody", a, b) }
+        static func publicIPBodyOnlyNew(_ a: String) -> String { tr("alerts.publicIPBodyOnlyNew", a) }
+        static func pillEvery(_ a: String) -> String { tr("alerts.pillEvery", a) }
         static func bluetoothLowHeadline(_ a: String, _ b: String, _ c: String) -> String { tr("alerts.bluetoothLowHeadline", a, b, c) }
         static var recovered: String { tr("alerts.recovered") }
         static func diskRecovered(_ a: String) -> String { tr("alerts.diskRecovered", a) }
@@ -641,6 +647,17 @@ enum L10n {
         static var ruleBattery: String { tr("settings.ruleBattery") }
         static var ruleTemp: String { tr("settings.ruleTemp") }
         static var ruleNetwork: String { tr("settings.ruleNetwork") }
+        static var rulePublicIP: String { tr("settings.rulePublicIP") }
+        static var rulePublicIPSuffix: String { tr("settings.rulePublicIPSuffix") }
+        static var rulePublicIPSwitch: String { tr("settings.rulePublicIPSwitch") }
+        static var publicIPIntervalA11y: String { tr("settings.publicIPIntervalA11y") }
+        static var customEllipsis: String { tr("settings.customEllipsis") }
+        static var publicIPCustomTitle: String { tr("settings.publicIPCustomTitle") }
+        static var unitSeconds: String { tr("settings.unitSeconds") }
+        static var unitMinutes: String { tr("settings.unitMinutes") }
+        static var publicIPRangeSeconds: String { tr("settings.publicIPRangeSeconds") }
+        static var publicIPRangeMinutes: String { tr("settings.publicIPRangeMinutes") }
+        static var apply: String { tr("settings.apply") }
         static var ruleToggle: String { tr("settings.ruleToggle") }
         static var delivery: String { tr("settings.delivery") }
         static var notificationStyle: String { tr("settings.notificationStyle") }
