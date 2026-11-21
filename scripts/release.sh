@@ -20,7 +20,8 @@ REPO=https://github.com/Cocojcc/Rin
 KEY_ACCOUNT=com.zoro.rin
 
 OUT=build/release
-DERIVED="$OUT/DerivedData"
+# Spotlight skips folders named *.noindex, so this signed copy doesn't show up in search beside the one in use.
+DERIVED="$OUT/DerivedData.noindex"
 APP="$DERIVED/Build/Products/Release/Rin.app"
 SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
 SPARKLE_BIN="$DERIVED/SourcePackages/artifacts/sparkle/Sparkle/bin"
@@ -78,7 +79,7 @@ xcrun stapler staple "$APP"
 rm "$OUT/Rin.zip"
 
 step "Making the DMG"
-STAGE="$OUT/dmg"
+STAGE="$OUT/dmg.noindex"
 mkdir -p "$STAGE"
 ditto "$APP" "$STAGE/Rin.app"
 ln -s /Applications "$STAGE/Applications"

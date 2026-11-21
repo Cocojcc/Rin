@@ -4,6 +4,16 @@ All notable changes to Rin are documented in this file. The format is based on [
 
 ## [Unreleased]
 
+## [0.6.6] - 2026-11-21
+
+### Added
+
+- Alerts: a new rule watches for public IP changes and notifies immediately with the old and new addresses. Pick a check interval from presets (down to 3 seconds) or set any custom interval in seconds or minutes.
+
+### Changed
+
+- Network: public IP checks now use fresh connections with automatic fallback across global and direct IPv4 endpoints, and re-check immediately when the network interface, router or system proxy changes. While the public IP alert is on, the Network page and dropdown show the current public IP automatically.
+
 ## [0.6.5] - 2026-11-11
 
 ### Added
