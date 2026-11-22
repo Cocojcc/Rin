@@ -94,8 +94,15 @@ struct NetworkSample {
     var up: Double = 0
     var connected = false
     var interface: String = ""
-    /// Changes whenever the active interface, local IP, router or system proxy changes.
+    /// Changes whenever the active interface, local IP, router, system proxy, active IPv4 tunnels
+    /// or the way out to the internet change: any of these is worth checking the public IP again.
     var routeKey: String = ""
+    /// What traffic to the internet actually leaves through: the physical network, the system
+    /// proxy, and the interface macOS routes public addresses over. A tunnel that comes and goes
+    /// beside the one carrying that traffic (Tailscale next to a proxy's TUN) leaves it unchanged.
+    var egressKey: String = ""
+    /// True when a system proxy is enabled or an active IPv4 tunnel (TUN/VPN) interface is up.
+    var hasProxyOrTunnel = false
     var kind: InterfaceKind = .other
     var localIP: String = ""
     var router: String = ""
@@ -118,6 +125,14 @@ struct NetworkSample {
 /// `unmeasured`: the reply came back too fast to have left the Mac (a VPN's tunnel answering
 /// for the resolver), so it says nothing about the connection.
 enum ConnectionCheck: Int, Codable { case ok, slow, failed, unmeasured }
+
+/// Why checking the public IP failed after consecutive retries.
+enum PublicIPFailureReason: Int, Codable, Equatable {
+    case timedOut = 1
+    case dnsFailed = 2
+    case overseasUnreachable = 3
+    case unreachable = 4
+}
 
 struct Volume: Identifiable, Equatable {
     var id: String { url.path }

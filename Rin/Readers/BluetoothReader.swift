@@ -147,7 +147,9 @@ final class BluetoothStore {
     private static let keep: TimeInterval = 30 * 86_400
 
     init() {
-        if let url, let data = try? Data(contentsOf: url), let decoded = try? JSONDecoder().decode([String: Device].self, from: data) {
+        // Unit tests start from nothing.
+        if !RinMain.isRunningTests, let url, let data = try? Data(contentsOf: url),
+           let decoded = try? JSONDecoder().decode([String: Device].self, from: data) {
             devices = decoded
         }
     }
@@ -196,7 +198,7 @@ final class BluetoothStore {
     }
 
     private func save() {
-        guard let url, let data = try? JSONEncoder().encode(devices) else { return }
+        guard SettingsStore.persistenceEnabled, let url, let data = try? JSONEncoder().encode(devices) else { return }
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? data.write(to: url, options: .atomic)
     }

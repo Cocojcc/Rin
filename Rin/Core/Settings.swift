@@ -278,7 +278,8 @@ final class SettingsStore {
 
     private static let key = "preferences.v2"
     private static let legacyKey = "preferences.v1"
-    /// Off while rendering debug snapshots so previews never overwrite the user's settings.
+    /// Off while rendering debug snapshots and while hosting unit tests, so neither overwrites
+    /// the user's settings, alert log, history or accessories record (those check it too).
     static var persistenceEnabled = true
 
     var prefs: Preferences {

@@ -132,7 +132,7 @@ private struct EventRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Circle().fill(event.ended == nil ? Theme.danger : Theme.low).frame(width: 8, height: 8)
+                Circle().fill(event.ended == nil ? (event.probeFailure != nil ? Theme.warn : Theme.danger) : Theme.low).frame(width: 8, height: 8)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(AlertText.headline(event)).ui(14, fresh ? 500 : 400).lineLimit(1)

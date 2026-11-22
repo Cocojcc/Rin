@@ -20,6 +20,7 @@ final class Monitor {
     private(set) var processes = ProcessSnapshot()
     private(set) var tick = 0
     private(set) var publicIP: String?
+    private(set) var publicIPFailure: PublicIPFailureReason?
     private(set) var interfaces: [(name: String, kind: InterfaceKind)] = []
     /// The screen is off or locked, or another user's session is in front: nobody sees the menu
     /// bar or a window, so only what alert rules need is read, slowly.
@@ -32,8 +33,9 @@ final class Monitor {
     @ObservationIgnored private let sampler = Sampler()
     @ObservationIgnored private let publicIPWatcher = PublicIPWatcher()
     @ObservationIgnored private var consumers: Set<Consumer> = []
-    /// The interface the public address was looked up over; a VPN going on or off changes both.
-    @ObservationIgnored private var publicIPRoute = ""
+    /// The way out the public address was looked up over (physical network, system proxy, the
+    /// interface public addresses route over); a VPN going on or off changes both.
+    @ObservationIgnored private var publicIPEgress = ""
     @ObservationIgnored private var publicIPAlertOn = false
     @ObservationIgnored var onSample: ((Snapshot) -> Void)?
 
@@ -62,8 +64,17 @@ final class Monitor {
             DispatchQueue.main.async { self?.apply(snapshot) }
         }
         publicIPWatcher.onUpdate = { [weak self] ip in
+            self?.publicIPFailure = nil
             self?.publicIP = ip
             Alerts.shared.publicIPUpdated(ip)
+        }
+        publicIPWatcher.onFailure = { [weak self] reason in
+            self?.publicIPFailure = reason
+            Alerts.shared.publicIPCheckFailed(reason)
+        }
+        publicIPWatcher.onFailureCleared = { [weak self] in
+            self?.publicIPFailure = nil
+            Alerts.shared.publicIPFailureCleared()
         }
         applyConfiguration()
         sampler.start()
@@ -200,7 +211,8 @@ final class Monitor {
         if !alertOn { Alerts.shared.resetPublicIP() }
         if !active {
             publicIP = nil
-            publicIPRoute = ""
+            publicIPFailure = nil
+            publicIPEgress = ""
         }
         let baseInterval: TimeInterval = alertOn ? prefs.alerts.publicIPInterval : 600
         let interval = isResting ? max(baseInterval, Self.restInterval) : baseInterval
@@ -208,12 +220,21 @@ final class Monitor {
     }
 
     private func updatePublicIPNetwork(_ s: Snapshot) {
-        let route = s.network.routeKey
-        if !route.isEmpty, route != publicIPRoute {
-            if !publicIPRoute.isEmpty { publicIP = nil }
-            publicIPRoute = route
+        // The address shown belongs to the way out it was looked up over; a tunnel coming and
+        // going beside it only checks again, and keeps showing the address meanwhile.
+        let egress = s.network.egressKey
+        if !egress.isEmpty, egress != publicIPEgress {
+            if !publicIPEgress.isEmpty {
+                publicIP = nil
+                publicIPFailure = nil
+            }
+            publicIPEgress = egress
         }
-        publicIPWatcher.networkChanged(connected: s.network.connected, route: route)
+        if !s.network.connected {
+            publicIPFailure = nil
+        }
+        publicIPWatcher.networkChanged(connected: s.network.connected, route: s.network.routeKey, egress: egress,
+                                       hasProxyOrTunnel: s.network.hasProxyOrTunnel)
     }
 
     private func recordProcesses(_ p: ProcessSnapshot) {

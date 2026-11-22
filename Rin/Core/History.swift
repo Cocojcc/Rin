@@ -107,11 +107,11 @@ final class History {
         }
     }
 
+    /// Only a save creates the folder: a read that made an empty "Rin" folder would make the
+    /// rename from Hum skip moving the old one over.
     private static var fileURL: URL {
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Rin", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("history.plist")
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Rin", isDirectory: true).appendingPathComponent("history.plist")
     }
 
     private struct Stored: Codable {
@@ -121,7 +121,8 @@ final class History {
 
     init() {
         raw = [[Float]](repeating: [], count: Metric.allCases.count)
-        load()
+        // Unit tests start from nothing; snapshots still read it (they only never write).
+        if !RinMain.isRunningTests { load() }
     }
 
     // MARK: Recording
@@ -287,10 +288,12 @@ final class History {
 
     func save() {
         lastSave = Date()
+        guard SettingsStore.persistenceEnabled else { return }
         let stored = Stored(minutes: minutes, fives: fives)
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .binary
         if let data = try? encoder.encode(stored) {
+            try? FileManager.default.createDirectory(at: Self.fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? data.write(to: Self.fileURL, options: .atomic)
         }
     }

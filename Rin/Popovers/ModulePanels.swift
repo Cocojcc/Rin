@@ -360,7 +360,12 @@ struct NetworkPanel: View {
             if n.connected {
                 KVRow(key: L10n.Network.localIP, value: n.localIP.isEmpty ? L10n.Common.dash : PanelText.localIP(n))
                 if !n.router.isEmpty { KVRow(key: L10n.Network.router, value: n.router) }
-                if p.showPublicIP || Alerts.Rule.publicIP.isOn(settings.prefs) { KVRow(key: L10n.Network.publicIP, value: monitor.publicIP ?? L10n.Common.dash) }
+                if p.showPublicIP || Alerts.Rule.publicIP.isOn(settings.prefs) {
+                    let failure = monitor.publicIPFailure
+                    let ipText = failure.map(AlertText.publicIPFailureStatus) ?? monitor.publicIP ?? L10n.Common.dash
+                    KVRow(key: L10n.Network.publicIP, value: ipText, valueColor: failure != nil ? Theme.warn : Theme.text)
+                        .help(failure != nil ? (monitor.publicIP.map(L10n.Network.publicIPLastKnown) ?? "") : "")
+                }
             } else if let last = n.lastConnected {
                 KVRow(key: L10n.Network.lastConnected, value: Format.time(last))
             }

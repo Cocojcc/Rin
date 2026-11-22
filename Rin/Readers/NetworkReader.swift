@@ -11,6 +11,9 @@ final class NetworkReader {
     private var lastConnected: Date?
     private var kindCache: [String: InterfaceKind] = [:]
     private var adapterCache: (date: Date, value: Adapter?)?
+    /// The last way out found, with the network it was found on: a lookup that fails for a
+    /// moment keeps it instead of reading as a change.
+    private var lastEgress: (base: String, signature: String)?
     private let store = SCDynamicStoreCreate(nil, "Rin" as CFString, nil, nil)
 
     private static let todayKey = "network.today"
@@ -41,11 +44,12 @@ final class NetworkReader {
         sample.router = (name == primary ? global?["Router"] as? String : nil) ?? ""
 
         let counters = Self.counters()
+        let ipv4Interfaces = Self.allIPv4Interfaces()
         let now = Date()
         if let name, let c = counters[name] {
             sample.interface = name
             sample.kind = kind(of: name)
-            sample.localIP = Self.ipv4(of: name) ?? ""
+            sample.localIP = ipv4Interfaces.first(where: { $0.name == name })?.address ?? ""
             sample.connected = !sample.localIP.isEmpty && primary != nil
             // A VPN's tunnel has a made-up address; the Mac's own is the adapter's under it.
             // The tunnel also only carries what it captures, while everything, tunnelled or
@@ -77,7 +81,17 @@ final class NetworkReader {
 
         if sample.connected {
             lastConnected = now
-            sample.routeKey = "\(sample.interface)|\(sample.localIP)|\(sample.router)|\(proxySignature())"
+            let proxy = proxyState()
+            let tunnels = Self.activeTunnels(from: ipv4Interfaces)
+            let tunnelSig = Self.tunnelSignature(from: tunnels)
+            let base = "\(sample.interface)|\(sample.localIP)|\(sample.router)"
+            let found = Self.egressSignature(interfaces: ipv4Interfaces)
+            let egress = Self.resolvedEgress(found: found, base: base, last: lastEgress)
+            if !found.isEmpty { lastEgress = (base, found) }
+            sample.hasProxyOrTunnel = proxy.enabled || !tunnels.isEmpty || sample.kind == .vpn
+            sample.routeKey = "\(base)|\(proxy.signature)|\(tunnelSig)|\(egress)"
+            // Empty means "not known": watchers keep the way out they had rather than see a change.
+            sample.egressKey = egress.isEmpty ? "" : "\(base)|\(proxy.signature)|\(egress)"
         }
         sample.lastConnected = lastConnected
         sample.sessionDown = sessionDown
@@ -99,18 +113,26 @@ final class NetworkReader {
             .map { ($0, kind(of: $0)) }
     }
 
-    private func proxySignature() -> String {
-        guard let store,
-              let proxies = SCDynamicStoreCopyValue(store, "State:/Network/Global/Proxies" as CFString) as? [String: Any] else { return "" }
+    private func proxyState() -> (signature: String, enabled: Bool) {
+        let proxies = store.flatMap { SCDynamicStoreCopyValue($0, "State:/Network/Global/Proxies" as CFString) as? [String: Any] }
+        return Self.proxyState(from: proxies)
+    }
+
+    static func proxyState(from proxies: [String: Any]?) -> (signature: String, enabled: Bool) {
+        guard let proxies else { return ("", false) }
+        var enabled = false
         func entry(_ enableKey: String, _ hostKey: String, _ portKey: String) -> String {
             guard (proxies[enableKey] as? NSNumber)?.intValue == 1 else { return "0" }
+            enabled = true
             let host = proxies[hostKey] as? String ?? ""
             let port = (proxies[portKey] as? NSNumber)?.intValue ?? 0
             return "1:\(host):\(port)"
         }
-        let pac = (proxies["ProxyAutoConfigEnable"] as? NSNumber)?.intValue == 1
-            ? (proxies["ProxyAutoConfigURLString"] as? String ?? "1") : "0"
-        return "\(entry("HTTPEnable", "HTTPProxy", "HTTPPort"))|\(entry("HTTPSEnable", "HTTPSProxy", "HTTPSPort"))|\(entry("SOCKSEnable", "SOCKSProxy", "SOCKSPort"))|\(pac)"
+        let pacEnabled = (proxies["ProxyAutoConfigEnable"] as? NSNumber)?.intValue == 1
+        if pacEnabled { enabled = true }
+        let pac = pacEnabled ? (proxies["ProxyAutoConfigURLString"] as? String ?? "1") : "0"
+        let sig = "\(entry("HTTPEnable", "HTTPProxy", "HTTPPort"))|\(entry("HTTPSEnable", "HTTPSProxy", "HTTPSPort"))|\(entry("SOCKSEnable", "SOCKSProxy", "SOCKSPort"))|\(pac)"
+        return (sig, enabled)
     }
 
     private struct Adapter {
@@ -154,10 +176,14 @@ final class NetworkReader {
         }
     }
 
+    static func isTunnelInterface(_ bsdName: String) -> Bool {
+        ["utun", "ipsec", "ppp", "tun", "tap", "wg"].contains(where: { bsdName.hasPrefix($0) })
+    }
+
     private func kind(of bsdName: String) -> InterfaceKind {
         if let cached = kindCache[bsdName] { return cached }
         var result: InterfaceKind = .other
-        if ["utun", "ipsec", "ppp", "tun", "tap", "wg"].contains(where: { bsdName.hasPrefix($0) }) {
+        if Self.isTunnelInterface(bsdName) {
             kindCache[bsdName] = .vpn
             return .vpn
         }
@@ -219,21 +245,129 @@ final class NetworkReader {
         return String(cString: buffer)
     }
 
-    private static func ipv4(of name: String) -> String? {
+    struct InterfaceIPv4: Equatable {
+        var name: String
+        var address: String
+        var flags: UInt32
+    }
+
+    static func activeTunnels(from interfaces: [InterfaceIPv4]) -> [(name: String, ip: String)] {
+        let upRunning = UInt32(IFF_UP | IFF_RUNNING)
+        var seen = Set<String>()
+        var result: [(name: String, ip: String)] = []
+        for entry in interfaces {
+            guard isTunnelInterface(entry.name),
+                  (entry.flags & upRunning) == upRunning,
+                  !entry.address.isEmpty,
+                  entry.address != "0.0.0.0",
+                  !entry.address.hasPrefix("127."),
+                  // Link-local: a tunnel with only this carries no traffic anywhere.
+                  !entry.address.hasPrefix("169.254.") else { continue }
+            let key = "\(entry.name):\(entry.address)"
+            if seen.insert(key).inserted {
+                result.append((entry.name, entry.address))
+            }
+        }
+        return result.sorted { a, b in a.name == b.name ? a.ip < b.ip : a.name < b.name }
+    }
+
+    static func tunnelSignature(from tunnels: [(name: String, ip: String)]) -> String {
+        tunnels.map { "\($0.name):\($0.ip)" }.joined(separator: ",")
+    }
+
+    /// The source address macOS picks to reach a public address. Connecting a UDP socket only
+    /// looks up the route; nothing is sent. A proxy's TUN mode or a full VPN routes public
+    /// addresses through its tunnel, so this is the tunnel's address; a tunnel that only carries
+    /// its own subnet (Tailscale without an exit node) doesn't change it.
+    static func egressAddress(to target: String = "1.1.1.1") -> String? {
+        var address = sockaddr_in()
+        address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        address.sin_family = sa_family_t(AF_INET)
+        address.sin_port = in_port_t(53).bigEndian
+        guard inet_pton(AF_INET, target, &address.sin_addr) == 1 else { return nil }
+        let fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
+        guard fd >= 0 else { return nil }
+        defer { close(fd) }
+        let connected = withUnsafePointer(to: &address) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                connect(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        guard connected == 0 else { return nil }
+        var local = sockaddr_in()
+        var length = socklen_t(MemoryLayout<sockaddr_in>.size)
+        let named = withUnsafeMutablePointer(to: &local) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { getsockname(fd, $0, &length) }
+        }
+        guard named == 0 else { return nil }
+        var buffer = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+        guard inet_ntop(AF_INET, &local.sin_addr, &buffer, socklen_t(buffer.count)) != nil else { return nil }
+        let text = String(cString: buffer)
+        return text == "0.0.0.0" ? nil : text
+    }
+
+    /// The way out to report: what was just found, else (a lookup failing for a moment) the last
+    /// one found on the same network, else "" for not known. Never an empty part that would
+    /// read as a different way out.
+    static func resolvedEgress(found: String, base: String, last: (base: String, signature: String)?) -> String {
+        if !found.isEmpty { return found }
+        if let last, last.base == base { return last.signature }
+        return ""
+    }
+
+    /// Public addresses looked up for the way out, in order. One alone could mislead: a proxy's
+    /// TUN can leave a single address (often 1.1.1.1) out of its routes.
+    static let egressTargets = ["1.1.1.1", "8.8.8.8", "9.9.9.9"]
+
+    /// The way out most of `targets` route over, as "interface:address", or "" when none could
+    /// be looked up. Stops as soon as two agree, so it usually costs two lookups. With no
+    /// majority, a tunnel wins over the physical interface, then the earlier target.
+    static func egressSignature(targets: [String] = egressTargets, interfaces: [InterfaceIPv4],
+                                lookup: (String) -> String? = { egressAddress(to: $0) }) -> String {
+        var found: [String] = []
+        for target in targets {
+            guard let address = lookup(target) else { continue }
+            let signature = egressSignature(address: address, interfaces: interfaces)
+            if found.contains(signature) { return signature }
+            found.append(signature)
+        }
+        return found.first { isTunnelInterface(String($0.prefix { $0 != ":" })) } ?? found.first ?? ""
+    }
+
+    /// "interface:address" for one egress address, or "" when there is none. When several
+    /// interfaces carry the address, one that is up and running wins, then a tunnel, then the
+    /// first by name.
+    static func egressSignature(address: String?, interfaces: [InterfaceIPv4]) -> String {
+        guard let address else { return "" }
+        let upRunning = UInt32(IFF_UP | IFF_RUNNING)
+        let name = interfaces.filter { $0.address == address }
+            .min { a, b in
+                let ua = a.flags & upRunning == upRunning, ub = b.flags & upRunning == upRunning
+                if ua != ub { return ua }
+                let ta = isTunnelInterface(a.name), tb = isTunnelInterface(b.name)
+                if ta != tb { return ta }
+                return a.name < b.name
+            }?.name ?? ""
+        return "\(name):\(address)"
+    }
+
+    private static func allIPv4Interfaces() -> [InterfaceIPv4] {
         var list: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&list) == 0, let first = list else { return nil }
+        guard getifaddrs(&list) == 0, let first = list else { return [] }
         defer { freeifaddrs(list) }
+        var result: [InterfaceIPv4] = []
         var cursor: UnsafeMutablePointer<ifaddrs>? = first
         while let entry = cursor {
             defer { cursor = entry.pointee.ifa_next }
-            guard let addr = entry.pointee.ifa_addr, addr.pointee.sa_family == UInt8(AF_INET),
-                  String(cString: entry.pointee.ifa_name) == name else { continue }
+            guard let addr = entry.pointee.ifa_addr, addr.pointee.sa_family == UInt8(AF_INET) else { continue }
             var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
             if getnameinfo(addr, socklen_t(addr.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 {
-                return String(cString: host)
+                result.append(InterfaceIPv4(name: String(cString: entry.pointee.ifa_name),
+                                            address: String(cString: host),
+                                            flags: entry.pointee.ifa_flags))
             }
         }
-        return nil
+        return result
     }
 }
 
@@ -330,31 +464,17 @@ final class LatencyProbe {
 /// alert. Each probe uses a fresh ephemeral session (`Connection: close`, no cache) so switching
 /// a proxy node or VPN tunnel is seen on the very next check instead of reusing an old socket.
 final class PublicIPWatcher {
-    var onUpdate: ((String) -> Void)?
-
-    private let queue = DispatchQueue(label: "rin.publicIP", qos: .utility)
-    private var timer: DispatchSourceTimer?
-    private var timerInterval: TimeInterval = 0
-    private var active = false
-    private var connected = false
-    private var route = ""
-    private var interval: TimeInterval = 600
-    private var lastStarted = Date.distantPast
-    private var lastSucceeded = Date.distantPast
-    private var inFlight = false
-    private var generation: UInt64 = 0
-    private var currentSession: URLSession?
-    /// Tracks whether global/overseas endpoints were reachable on the current route; when false
-    /// (e.g. direct mainland China network without VPN), skips the blackholed secondary overseas
-    /// probe so direct fallback stays fast while still probing primary in case VPN comes back.
-    private var overseasReachable = true
-
-    private struct Endpoint {
-        enum Format { case plain, cloudflareTrace, afterColon }
+    struct Endpoint: Equatable {
+        enum Format: Equatable { case plain, cloudflareTrace, afterColon }
         var url: URL
         var format: Format
         var timeout: TimeInterval
         var overseas: Bool
+
+        var isIPLiteralHost: Bool {
+            guard let host = url.host else { return false }
+            return PublicIPWatcher.isValidIP(host)
+        }
 
         func parse(_ text: String) -> String? {
             switch format {
@@ -372,24 +492,124 @@ final class PublicIPWatcher {
         }
     }
 
+    enum ProbeErrorKind: Equatable {
+        case timeout
+        case dns
+        case tls
+        case connection
+        case invalidResponse
+    }
+
+    struct ProbeAttemptFailure: Equatable {
+        var endpoint: Endpoint
+        var kind: ProbeErrorKind
+    }
+
+    enum ProbeAttemptResult: Equatable {
+        case success(String)
+        case failure(ProbeErrorKind)
+    }
+
+    typealias CancelToken = () -> Void
+    typealias EndpointFetcher = (_ endpoint: Endpoint, _ completion: @escaping (ProbeAttemptResult) -> Void) -> CancelToken
+
+    /// Consecutive full probe failures required before reporting a gentle failure status/alert.
+    static let failureReportThreshold = 2
+
     // Pure IPv4 endpoints so dual-stack networks never flap between IPv4 and IPv6.
     // Overseas endpoints run first (seeing proxy/VPN exit IPs); direct China-reachable endpoints
-    // serve as fallback when overseas endpoints are blocked or unreachable (e.g. VPN turned off).
-    private static let endpoints: [Endpoint] = [
-        Endpoint(url: URL(string: "https://api.ipify.org")!, format: .plain, timeout: 3.5, overseas: true),
-        Endpoint(url: URL(string: "https://1.1.1.1/cdn-cgi/trace")!, format: .cloudflareTrace, timeout: 3.0, overseas: true),
-        Endpoint(url: URL(string: "https://myip.ipip.net/s")!, format: .plain, timeout: 3.0, overseas: false),
-        Endpoint(url: URL(string: "https://ddns.oray.com/checkip")!, format: .afterColon, timeout: 3.0, overseas: false),
+    // serve as fallback only when the way out changed or the connection was not already overseas.
+    // The IP-literal endpoint goes last of the overseas ones: a proxy can route 1.1.1.1/32 on
+    // its own (often straight out), and then it would see the direct IP, not the proxy's.
+    static let endpoints: [Endpoint] = [
+        Endpoint(url: URL(string: "https://api.ipify.org")!, format: .plain, timeout: 4.5, overseas: true),
+        Endpoint(url: URL(string: "https://v4.ident.me")!, format: .plain, timeout: 4.0, overseas: true),
+        Endpoint(url: URL(string: "https://1.1.1.1/cdn-cgi/trace")!, format: .cloudflareTrace, timeout: 4.0, overseas: true),
+        Endpoint(url: URL(string: "https://myip.ipip.net/s")!, format: .plain, timeout: 3.5, overseas: false),
+        Endpoint(url: URL(string: "https://ddns.oray.com/checkip")!, format: .afterColon, timeout: 3.5, overseas: false),
     ]
 
+    var onUpdate: ((String) -> Void)?
+    var onFailure: ((PublicIPFailureReason) -> Void)?
+    var onFailureCleared: (() -> Void)?
+
+    private let queue = DispatchQueue(label: "rin.publicIP", qos: .utility)
+    private let callbackQueue: DispatchQueue
+    private let fetcher: EndpointFetcher
+    private let now: () -> Date
+    private let enableTimer: Bool
+    private let endpoints: [Endpoint]
+
+    private var timer: DispatchSourceTimer?
+    private var timerInterval: TimeInterval = 0
+    private var active = false
+    private var connected = false
+    private var route = ""
+    private var egress = ""
+    private var hasProxyOrTunnel = false
+    private var interval: TimeInterval = 600
+    private var lastStarted = Date.distantPast
+    private var lastSucceeded = Date.distantPast
+    private var inFlight = false
+    private var generation: UInt64 = 0
+    private var currentCancel: CancelToken?
+    /// Tracks whether global/overseas endpoints were reachable on the current route; when false
+    /// (e.g. direct mainland China network without VPN), skips the blackholed secondary overseas
+    /// probes so direct fallback stays fast while still probing primary in case a proxy comes back.
+    private var overseasReachable = true
+    /// The source (`overseas` vs direct), route and way out of the last successful probe.
+    private var lastSuccessOverseas: Bool?
+    private var lastSuccessRoute = ""
+    private var lastSuccessEgress = ""
+    private var consecutiveFailures = 0
+    private var reportedFailure: PublicIPFailureReason?
+    /// A failure went to `onFailure` and no `onFailureCleared` has followed. A success doesn't
+    /// reset it: its delivery can still be dropped (the state moved on before it ran), and then
+    /// only a clear closes what the failure opened.
+    private var failureShown = false
+    /// The stale epoch the probe in flight started in.
+    private var probeEpoch: UInt64 = 0
+
+    /// What a callback still waiting on `callbackQueue` checks before it runs, behind a lock:
+    /// the generation it belongs to and whether checks are on and the Mac connected (written on
+    /// `queue`), and the stale epoch (bumped on the caller's thread).
+    private let deliveryLock = NSLock()
+    private var deliverable: (generation: UInt64, live: Bool) = (0, false)
+    /// Bumped on the caller's thread the moment results go stale (a disconnect, a new route or
+    /// way out, checks turned off, `stop()`), before `queue` gets to it: a result already waiting
+    /// on `callbackQueue` can't run in between.
+    private var staleEpoch: UInt64 = 0
+    /// The network as the caller last reported it, to tell on its thread whether results went stale.
+    private var reportedNetwork: (connected: Bool, route: String, egress: String) = (false, "", "")
+
+    init(
+        endpoints: [Endpoint] = PublicIPWatcher.endpoints,
+        fetcher: @escaping EndpointFetcher = PublicIPWatcher.liveFetch,
+        callbackQueue: DispatchQueue = .main,
+        now: @escaping () -> Date = Date.init,
+        enableTimer: Bool = true
+    ) {
+        self.endpoints = endpoints
+        self.fetcher = fetcher
+        self.callbackQueue = callbackQueue
+        self.now = now
+        self.enableTimer = enableTimer
+    }
+
     func configure(active: Bool, interval: TimeInterval, immediate: Bool = false) {
+        if !active { invalidateResultsNow() }
         queue.async {
             let clamped = min(max(interval, AlertPrefs.publicIPIntervalRange.lowerBound), AlertPrefs.publicIPIntervalRange.upperBound)
             guard active else {
                 if self.active {
                     self.active = false
                     self.overseasReachable = true
+                    self.lastSuccessOverseas = nil
+                    self.lastSuccessRoute = ""
+                    self.lastSuccessEgress = ""
+                    self.consecutiveFailures = 0
                     self.cancelInFlight()
+                    self.clearReportedFailure()
                     self.stopTimer()
                     self.lastStarted = .distantPast
                     self.lastSucceeded = .distantPast
@@ -400,45 +620,192 @@ final class PublicIPWatcher {
             let intervalChanged = self.interval != clamped
             self.active = true
             self.interval = clamped
-            self.rescheduleTimer()
+            self.publishDeliverable()
+            if self.enableTimer { self.rescheduleTimer() }
             if self.connected {
                 if !wasActive || immediate {
                     self.probe(force: true)
-                } else if intervalChanged, Date().timeIntervalSince(self.lastStarted) >= clamped {
+                } else if intervalChanged, self.now().timeIntervalSince(self.lastStarted) >= clamped {
                     self.probe(force: false)
                 }
             }
         }
     }
 
-    func networkChanged(connected: Bool, route: String) {
+    /// `route` changing means "check again"; `egress` changing means the way out changed, which
+    /// alone lets a check fall back to the direct endpoints after an overseas IP.
+    func networkChanged(connected: Bool, route: String, egress: String, hasProxyOrTunnel: Bool) {
+        deliveryLock.lock()
+        let last = reportedNetwork
+        let moved = (!last.route.isEmpty && !route.isEmpty && route != last.route)
+            || (!last.egress.isEmpty && !egress.isEmpty && egress != last.egress)
+        if (last.connected && !connected) || (connected && moved) { staleEpoch &+= 1 }
+        reportedNetwork.connected = connected
+        if !route.isEmpty { reportedNetwork.route = route }
+        if !egress.isEmpty { reportedNetwork.egress = egress }
+        deliveryLock.unlock()
+
         queue.async {
             let wasConnected = self.connected
-            let routeChanged = !self.route.isEmpty && !route.isEmpty && route != self.route
+            let routeChanged = (!self.route.isEmpty && !route.isEmpty && route != self.route)
+                || (!self.egress.isEmpty && !egress.isEmpty && egress != self.egress)
             self.connected = connected
+            self.hasProxyOrTunnel = hasProxyOrTunnel
             if !route.isEmpty { self.route = route }
-            guard self.active else { return }
+            if !egress.isEmpty { self.egress = egress }
+            guard self.active else {
+                self.publishDeliverable()
+                return
+            }
             guard connected else {
                 self.cancelInFlight()
+                self.consecutiveFailures = 0
+                self.clearReportedFailure()
                 return
             }
             if routeChanged {
                 self.overseasReachable = true
+                self.consecutiveFailures = 0
                 self.cancelInFlight()
+                self.clearReportedFailure()
                 self.probe(force: true)
             } else if !wasConnected {
-                self.overseasReachable = true
+                self.publishDeliverable()
+                if self.lastSuccessRoute != self.route { self.overseasReachable = true }
+                self.consecutiveFailures = 0
+                self.clearReportedFailure()
                 self.probe(force: true)
             }
         }
     }
 
+    /// Triggers an immediate check on the watcher's queue (used by unit tests to drive retries deterministically).
+    func probeNow(force: Bool = true) {
+        queue.async { self.probe(force: force) }
+    }
+
+    #if DEBUG
+    /// Runs everything queued on the watcher's queue; then, unless told not to (a test holding
+    /// `callbackQueue` suspended), everything queued for delivery.
+    func flushForTesting(includingCallbacks: Bool = true) {
+        for _ in 0..<(endpoints.count + 2) { queue.sync {} }
+        if includingCallbacks { callbackQueue.sync {} }
+    }
+    #endif
+
     func stop() {
+        invalidateResultsNow()
         queue.sync {
             active = false
+            overseasReachable = true
+            lastSuccessOverseas = nil
+            lastSuccessRoute = ""
+            lastSuccessEgress = ""
+            consecutiveFailures = 0
             cancelInFlight()
+            clearReportedFailure()
             stopTimer()
         }
+    }
+
+    static func shouldAllowDirectFallback(
+        lastSuccessOverseas: Bool?,
+        lastSuccessEgress: String,
+        currentEgress: String,
+        hasProxyOrTunnel: Bool,
+        consecutiveFailures: Int
+    ) -> Bool {
+        let sameEgress = !currentEgress.isEmpty && currentEgress == lastSuccessEgress
+        // Never known then or now (the lookups keep failing): no sign the way out changed.
+        let stillUnknown = currentEgress.isEmpty && lastSuccessEgress.isEmpty
+        // Never fall back to China-direct endpoints when the previous IP came from an overseas
+        // endpoint and the way out (physical network, system proxy, the interface public
+        // addresses route over) is the same: a proxy hiccup, or a tunnel reconnecting beside the
+        // one carrying the traffic, must not masquerade as a public IP change.
+        if lastSuccessOverseas == true && (sameEgress || stillUnknown) {
+            return false
+        }
+        // When a proxy or tunnel is active on a fresh/changed way out, try overseas endpoints once
+        // before falling back so TUN/proxy startup races don't grab a direct IP prematurely.
+        if hasProxyOrTunnel && !sameEgress && consecutiveFailures == 0 {
+            return false
+        }
+        return true
+    }
+
+    static func probePlan(
+        endpoints: [Endpoint] = PublicIPWatcher.endpoints,
+        overseasReachable: Bool,
+        lastSuccessOverseas: Bool?,
+        lastSuccessEgress: String,
+        currentEgress: String,
+        hasProxyOrTunnel: Bool,
+        consecutiveFailures: Int
+    ) -> (endpoints: [Endpoint], overseasOnly: Bool) {
+        let allowDirect = shouldAllowDirectFallback(
+            lastSuccessOverseas: lastSuccessOverseas,
+            lastSuccessEgress: lastSuccessEgress,
+            currentEgress: currentEgress,
+            hasProxyOrTunnel: hasProxyOrTunnel,
+            consecutiveFailures: consecutiveFailures
+        )
+        let overseas = endpoints.filter(\.overseas)
+        let direct = endpoints.filter { !$0.overseas }
+        if !allowDirect {
+            return (overseas, true)
+        }
+        if overseasReachable || overseas.isEmpty {
+            return (overseas + direct, false)
+        }
+        return ([overseas[0]] + direct, false)
+    }
+
+    static func classifyURLError(_ error: Error?) -> ProbeErrorKind {
+        guard let error else { return .invalidResponse }
+        let code: URLError.Code
+        if let urlError = error as? URLError {
+            code = urlError.code
+        } else {
+            let ns = error as NSError
+            guard ns.domain == NSURLErrorDomain else { return .invalidResponse }
+            code = URLError.Code(rawValue: ns.code)
+        }
+        switch code {
+        case .timedOut:
+            return .timeout
+        case .cannotFindHost, .dnsLookupFailed:
+            return .dns
+        case .secureConnectionFailed, .serverCertificateHasBadDate, .serverCertificateUntrusted,
+             .serverCertificateHasUnknownRoot, .serverCertificateNotYetValid,
+             .clientCertificateRejected, .clientCertificateRequired:
+            return .tls
+        case .cannotConnectToHost, .networkConnectionLost, .notConnectedToInternet,
+             .cannotLoadFromNetwork, .internationalRoamingOff, .dataNotAllowed:
+            return .connection
+        default:
+            return .invalidResponse
+        }
+    }
+
+    static func classifyFailure(failures: [ProbeAttemptFailure], overseasOnly: Bool) -> PublicIPFailureReason {
+        guard !failures.isEmpty else { return overseasOnly ? .overseasUnreachable : .unreachable }
+        let hostnameFailures = failures.filter { !$0.endpoint.isIPLiteralHost }
+        if !hostnameFailures.isEmpty && hostnameFailures.allSatisfy({ $0.kind == .dns }) {
+            return .dnsFailed
+        }
+        let kinds = failures.map(\.kind)
+        if kinds.allSatisfy({ $0 == .timeout }) {
+            return .timedOut
+        }
+        if overseasOnly {
+            if kinds.contains(.timeout) && !kinds.contains(.connection) && !kinds.contains(.tls) {
+                return .timedOut
+            }
+            return .overseasUnreachable
+        }
+        if kinds.contains(.dns) { return .dnsFailed }
+        if kinds.contains(.timeout) { return .timedOut }
+        return .unreachable
     }
 
     private func rescheduleTimer() {
@@ -463,33 +830,166 @@ final class PublicIPWatcher {
 
     private func cancelInFlight() {
         generation &+= 1
-        currentSession?.invalidateAndCancel()
-        currentSession = nil
+        currentCancel?()
+        currentCancel = nil
         inFlight = false
+        publishDeliverable()
+    }
+
+    /// Call on `queue` after `generation`, `active` or `connected` changes.
+    private func publishDeliverable() {
+        deliveryLock.lock()
+        deliverable = (generation, active && connected)
+        deliveryLock.unlock()
+    }
+
+    /// On the caller's thread: results of probes started before now must not be delivered.
+    private func invalidateResultsNow() {
+        deliveryLock.lock()
+        staleEpoch &+= 1
+        deliveryLock.unlock()
+    }
+
+    private func currentStaleEpoch() -> UInt64 {
+        deliveryLock.lock(); defer { deliveryLock.unlock() }
+        return staleEpoch
+    }
+
+    /// Runs a probe's result on `callbackQueue` only if, by the time it gets there, nothing made
+    /// it stale since the probe started (a disconnect, a new route or way out, checks turned off,
+    /// `stop()`), whether `queue` has caught up with that yet or not.
+    private func deliver(_ gen: UInt64, _ body: @escaping () -> Void) {
+        let epoch = probeEpoch
+        callbackQueue.async { [weak self] in
+            guard let self else { return }
+            self.deliveryLock.lock()
+            let current = self.deliverable
+            let stale = self.staleEpoch != epoch
+            self.deliveryLock.unlock()
+            guard current.generation == gen, current.live, !stale else { return }
+            body()
+        }
+    }
+
+    /// Clearing is not checked like results: it is queued in the same order as every result,
+    /// so a later failure still lands after it, and it only says what was true when queued.
+    /// It goes out whenever a failure was shown, even after a success whose delivery may have
+    /// been dropped; a clear with nothing open does nothing.
+    private func clearReportedFailure() {
+        guard reportedFailure != nil || failureShown else { return }
+        reportedFailure = nil
+        failureShown = false
+        let cb = onFailureCleared
+        callbackQueue.async { cb?() }
     }
 
     private func probe(force: Bool) {
         guard active, connected, !inFlight else { return }
-        let now = Date()
+        let timestamp = now()
         if !force {
             let failed = lastStarted > lastSucceeded
             let wait = failed && interval > 60 ? 60 : interval
-            guard now.timeIntervalSince(lastStarted) >= wait - 0.15 else { return }
+            guard timestamp.timeIntervalSince(lastStarted) >= wait - 0.15 else { return }
         }
         inFlight = true
-        lastStarted = now
-        let plan = overseasReachable
-            ? Self.endpoints
-            : [Self.endpoints[0]] + Self.endpoints.filter { !$0.overseas }
-        fetch(plan: plan, index: 0, generation: generation)
+        lastStarted = timestamp
+        probeEpoch = currentStaleEpoch()
+        let probeRoute = route
+        let probeEgress = egress
+        let plan = Self.probePlan(
+            endpoints: endpoints,
+            overseasReachable: overseasReachable,
+            lastSuccessOverseas: lastSuccessOverseas,
+            lastSuccessEgress: lastSuccessEgress,
+            currentEgress: probeEgress,
+            hasProxyOrTunnel: hasProxyOrTunnel,
+            consecutiveFailures: consecutiveFailures
+        )
+        fetch(plan: plan.endpoints, overseasOnly: plan.overseasOnly, probeRoute: probeRoute, probeEgress: probeEgress,
+              index: 0, failures: [], generation: generation)
     }
 
-    private func fetch(plan: [Endpoint], index: Int, generation gen: UInt64) {
+    private func fetch(
+        plan: [Endpoint],
+        overseasOnly: Bool,
+        probeRoute: String,
+        probeEgress: String,
+        index: Int,
+        failures: [ProbeAttemptFailure],
+        generation gen: UInt64
+    ) {
         guard active, connected, generation == gen, index < plan.count else {
             if generation == gen { inFlight = false }
             return
         }
         let endpoint = plan[index]
+        currentCancel = fetcher(endpoint) { [weak self] result in
+            guard let self else { return }
+            self.queue.async {
+                guard self.generation == gen else { return }
+                self.currentCancel = nil
+                switch result {
+                case .success(let ip) where Self.isValidIP(ip):
+                    self.inFlight = false
+                    self.lastSucceeded = self.now()
+                    self.overseasReachable = endpoint.overseas
+                    self.lastSuccessOverseas = endpoint.overseas
+                    self.lastSuccessRoute = probeRoute
+                    self.lastSuccessEgress = probeEgress
+                    self.consecutiveFailures = 0
+                    self.reportedFailure = nil
+                    let cb = self.onUpdate
+                    self.deliver(gen) { cb?(ip) }
+                    return
+                case .success:
+                    self.advance(plan: plan, overseasOnly: overseasOnly, probeRoute: probeRoute, probeEgress: probeEgress, index: index,
+                                 failures: failures + [ProbeAttemptFailure(endpoint: endpoint, kind: .invalidResponse)], generation: gen)
+                case .failure(let kind):
+                    self.advance(plan: plan, overseasOnly: overseasOnly, probeRoute: probeRoute, probeEgress: probeEgress, index: index,
+                                 failures: failures + [ProbeAttemptFailure(endpoint: endpoint, kind: kind)], generation: gen)
+                }
+            }
+        }
+    }
+
+    private func advance(
+        plan: [Endpoint],
+        overseasOnly: Bool,
+        probeRoute: String,
+        probeEgress: String,
+        index: Int,
+        failures: [ProbeAttemptFailure],
+        generation gen: UInt64
+    ) {
+        let next = index + 1
+        if next < plan.count, active, connected {
+            fetch(plan: plan, overseasOnly: overseasOnly, probeRoute: probeRoute, probeEgress: probeEgress,
+                  index: next, failures: failures, generation: gen)
+            return
+        }
+        inFlight = false
+        consecutiveFailures += 1
+        let sameEgress = !probeEgress.isEmpty && probeEgress == lastSuccessEgress
+        // After the one-shot overseas-only pass on a new/fresh way out fails (e.g. a proxy turned
+        // off while Tailscale stays up, or a proxy still warming up at login), retry shortly so
+        // slow display-only polling does not stall for 60 s.
+        if enableTimer, hasProxyOrTunnel, !sameEgress, consecutiveFailures == 1, interval > 3 {
+            queue.asyncAfter(deadline: .now() + 3) { [weak self] in
+                guard let self, self.generation == gen, self.active, self.connected, !self.inFlight else { return }
+                self.probe(force: true)
+            }
+        }
+        guard consecutiveFailures >= Self.failureReportThreshold else { return }
+        let reason = Self.classifyFailure(failures: failures, overseasOnly: overseasOnly)
+        if reportedFailure != reason {
+            reportedFailure = reason
+            failureShown = true
+            let cb = onFailure
+            deliver(gen) { cb?(reason) }
+        }
+    }
+
+    private static func liveFetch(_ endpoint: Endpoint, completion: @escaping (ProbeAttemptResult) -> Void) -> CancelToken {
         let config = URLSessionConfiguration.ephemeral
         config.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         config.urlCache = nil
@@ -498,38 +998,24 @@ final class PublicIPWatcher {
         config.timeoutIntervalForResource = endpoint.timeout + 1
         config.httpAdditionalHeaders = ["Connection": "close", "Cache-Control": "no-cache"]
         let session = URLSession(configuration: config)
-        currentSession = session
 
         var request = URLRequest(url: endpoint.url)
         request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         request.timeoutInterval = endpoint.timeout
 
-        let task = session.dataTask(with: request) { [weak self] data, response, error in
+        let task = session.dataTask(with: request) { data, response, error in
             session.finishTasksAndInvalidate()
-            guard let self else { return }
-            self.queue.async {
-                guard self.generation == gen else { return }
-                if self.currentSession === session { self.currentSession = nil }
-                if error == nil,
-                   let http = response as? HTTPURLResponse, http.statusCode == 200,
-                   let data, let text = String(data: data, encoding: .utf8),
-                   let ip = endpoint.parse(text), Self.isValidIP(ip) {
-                    self.inFlight = false
-                    self.lastSucceeded = Date()
-                    self.overseasReachable = endpoint.overseas
-                    let cb = self.onUpdate
-                    DispatchQueue.main.async { cb?(ip) }
-                    return
-                }
-                let next = index + 1
-                if next < plan.count, self.active, self.connected {
-                    self.fetch(plan: plan, index: next, generation: gen)
-                } else {
-                    self.inFlight = false
-                }
+            if error == nil,
+               let http = response as? HTTPURLResponse, http.statusCode == 200,
+               let data, let text = String(data: data, encoding: .utf8),
+               let ip = endpoint.parse(text), Self.isValidIP(ip) {
+                completion(.success(ip))
+            } else {
+                completion(.failure(Self.classifyURLError(error)))
             }
         }
         task.resume()
+        return { session.invalidateAndCancel() }
     }
 
     static func isValidIP(_ s: String) -> Bool {

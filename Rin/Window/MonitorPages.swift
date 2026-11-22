@@ -430,7 +430,10 @@ struct NetworkPage: View {
                     ValueRow(label: L10n.Monitor.localIPTitle, value: n.localIP.isEmpty ? L10n.Common.dash : n.localIP, height: 36)
                     ValueRow(label: L10n.Network.router, value: n.router.isEmpty ? L10n.Common.dash : n.router, height: 36)
                     if settings.prefs.network.showPublicIP || Alerts.Rule.publicIP.isOn(settings.prefs) {
-                        ValueRow(label: L10n.Monitor.publicIPTitle, value: n.connected ? (monitor.publicIP ?? L10n.Common.dash) : L10n.Common.dash, height: 36)
+                        let failure = n.connected ? monitor.publicIPFailure : nil
+                        let ipText = n.connected ? (failure.map(AlertText.publicIPFailureStatus) ?? monitor.publicIP ?? L10n.Common.dash) : L10n.Common.dash
+                        ValueRow(label: L10n.Monitor.publicIPTitle, value: ipText, height: 36, valueColor: failure != nil ? Theme.warn : Theme.text)
+                            .help(failure != nil ? (monitor.publicIP.map(L10n.Network.publicIPLastKnown) ?? "") : "")
                     }
                 }
             } b: {

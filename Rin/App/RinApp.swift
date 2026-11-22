@@ -3,8 +3,16 @@ import SwiftUI
 
 @main
 enum RinMain {
+    /// Rin hosting unit tests: XCTest launches the app itself, so nothing here may move, write or
+    /// save the user's settings, alert log or history.
+    static let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+
     static func main() {
-        RenameMigration.run()
+        if isRunningTests {
+            SettingsStore.persistenceEnabled = false
+        } else {
+            RenameMigration.run()
+        }
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate
@@ -15,6 +23,7 @@ enum RinMain {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillFinishLaunching(_ notification: Notification) {
+        if RinMain.isRunningTests { return }
         MenuBarSpacing.claimItemSpacing()
         // Tooltips name icon-only controls (widget chips, steppers); the system waits about a
         // second before showing one, which feels slow there. Milliseconds, for Rin only.
@@ -22,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if RinMain.isRunningTests { return }
         #if DEBUG
         if Snapshots.runIfRequested() { return }
         #endif
@@ -63,11 +73,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        if RinMain.isRunningTests { return }
         Monitor.shared.stop()
         Alerts.shared.flush()
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if RinMain.isRunningTests { return false }
         MainWindowController.shared.reopen()
         return true
     }

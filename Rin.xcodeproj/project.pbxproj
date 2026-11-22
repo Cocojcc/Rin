@@ -19,6 +19,7 @@
 		1ADC38F56C9418A50F1BC43A /* runner-girl-2x-18.png in Resources */ = {isa = PBXBuildFile; fileRef = 1B9743FA2794A567B92D5762 /* runner-girl-2x-18.png */; };
 		1B0AC5004C97B11502AF87E8 /* runner-cat-1x-3.png in Resources */ = {isa = PBXBuildFile; fileRef = 35CA60AAC81706851A5B0534 /* runner-cat-1x-3.png */; };
 		1D1324FF2A600CE864C5DC7F /* runner-cat-1x-7.png in Resources */ = {isa = PBXBuildFile; fileRef = 6F414BC11853F0151C93FD48 /* runner-cat-1x-7.png */; };
+		1EF1AAD6001E68EB255E12E1 /* PublicIPWatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E48E6879DEA22C2D54523E44 /* PublicIPWatcherTests.swift */; };
 		1F182FE4F78EDE2954BE5DE6 /* Alerts.swift in Sources */ = {isa = PBXBuildFile; fileRef = F56A3A8F85809D69F9F6DC5F /* Alerts.swift */; };
 		211F8C1C204C0E03A5F79A44 /* NetworkReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85C409BFE52D954315998FB1 /* NetworkReader.swift */; };
 		258F974717990BD1CFE3971A /* runner-cat-1x-13.png in Resources */ = {isa = PBXBuildFile; fileRef = 30419E79DB90C83FAA79584A /* runner-cat-1x-13.png */; };
@@ -66,6 +67,7 @@
 		5A12AA55C5B85DD261F8F11B /* runner-cat-2x-15.png in Resources */ = {isa = PBXBuildFile; fileRef = 829217F45C6BA30BB6356E10 /* runner-cat-2x-15.png */; };
 		5A1BA929203D9E3505A35D81 /* runner-cat-1x-19.png in Resources */ = {isa = PBXBuildFile; fileRef = A7C2A0AE26A252D5395C0FEA /* runner-cat-1x-19.png */; };
 		65BD5D148182B482E3C9D4DC /* UpdateChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2658CDA651427E19D7A49CC5 /* UpdateChecker.swift */; };
+		67B046CB80A4D838025B39D0 /* HostedTestSafetyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B068E09C745B9BD6EC0EBD4 /* HostedTestSafetyTests.swift */; };
 		699303466EB619AE2918372C /* OverviewPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F4E0257D15C8D30BD26345 /* OverviewPage.swift */; };
 		6CAB89EDCD11508DE8A1459D /* runner-girl-2x-5.png in Resources */ = {isa = PBXBuildFile; fileRef = 633FB24112FDA4CEA8C45AFA /* runner-girl-2x-5.png */; };
 		6CC7573D9B37B2DF6DDD07AF /* runner-cat-2x-4.png in Resources */ = {isa = PBXBuildFile; fileRef = 8A2162121163C6E0711F9B11 /* runner-cat-2x-4.png */; };
@@ -167,6 +169,16 @@
 		FD947978ECD1A2D5BA00A7BB /* runner-cat-1x-12.png in Resources */ = {isa = PBXBuildFile; fileRef = 697426A397ED8924D6063481 /* runner-cat-1x-12.png */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		9BAFB13338F7DE5A634C506A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 534763B42683CE26DFC36BA7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 275ACE0928B56CD02773DDAE;
+			remoteInfo = Rin;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		025688DB47202C85B6040999 /* SVGPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVGPath.swift; sourceTree = "<group>"; };
 		03178CE92B70866369F0809C /* runner-girl-2x-15.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-2x-15.png"; sourceTree = "<group>"; };
@@ -194,12 +206,14 @@
 		1949B7F250486CF17E328A31 /* runner-cat-1x-6.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-1x-6.png"; sourceTree = "<group>"; };
 		1B9743FA2794A567B92D5762 /* runner-girl-2x-18.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-2x-18.png"; sourceTree = "<group>"; };
 		1C3FA3F03EB8B8C5DD91E346 /* Rin-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Rin-Bridging-Header.h"; sourceTree = "<group>"; };
+		1D8D25DDCAC1C627619E87D6 /* RinTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RinTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1F4BA15432063DBB0F598C74 /* runner-girl-2x-0.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-2x-0.png"; sourceTree = "<group>"; };
 		21B5A0C75273517165C802DD /* Widgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Widgets.swift; sourceTree = "<group>"; };
 		225575C7144DA58DDF51A4F3 /* runner-girl-1x-19.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-1x-19.png"; sourceTree = "<group>"; };
 		2658CDA651427E19D7A49CC5 /* UpdateChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateChecker.swift; sourceTree = "<group>"; };
 		28D0D50D2A04270E891B3F3A /* runner-cat-1x-16.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-1x-16.png"; sourceTree = "<group>"; };
 		299C6AFA605F60D09DCFAAA1 /* Mood.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mood.swift; sourceTree = "<group>"; };
+		2B068E09C745B9BD6EC0EBD4 /* HostedTestSafetyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostedTestSafetyTests.swift; sourceTree = "<group>"; };
 		2D44E164BAD1924EBE8B02F6 /* ProcessesPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessesPage.swift; sourceTree = "<group>"; };
 		30419E79DB90C83FAA79584A /* runner-cat-1x-13.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-1x-13.png"; sourceTree = "<group>"; };
 		30E19185F1DE404EBECC7903 /* SMC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SMC.swift; sourceTree = "<group>"; };
@@ -321,6 +335,7 @@
 		E02472A22BDB813E9096C661 /* MenuIcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuIcons.swift; sourceTree = "<group>"; };
 		E2BD1E1AE8CAFFAED0E18152 /* runner-girl-1x-4.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-1x-4.png"; sourceTree = "<group>"; };
 		E4004D8F15D38E0855CB4A33 /* ProcessReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessReader.swift; sourceTree = "<group>"; };
+		E48E6879DEA22C2D54523E44 /* PublicIPWatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicIPWatcherTests.swift; sourceTree = "<group>"; };
 		E49D03B07972D04B3048FA0D /* runner-girl-2x-19.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-2x-19.png"; sourceTree = "<group>"; };
 		E699B534797AEA52FA28AB9E /* runner-girl-1x-12.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-girl-1x-12.png"; sourceTree = "<group>"; };
 		E6F61A84EE5A5B167A6E0680 /* runner-cat-2x-6.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "runner-cat-2x-6.png"; sourceTree = "<group>"; };
@@ -377,6 +392,15 @@
 				0CC0E5B05AA94C286EF9B728 /* SystemInfo.swift */,
 			);
 			path = Readers;
+			sourceTree = "<group>";
+		};
+		234C013581D57FE47A6BA468 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				2B068E09C745B9BD6EC0EBD4 /* HostedTestSafetyTests.swift */,
+				E48E6879DEA22C2D54523E44 /* PublicIPWatcherTests.swift */,
+			);
+			path = Tests;
 			sourceTree = "<group>";
 		};
 		3C5A30A60B1862F817AFEDCE /* Packages */ = {
@@ -561,6 +585,7 @@
 			isa = PBXGroup;
 			children = (
 				3D4B961704C4912B4FF164CB /* Rin.app */,
+				1D8D25DDCAC1C627619E87D6 /* RinTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -578,6 +603,7 @@
 			children = (
 				3C5A30A60B1862F817AFEDCE /* Packages */,
 				7B43B2072604C406BD48B0F5 /* Rin */,
+				234C013581D57FE47A6BA468 /* Tests */,
 				BC8EACAC448106D47AC5F230 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -642,6 +668,24 @@
 			productReference = 3D4B961704C4912B4FF164CB /* Rin.app */;
 			productType = "com.apple.product-type.application";
 		};
+		E4D8364123132D93447D9DBD /* RinTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C943C9AFA6490BFAAAC361C3 /* Build configuration list for PBXNativeTarget "RinTests" */;
+			buildPhases = (
+				40385B6A26447D0A55FA9FD7 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D630CA1B28B2E5DA0AD30CC9 /* PBXTargetDependency */,
+			);
+			name = RinTests;
+			packageProductDependencies = (
+			);
+			productName = RinTests;
+			productReference = 1D8D25DDCAC1C627619E87D6 /* RinTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -652,6 +696,9 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					275ACE0928B56CD02773DDAE = {
+						ProvisioningStyle = Manual;
+					};
+					E4D8364123132D93447D9DBD = {
 						ProvisioningStyle = Manual;
 					};
 				};
@@ -675,6 +722,7 @@
 			projectRoot = "";
 			targets = (
 				275ACE0928B56CD02773DDAE /* Rin */,
+				E4D8364123132D93447D9DBD /* RinTests */,
 			);
 		};
 /* End PBXProject section */
@@ -854,7 +902,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		40385B6A26447D0A55FA9FD7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				67B046CB80A4D838025B39D0 /* HostedTestSafetyTests.swift in Sources */,
+				1EF1AAD6001E68EB255E12E1 /* PublicIPWatcherTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D630CA1B28B2E5DA0AD30CC9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 275ACE0928B56CD02773DDAE /* Rin */;
+			targetProxy = 9BAFB13338F7DE5A634C506A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		4E945FC11D8B13CA17BD6103 /* Localizable.strings */ = {
@@ -892,6 +957,46 @@
 				RIN_UPDATE_FEED = "";
 				SDKROOT = macosx;
 				SWIFT_OBJC_BRIDGING_HEADER = "Rin/Support/Rin-Bridging-Header.h";
+			};
+			name = Debug;
+		};
+		1907D67AD067C6BD23C995B9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.zoro.RinTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Rin.app/Contents/MacOS/Rin";
+			};
+			name = Release;
+		};
+		22C2DFB5B604B6F6101C5C3C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.zoro.RinTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Rin.app/Contents/MacOS/Rin";
 			};
 			name = Debug;
 		};
@@ -1063,6 +1168,15 @@
 			buildConfigurations = (
 				0BEEB71DBDC2F0DF60778E23 /* Debug */,
 				57984FFD85F982F4AB84F703 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C943C9AFA6490BFAAAC361C3 /* Build configuration list for PBXNativeTarget "RinTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				22C2DFB5B604B6F6101C5C3C /* Debug */,
+				1907D67AD067C6BD23C995B9 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

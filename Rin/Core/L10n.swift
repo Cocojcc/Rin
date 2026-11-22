@@ -251,6 +251,19 @@ enum L10n {
         static var publicIPBanner: String { tr("alerts.publicIPBanner") }
         static func publicIPBody(_ a: String, _ b: String) -> String { tr("alerts.publicIPBody", a, b) }
         static func publicIPBodyOnlyNew(_ a: String) -> String { tr("alerts.publicIPBodyOnlyNew", a) }
+        static var publicIPTimedOutHeadline: String { tr("alerts.publicIPTimedOutHeadline") }
+        static var publicIPDNSFailedHeadline: String { tr("alerts.publicIPDNSFailedHeadline") }
+        static var publicIPOverseasUnreachableHeadline: String { tr("alerts.publicIPOverseasUnreachableHeadline") }
+        static var publicIPCheckFailedHeadline: String { tr("alerts.publicIPCheckFailedHeadline") }
+        static func publicIPLastConfirmed(_ a: String) -> String { tr("alerts.publicIPLastConfirmed", a) }
+        static var publicIPTimedOutBanner: String { tr("alerts.publicIPTimedOutBanner") }
+        static var publicIPDNSFailedBanner: String { tr("alerts.publicIPDNSFailedBanner") }
+        static var publicIPOverseasUnreachableBanner: String { tr("alerts.publicIPOverseasUnreachableBanner") }
+        static var publicIPCheckFailedBanner: String { tr("alerts.publicIPCheckFailedBanner") }
+        static var publicIPTimedOutBody: String { tr("alerts.publicIPTimedOutBody") }
+        static var publicIPDNSFailedBody: String { tr("alerts.publicIPDNSFailedBody") }
+        static var publicIPOverseasUnreachableBody: String { tr("alerts.publicIPOverseasUnreachableBody") }
+        static var publicIPCheckFailedBody: String { tr("alerts.publicIPCheckFailedBody") }
         static func pillEvery(_ a: String) -> String { tr("alerts.pillEvery", a) }
         static func bluetoothLowHeadline(_ a: String, _ b: String, _ c: String) -> String { tr("alerts.bluetoothLowHeadline", a, b, c) }
         static var recovered: String { tr("alerts.recovered") }
@@ -401,6 +414,11 @@ enum L10n {
         static var interface: String { tr("network.interface") }
         static func downUp(_ d: String, _ u: String) -> String { tr("network.downUp", d, u) }
         static func ipVia(_ a: String, _ b: String) -> String { tr("network.ipVia", a, b) }
+        static var publicIPTimedOut: String { tr("network.publicIPTimedOut") }
+        static var publicIPDNSFailed: String { tr("network.publicIPDNSFailed") }
+        static var publicIPOverseasUnreachable: String { tr("network.publicIPOverseasUnreachable") }
+        static var publicIPCheckFailed: String { tr("network.publicIPCheckFailed") }
+        static func publicIPLastKnown(_ a: String) -> String { tr("network.publicIPLastKnown", a) }
     }
 
     enum Disk {

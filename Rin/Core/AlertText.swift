@@ -52,6 +52,14 @@ enum AlertText {
             guard let ended = e.ended else { return L10n.Alerts.networkDown }
             return L10n.Alerts.networkDownFor(duration(ended.timeIntervalSince(e.date) + e.held))
         case .publicIP:
+            if let failure = e.probeFailure {
+                switch failure {
+                case .timedOut: return L10n.Alerts.publicIPTimedOutHeadline
+                case .dnsFailed: return L10n.Alerts.publicIPDNSFailedHeadline
+                case .overseasUnreachable: return L10n.Alerts.publicIPOverseasUnreachableHeadline
+                case .unreachable: return L10n.Alerts.publicIPCheckFailedHeadline
+                }
+            }
             return L10n.Alerts.publicIPHeadline(e.subject ?? L10n.Common.dash)
         case .bluetoothLow: return L10n.Alerts.bluetoothLowHeadline(e.subject ?? "", Format.percent(e.value), Format.percent(e.limit))
         case .bluetoothDisconnect: return L10n.Alerts.bluetoothDisconnectTitle(e.subject ?? "")
@@ -78,6 +86,12 @@ enum AlertText {
             default: return L10n.Alerts.reconnectedPlain
             }
         case .publicIP:
+            if e.probeFailure != nil {
+                // Ended without a check getting through (disconnect, route change, checks off,
+                // a restart) is not a recovery: it keeps naming the last address confirmed.
+                if e.publicIPRecoveryConfirmed { return L10n.Alerts.recovered }
+                return e.previousSubject.map(L10n.Alerts.publicIPLastConfirmed)
+            }
             return e.previousSubject.map(L10n.Alerts.publicIPDetail)
         case .bluetoothDisconnect:
             return e.ended != nil ? L10n.Alerts.reconnectedPlain : nil
@@ -96,7 +110,16 @@ enum AlertText {
         case .battery: return L10n.Alerts.batteryBanner(percent(e.value))
         case .temperature: return L10n.Alerts.tempBanner(Format.temperature(e.value, unit: unit, showUnit: true))
         case .network: return L10n.Alerts.networkBanner
-        case .publicIP: return L10n.Alerts.publicIPBanner
+        case .publicIP:
+            if let failure = e.probeFailure {
+                switch failure {
+                case .timedOut: return L10n.Alerts.publicIPTimedOutBanner
+                case .dnsFailed: return L10n.Alerts.publicIPDNSFailedBanner
+                case .overseasUnreachable: return L10n.Alerts.publicIPOverseasUnreachableBanner
+                case .unreachable: return L10n.Alerts.publicIPCheckFailedBanner
+                }
+            }
+            return L10n.Alerts.publicIPBanner
         case .bluetoothLow: return L10n.Alerts.bluetoothLowBanner(e.subject ?? "", Format.percent(e.value))
         case .bluetoothDisconnect: return L10n.Alerts.bluetoothDisconnectBanner(e.subject ?? "")
         }
@@ -116,7 +139,14 @@ enum AlertText {
         case .temperature: sentences.append(L10n.Alerts.tempBody)
         case .network: sentences.append(L10n.Alerts.networkBody)
         case .publicIP:
-            if let old = e.previousSubject, let new = e.subject {
+            if let failure = e.probeFailure {
+                switch failure {
+                case .timedOut: sentences.append(L10n.Alerts.publicIPTimedOutBody)
+                case .dnsFailed: sentences.append(L10n.Alerts.publicIPDNSFailedBody)
+                case .overseasUnreachable: sentences.append(L10n.Alerts.publicIPOverseasUnreachableBody)
+                case .unreachable: sentences.append(L10n.Alerts.publicIPCheckFailedBody)
+                }
+            } else if let old = e.previousSubject, let new = e.subject {
                 sentences.append(L10n.Alerts.publicIPBody(old, new))
             } else if let new = e.subject {
                 sentences.append(L10n.Alerts.publicIPBodyOnlyNew(new))
@@ -167,6 +197,16 @@ enum AlertText {
         case .bluetoothLow: return L10n.Settings.bluetoothLowAlertA11y
         case .bluetoothDisconnect: return L10n.Settings.bluetoothDisconnectAlertA11y
         case .temperature: return L10n.Settings.ruleTempSwitch
+        }
+    }
+
+    /// Short inline status for the Network page and dropdown when public IP checks keep failing.
+    static func publicIPFailureStatus(_ reason: PublicIPFailureReason) -> String {
+        switch reason {
+        case .timedOut: return L10n.Network.publicIPTimedOut
+        case .dnsFailed: return L10n.Network.publicIPDNSFailed
+        case .overseasUnreachable: return L10n.Network.publicIPOverseasUnreachable
+        case .unreachable: return L10n.Network.publicIPCheckFailed
         }
     }
 }

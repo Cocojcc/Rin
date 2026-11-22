@@ -18,8 +18,12 @@ struct AlertEvent: Codable, Identifiable, Equatable {
     var held: Double = 0
     /// The device or volume it is about, or the new value for change events (e.g. public IP).
     var subject: String?
-    /// The previous value for change events (e.g. the old public IP).
+    /// The previous value for change events (e.g. the old public IP), or last known IP for probe failures.
     var previousSubject: String?
+    /// Set on `.publicIP` probe-failure events; nil for normal IP-change events and other rules.
+    /// Such an event's `endValue` is `publicIPConfirmedRecovery` when a later check succeeded,
+    /// and nil when it ended any other way (disconnect, route change, checks off, a restart).
+    var probeFailure: PublicIPFailureReason? = nil
     /// The busiest process at the time and its share ("71%", "3.2 GB").
     var culprit: String?
     var culpritValue: String?
@@ -29,6 +33,14 @@ struct AlertEvent: Codable, Identifiable, Equatable {
     var ended: Date?
     var endValue: Double?
     var seen = false
+
+    /// `endValue` of a public IP check failure that ended because a check succeeded.
+    static let publicIPConfirmedRecovery: Double = 1
+
+    /// A public IP check failure that ended because a later check succeeded (not merely closed).
+    var publicIPRecoveryConfirmed: Bool {
+        probeFailure != nil && ended != nil && endValue == Self.publicIPConfirmedRecovery
+    }
 }
 
 /// Evaluates the alert rules after every sample, colors the menu bar, posts notifications that
@@ -110,6 +122,8 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
     @ObservationIgnored private var disconnected: [String: UUID] = [:]
     @ObservationIgnored private var dirty = false
     @ObservationIgnored private var lastSave = Date.distantPast
+    /// Overridable in unit tests so alerts can be verified without posting system notifications.
+    @ObservationIgnored var deliverNotification: ((AlertEvent, Bool) -> Void)?
 
     private static let cooldown: TimeInterval = 600
     static let snoozeLength: TimeInterval = 3600
@@ -119,10 +133,10 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
     private static let snoozeAction = "snooze"
     private static let category = "rin.alert"
 
+    /// Only a save creates the folder (see History.fileURL).
     private static var storeURL: URL {
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Rin", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("alerts.json")
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Rin", isDirectory: true).appendingPathComponent("alerts.json")
     }
 
     // MARK: Record
@@ -138,7 +152,7 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
     /// The newest episode still going and not snoozed (the overview banner).
     var current: AlertEvent? {
         let now = Date()
-        return events.first { $0.ended == nil && $0.rule != .bluetoothDisconnect && (snoozed[$0.rule].map { $0 <= now } ?? true) }
+        return events.first { $0.ended == nil && $0.rule != .bluetoothDisconnect && $0.rule != .publicIP && (snoozed[$0.rule].map { $0 <= now } ?? true) }
     }
 
     /// The live episode of a rule, if it holds now.
@@ -185,7 +199,7 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
     }
 
     func requestAuthorizationIfNeeded() {
-        guard !askedAuthorization else { return }
+        guard !askedAuthorization, deliverNotification == nil else { return }
         askedAuthorization = true
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
             DispatchQueue.main.async { self.authorized = granted }
@@ -290,7 +304,10 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
         }
 
         checkBluetooth(s, a, prefs)
-        if !Rule.publicIP.isOn(prefs) { lastPublicIP = nil }
+        if !Rule.publicIP.isOn(prefs) {
+            lastPublicIP = nil
+            close(.publicIP, at: now, value: nil)
+        }
 
         if next != active { active = next }
         // Rule state lands on disk now and then; firing and clearing save at once.
@@ -299,11 +316,15 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
 
     func resetPublicIP() {
         lastPublicIP = nil
+        close(.publicIP, at: Date(), value: nil)
     }
 
     /// Fires immediately on the main thread when a fresh check observes a different public IP.
     func publicIPUpdated(_ ip: String) {
         let prefs = SettingsStore.shared.prefs
+        let now = Date()
+        // A check came back: the only way a failure episode ends as recovered.
+        close(.publicIP, at: now, value: AlertEvent.publicIPConfirmedRecovery)
         guard Rule.publicIP.isOn(prefs) else {
             lastPublicIP = nil
             return
@@ -311,11 +332,39 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
         requestAuthorizationIfNeeded()
         defer { lastPublicIP = ip }
         guard let previous = lastPublicIP, previous != ip else { return }
-        let now = Date()
         let event = AlertEvent(rule: .publicIP, date: now, value: 0, limit: 0,
                                subject: ip, previousSubject: previous, ended: now)
         record(event, open: nil)
         notify(event, sound: prefs.alerts.sound)
+    }
+
+    /// Reports a sustained public IP check failure (after consecutive retries) as a calm,
+    /// rate-limited status event without modifying `lastPublicIP` or faking an IP change.
+    func publicIPCheckFailed(_ reason: PublicIPFailureReason, at now: Date = Date()) {
+        let prefs = SettingsStore.shared.prefs
+        guard Rule.publicIP.isOn(prefs) else { return }
+        requestAuthorizationIfNeeded()
+        if let id = open[.publicIP] {
+            if let i = events.firstIndex(where: { $0.id == id }) {
+                events[i].probeFailure = reason
+                events[i].value = Double(reason.rawValue)
+                dirty = true
+            }
+            return
+        }
+        if let last = lastFired[.publicIP], now.timeIntervalSince(last) < Self.cooldown {
+            open[.publicIP] = UUID() // this episode stays quiet
+            return
+        }
+        lastFired[.publicIP] = now
+        let event = AlertEvent(rule: .publicIP, date: now, value: Double(reason.rawValue), limit: 0,
+                               previousSubject: lastPublicIP, probeFailure: reason)
+        record(event, open: .publicIP)
+        notify(event, sound: prefs.alerts.sound)
+    }
+
+    func publicIPFailureCleared(at now: Date = Date()) {
+        close(.publicIP, at: now, value: nil)
     }
 
     /// Per device, so these keep their own memory instead of the module-wide rule state.
@@ -375,12 +424,31 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
         events = seed
         if let rule, let first = seed.first { open[rule] = first.id }
     }
+
+    /// Unit tests: clears in-memory alert state without touching disk.
+    func debugReset() {
+        active = [:]
+        events = []
+        snoozed = [:]
+        since = [:]
+        open = [:]
+        lastFired = [:]
+        lastPublicIP = nil
+        lowReported = [:]
+        lastConnected = nil
+        disconnected = [:]
+        dirty = false
+    }
     #endif
 
     // MARK: Notify
 
     private func notify(_ event: AlertEvent, sound: Bool) {
         if let until = snoozed[event.rule], until > Date() { return }
+        if let deliverNotification {
+            deliverNotification(event, sound)
+            return
+        }
         let content = UNMutableNotificationContent()
         content.title = AlertText.notificationTitle(event)
         content.body = AlertText.notificationBody(event)
@@ -417,6 +485,7 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
         dirty = false
         lastSave = Date()
         guard SettingsStore.persistenceEnabled, let data = try? JSONEncoder().encode(events) else { return }
+        try? FileManager.default.createDirectory(at: Self.storeURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? data.write(to: Self.storeURL, options: .atomic)
     }
 
