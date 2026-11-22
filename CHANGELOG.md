@@ -4,6 +4,17 @@ All notable changes to Rin are documented in this file. The format is based on [
 
 ## [Unreleased]
 
+## [0.6.7] - 2026-11-22
+
+### Changed
+
+- Network: when public IP checks keep failing, the Network page and dropdown say why (check timed out, DNS failed, overseas unreachable or unavailable) in place of the address, with the last known IP on hover. The public IP alert sends one calm notification for it, at most every 10 minutes, and never reports it as an IP change.
+
+### Fixed
+
+- Public IP alert: a proxy node stalling, a proxy still connecting at login, or another tunnel such as Tailscale reconnecting beside the proxy no longer reports a change to the direct IP and back. Rin only checks the direct services after the way out to the internet changes: the proxy or VPN carrying the traffic goes away, the system proxy turns off, or the Mac joins another network. A check still under way when the network changes no longer updates the address or posts an alert.
+- Alerts: a failed public IP check shows as recovered only once a check succeeds again, not when a disconnect, a network change or a restart ended it.
+
 ## [0.6.6] - 2026-11-21
 
 ### Added
